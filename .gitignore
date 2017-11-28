@@ -1,0 +1,7 @@
+.lein-repl-history
+.nrepl-port
+/*.log
+/target
+/resources/public/js/dev
+/resources/public/js/min/out
+
