@@ -5,7 +5,8 @@
   {:view {:size (u/get-window-size)
           :root {:top-bar {}
                  :menu-bar {}
-                 :main-container {:active :home}}}
+                 :main-container {:active :home}}
+          :home {:menu-bar {:active :home}}}
    :language {:options [{:id :en, :name "English"}
                         {:id :ru, :name "pусский"}
                         {:id :es, :name "Español"}]

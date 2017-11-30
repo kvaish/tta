@@ -40,36 +40,53 @@
                    :font-weight "900"
                    :font-size "18px"}} "True"]
    [:span {:style {:font-weight "300"
-                   :font-size "18px"}} "Temp™"]
-   ])
+                   :font-size "18px"}} "Temp™"]])
+
 
 (defn menu-bar-link []
-  [:div (merge (use-style style/pull-left){:style {:width "60%"
-                                                   :padding "15px 10px 0 0"
-                                                   :font-size "12px"
-                                                   }})
-   [:a (merge (use-style style/menu-bar-spacing style/menu-bar-active) {:href "#"})  "Home"]
-   [:a (merge (use-style style/menu-bar-spacing){:href "#"})  "Dataset"]
-   [:a (merge (use-style style/menu-bar-spacing){:href "#"})  "Trendline"]
-   ])
+  (let [active-link @(rf/subscribe [::subs/active-menu-link])]
+    [:div
+     (merge (use-style style/pull-left)
+            {:style {:width "60%"
+                     :padding "15px 10px 0 0"
+                     :font-size "12px"}})
+     (doall
+      (map (fn [[title id] i]
+             ^{:key i}
+             [:a
+              (merge (use-style (merge style/menu-bar-spacing
+                                       (if (= active-link id)
+                                         style/menu-bar-active)))
+                     {:href "#"
+                      :on-click #(rf/dispatch
+                                  [::events/set-active-menu-link id])})
+              title])
+           [["Home" :home]
+            ["Dataset" :dataset]
+            ["Trendline" :trendline]]
+           (range)))]))
+
 
 (defn menu-bar-info []
   [:div {:style {:background-color "#e8e8e8"
                  :height "50px"
                  :float "right"
-                 :width "25%"
-                 }}
-   [:div (merge (use-style style/pull-left) {:style {:padding "2% 42% 1% 25px"  } } )
-          [:span {:style {:display "block"
-                          :font-size "10px":font-weight "300"} } "Company"]
-          [:span {:style {:display "block"
-                          :font-size "14px"}} "Vestas"]
-          ]
-   [:div (merge (use-style style/pull-left) {:style {:padding "2% 2% 1% 2%" } } )
+                 :width "25%"}}
+   [:div
+    (merge (use-style style/pull-left)
+           {:style {:padding "2% 42% 1% 25px"}})
     [:span {:style {:display "block"
-                    :font-size "10px" :font-weight "300"} } "Plant"]
+                    :font-size "10px":font-weight "300"}}
+     "Company"]
+    [:span {:style {:display "block"
+                    :font-size "14px"}} "Vestas"]]
+   [:div (merge (use-style style/pull-left)
+                {:style {:padding "2% 2% 1% 2%"}})
+    [:span {:style {:display "block"
+                    :font-size "10px" :font-weight "300"}} "Plant"]
     [:span  {:style {:display "block"
-                     :font-size "14px"} }"Ringsted"]] ])
+                     :font-size "14px"}}
+     "Ringsted"]]])
 
 (defn menu-bar []
   [:div (use-style style/menu-bar)
