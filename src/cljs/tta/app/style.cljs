@@ -48,7 +48,7 @@
 
 
 (def theme
-  {:font-familty "open_sans"
+  {:font-family "open_sans"
    :palette {:primary1Color (color-hex :royal-blue)
              :primary2Color (color-hex :ocean-blue)
              :primary3Color (color-hex :slate-grey 20)
