@@ -7,7 +7,12 @@
             [tta.util.gen :as u]
             [tta.component.root.style :as style]
             [tta.component.root.subs :as subs]
-            [tta.component.root.events :as events]))
+            [tta.component.root.events :as events]
+            [tta.component.home.views :as home]
+            [tta.component.dataset.views :as dataset]
+            [tta.component.trendline.views :as trendline]
+            [tta.component.dataentry.views :as dataentry]
+            [tta.component.logger.views :as logger]))
 
 ;;;;;;;;;; top-bar start
 (defn top-bar-link [props]
@@ -98,78 +103,23 @@
 ;;;;;;;;; menu-bar-end
 
 ;;;;;;;;;;; main-container start
- (defn primary-row-comp "pass type anchor/paragraph" [key-v]
-   (let [{:keys [type heading first-data second-data third-data icon ]} key-v]
-     [ui/paper {:style {:width "32%" :height "100%" :background-color "#fff" :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }}
-       [:div {:style {:padding"2%" :margin "2% 1% 0 1%"}}
-        [:span {:style {:font-size "30px" :font-weight "800" :color "#002856" :padding-left "5%"}} heading [:hr {:style {:position "absolute"
-                                                                                                                         :margin  "0 1.5%"
-                                                                                                                         :width  "35px"
-                                                                                                                         :border "3px solid"
-                                                                                                                         :border-width "thin"}}]]
-        (if  (= type "anchor" )
-        [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "2%"}}
-         [:li [ui/flat-button {:label first-data :label-style {:font-size "25px"
-                                                         :font-weight "300"
-                                                         :color "#002856" } } ]]
-         [:li [ui/flat-button {:label second-data :label-style {:font-size "25px "
-                                                                :font-weight "300"
-                                                                :color "#002856"} } ]]
-         [:li [ui/flat-button {:label third-data :label-style {:font-size "25px "
-                                                               :font-weight "300"
-                                                               :color "#002856"} } ]]]
-        )
-        (if (= type "paragraph")
-          [:p {:style { :color "#002856"
-                       :font-size "25px"
-                       :font-weight "300"
-                       :padding-left "5%"}} first-data]
-          )
-        [:i (merge  {:class-name "fa fa-home fa-5x"
-                     :style {:padding "8% 2%" :float "right"} } ) icon]
-        ]]))
 
-(defn main-container-primery-row []
-  [:div {:style {:height "60%"}}
-   [primary-row-comp {:type "anchor" :heading "Create Dataset" :first-data "Data Entery" :second-data "Import From Logger App" :third-data "Print Logsheet pdf" }]
-   [primary-row-comp {:type "paragraph" :heading "Analyses Dataset" :first-data "Preview the Overall,TWT,Burner status of latest publish dataset"  }]
-   [primary-row-comp {:type "paragraph" :heading "Trendline Graph" :first-data "Overview of all the recorded datasets"  }]
-   ])
-
-(defn secondary-row-comp "pass type anchor/paragraph" [key-v]
-  (let [{:keys [ heading data ]} key-v]
-    [ui/paper  {:style {:width "18.8%" :height "100%"   :margin "0 0 1% 1%" :float "left" :opacity "0.8" }}
-     [:div {:style {:padding "8%" :color "#002856"  }}
-      [:span {:style {:font-weight "600" :font-size "20px" :color "#002856" :width "100%" } } heading [:hr {:style {:position "absolute"
-                                                                                                     :margin  "0"
-                                                                                                     :width  "20px"
-                                                                                                     :border "1px solid" }} ]]
-      (if data
-        [:div {:style { :position "relative" }}
-         [:p {:style {:display "block" :word-break "" :width "100%" :position "absolute"  }} data]
-         ])]]))
-
-(defn main-container-secondery-row []
-  [:div {:style {:display "inline-block" :width :100% :height "33%"}}
-   [secondary-row-comp {:heading "Gold Cup" :data "Internal users only"}]
-   [secondary-row-comp {:heading "Plant Settings" :data "Manage Pyrometer custom emmissivity and role type"}]
-   [secondary-row-comp {:heading "Configure Plant" :data "Internal users only"}]
-   [secondary-row-comp {:heading "Reformer History" }]
-   [secondary-row-comp {:heading "Logs" :data "All deleted dataset logs that can be auto recovered"}]
-   ;[:div {:style {:width "18.8%" :height "100%" :background-color "#fff"  :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }} [gold-cup] ]
-   ;[:div {:style {:width "18.8%" :height "100%" :background-color "#fff"  :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }} [plant-setting]]
-   ;[:div {:style {:width "18.8%" :height "100%" :background-color "#fff"  :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }} [configure-plant] ]
-   ;[:div {:style {:width "18.8%" :height "100%" :background-color "#fff"  :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }} [reformer-history]]
-   ;[:div {:style {:width "18.8%" :height "100%" :background-color "#fff"  :margin "1% 0 1% 1%" :float "left" :opacity "0.8" }} [logs]]
-   ])
 
 (defn main-container []
   (let [view-size @(rf/subscribe [::app-subs/view-size])]
     [:div (update (use-style style/main-container) :style
                   assoc :height (style/main-container-height view-size))
+     (let [active-link @(rf/subscribe [::subs/active-menu-link])]
+       (js/console.log active-link "check menu link")
+       [:div {:style {:height "100%"}}
+       (case active-link
+         :home [home/home-comp]
+         :dataset  [dataset/dataset-com]
+         :trendline [trendline/trendline-com]
+         :dataentry [dataentry/dataentry-com]
+         :logger  [logger/logger-com]
+         )])
 
-     [main-container-primery-row]
-     [main-container-secondery-row]
 
 
      ;for translation
@@ -190,88 +140,6 @@
 
 
 
-;(defn create-data-set []
-;  [:div {:style {:padding"2%"}}
-;   [:span {:style {:font-size "30px" :font-weight "800" :color "#002856" :padding-left "5%"}} "Create Dataset"]
-;   [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "5%"}}
-;    [:li "Data Entry"]
-;    [:li "Import From Logger App"]
-;    [:li "Print Logsheet pdf"]]
-;   [:i (merge  {:class-name "fa fa-home fa-5x"
-;                                            :style {:padding "8% 2%" :float "right"} })]
-;   ])
-;
-;(defn analyse-dataset []
-;  [:div {:style {:padding "2%"}}
-;   [:span {:style {:font-size "30px" :font-weight "800" :color "#002856" :padding-left "5%"}} "Analyse Dataset"]
-;   [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "5%"}}
-;    [:li "Preview the Overall,"]
-;    [:li "TWT,Burner status of latest"]
-;    [:li "publish dataset"]]
-;   [:i (merge {:class-name "fa fa-home fa-5x"
-;                                            :style {:padding "8% 2%" :float "right"} })]])
-;
-;(defn trendline-graph []
-;  [:div {:style {:padding "2%"}}
-;   [:span {:style {:font-size "30px" :font-weight "800" :color "#002856" :padding-left "5%"}} "Trendline Graph"]
-;   [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "5%"}}
-;    [:li "Overview of all the"]
-;    [:li "recorded datasets"]
-;    ]
-;   [:i (merge {:class-name "fa fa-home fa-5x"
-;                                            :style {:padding "10% 2%" :float "right"} }) ]])
-;(defn main-container-primery-row []
-;  [:div {:style {:height "60%"}}
-;   [:div {:style {:width "32%" :height "100%" :background-color "#fff"  :margin "2% 1% 0 1%" :float "left" :opacity "0.8" }} [create-data-set ]]
-;   [:div {:style {:width "32%" :height "100%" :background-color "#fff" :margin "2% 0 0 0" :float "left" :opacity "0.8" }}  [analyse-dataset]]
-;   [:div {:style {:width "32%" :height "100%" :background-color "#fff" :margin "2% 1% 0 1%" :float "left" :opacity "0.8" }} [trendline-graph]]]
-;  )
-
-;(defn gold-cup []
-;  [:div {:style {:padding "8%" :color "#002856"}}
-;   [:span {:style {:font-weight "600" :font-size "20px" :color "#002856"} } "Gold Cup"]
-;   [:div {:style {:position "absolute" :bottom  "8%"}}
-;    [:span {:style {:display "block"}} "Internal"]
-;    [:span "users only"]
-;    ]
-;   ]
-;  )
-;
-;(defn plant-setting []
-;  [:div {:style {:padding "8%" :color "#002856"}}
-;   [:span  {:style {:font-weight "600" :font-size "20px" :color "#002856"} } "Plant Settings"]
-;   [:div {:style {:position "absolute" :bottom  "8%"}}
-;    [:span {:style {:display "block"}} "Manage Pyrometer, custom"]
-;    [:span "emmissivity and role type"]
-;    ]
-;   ]
-;  )
-;
-;(defn configure-plant []
-;  [:div  {:style {:padding "8%" :color "#002856"}}
-;   [:span  {:style {:font-weight "600" :font-size "20px" :color "#002856"} } "Configure Plant"]
-;   [:div {:style {:position "absolute" :bottom  "8%"}}
-;    [:span {:style {:display "block"}} "Internal"]
-;    [:span "users only"]
-;    ]
-;   ]
-;  )
-;
-;(defn reformer-history []
-;  [:div {:style {:padding "8%" :color "#002856"}}
-;   [:span   {:style {:font-weight "600" :font-size "20px" :color "#002856"} } "Reformer History"]
-;
-;   ]
-;  )
-;(defn logs []
-;  [:div {:style {:padding "8%" :color "#002856"}}
-;   [:span  {:style {:font-weight "600" :font-size "20px" :color "#002856"} } "Logs"]
-;   [:div {:style {:position "absolute" :bottom  "8%"}}
-;    [:span {:style {:display "block"}} "All deleted dataset logs"]
-;    [:span "that can be auto recovered"]
-;    ]
-;   ]
-;  )
 
 
 
