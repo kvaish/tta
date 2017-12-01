@@ -12,5 +12,4 @@
 
 
 (defn trendline-com []
-  [:div "trendline"]
-  )
+  [:div "trendline"])

@@ -9,6 +9,22 @@
             [tta.component.home.subs :as subs]
             [tta.component.home.events :as events]))
 
+(defn create-dataset-link []
+  [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "2%"}}
+   (doall
+     (map (fn [[key-v] i]
+            (let [{:keys [label-data action-data]} key-v]
+              ^{:key i}
+              [:li [ui/flat-button {:label label-data :label-style {:font-size "25px"
+                                                                    :font-weight "300"
+                                                                    :color "#002856" }
+                                    :on-click #(rf/dispatch
+                                                 [::events/set-active-menu-link action-data]) } ]]
+              ))
+          [[{:label-data "Data Entry" :action-data :dataentry}]
+           [{:label-data "Import From Logger App" :action-data :logger}]
+           [{:label-data "Print Logsheet pdf"}]] (range)))])
+
 (defn primary-row-comp "pass type anchor/paragraph" []
   [:div {:style {:height "60%"}}
    (doall
@@ -24,20 +40,21 @@
                                :margin  "0 1.5%"
                                :border-width "thin"}}]]
                 (if  (= type "anchor" )
-                  [:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "2%"}}
-                   [:li [ui/flat-button {:label first-data :label-style {:font-size "25px"
-                                                                         :font-weight "300"
-                                                                         :color "#002856" }
-                                         :on-click #(rf/dispatch
-                                                      [::events/set-active-menu-link :dataentry]) } ]]
-                   [:li [ui/flat-button {:label second-data :label-style {:font-size "25px "
-                                                                          :font-weight "300"
-                                                                          :color "#002856"}
-                                         :on-click #(rf/dispatch
-                                                      [::events/set-active-menu-link :logger]) } ]]
-                   [:li [ui/flat-button {:label third-data :label-style {:font-size "25px "
-                                                                         :font-weight "300"
-                                                                         :color "#002856"} } ]]]
+                  ;[:ul {:style {:list-style-type "none" :color "#002856" :font-size "30px" :font-weight "150" :padding-left "2%"}}
+                  ; [:li [ui/flat-button {:label first-data :label-style {:font-size "25px"
+                  ;                                                       :font-weight "300"
+                  ;                                                       :color "#002856" }
+                  ;                       :on-click #(rf/dispatch
+                  ;                                    [::events/set-active-menu-link :dataentry]) } ]]
+                  ; [:li [ui/flat-button {:label second-data :label-style {:font-size "25px "
+                  ;                                                        :font-weight "300"
+                  ;                                                        :color "#002856"}
+                  ;                       :on-click #(rf/dispatch
+                  ;                                    [::events/set-active-menu-link :logger]) } ]]
+                  ; [:li [ui/flat-button {:label third-data :label-style {:font-size "25px "
+                  ;                                                       :font-weight "300"
+                  ;                                                       :color "#002856"} } ]]]
+                  [create-dataset-link ]
                   )
                 (if (= type "paragraph")
                   [:p {:style { :color "#002856"
@@ -50,15 +67,14 @@
                 ]])
 
             )
-          [[{:type "anchor" :heading "Create Dataset" :first-data "Data Entry" :second-data "Import From Logger App" :third-data "Print Logsheet pdf" }]
+          [[{:type "anchor" :heading "Create Dataset" }]
            [{:type "paragraph" :heading "Analyses Dataset" :first-data "Preview the Overall,TWT,Burner status of latest publish dataset"  }]
            [{:type "paragraph" :heading "Trendline Graph" :first-data "Overview of all the recorded datasets"  }]
 
            ]
-          (range)
-          ))]
+          (range)))])
 
-  )
+
 
 (defn secondary-row-comp "pass type anchor/paragraph" []
   [:div {:style {:display "inline-block" :width :100% :height "33%"}}

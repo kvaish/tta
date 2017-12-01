@@ -10,5 +10,4 @@
             [tta.component.dataentry.events :as events]))
 
 (defn dataentry-com []
-  [:div "dataentry"]
-  )
+  [:div "dataentry"])

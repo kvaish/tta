@@ -10,5 +10,4 @@
             [tta.component.dataset.events :as events]))
 
 (defn dataset-com []
-  [:div "datasetpage"]
-  )
+  [:div "datasetpage"])

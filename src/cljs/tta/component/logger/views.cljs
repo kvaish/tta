@@ -14,5 +14,4 @@
 "logger"
    ;[ui/dialog {:title "logger" :model {true} :open {true}}]
 
-   ]
-)
+   ])
