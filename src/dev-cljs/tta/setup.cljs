@@ -1,8 +1,10 @@
-(ns tta.setup)
+(ns tta.setup
+  (:require [re-frisk.core :refer [enable-re-frisk!]]))
 
 
 (defn dev-setup []
   (enable-console-print!)
+  (enable-re-frisk!)
   (println "dev mode"))
 
 

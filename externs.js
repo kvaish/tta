@@ -1,1 +1,1 @@
-var portalSiteRoot = "";
+var htAppConfig = "";

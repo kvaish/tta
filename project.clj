@@ -11,9 +11,9 @@
                  [cljs-react-material-ui "0.2.50"
                   :exclusions [org.clojure/clojure
                                cljsjs/material-ui]]
-                 [cljsjs/react "16.1.0-1"]
-                 [cljsjs/react-dom "16.1.0-1"]
-                 [cljsjs/react-dom-server "16.1.0-1"]
+                 [cljsjs/react "16.1.1-0"]
+                 [cljsjs/react-dom "16.1.1-0"]
+                 [cljsjs/react-dom-server "16.1.1-0"]
                  [garden "1.3.3"]
                  [stylefy "1.1.0"
                   :exclusions [garden]]
@@ -23,36 +23,62 @@
                  [cljsjs/d3 "4.12.0-0"]
                  [com.cognitect/transit-cljs "0.8.243"]]
 
-  :min-lein-version "2.8.1"
+  :plugins [[lein-figwheel "0.5.14"
+             :exclusions [org.clojure/clojure]]
+            [lein-cljsbuild "1.1.7"]
+            [lein-garden "0.3.0"
+             :exclusions [garden org.clojure/clojure]]
+            [lein-doo "0.1.8"]]
 
-  :source-paths ["src/clj"]
+  :min-lein-version "2.8.1"
 
   :clean-targets ^{:protect false} ["resources/public/js/dev"
                                     "resources/public/js/min"
+                                    "resources/public/css/build"
                                     "target"]
 
   :figwheel {:css-dirs ["resources/public/css"]}
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  :aliases {"build" ["do" ["clean"] ["cljsbuild" "once" "min"]]}
+  :aliases {"build" ["with-profile" "prd"
+                     ["do"
+                      ["clean"]
+                      ["garden" "once"]
+                      ["cljsbuild" "once" "min"]]]}
   
   :profiles
   {:dev
-   {:dependencies [[binaryage/devtools "0.9.7"]
+   {:source-paths ["src/clj" "src/dev-clj"]
+    :dependencies [[binaryage/devtools "0.9.8"]
                    [re-frisk "0.5.2"
                     :exclusions [org.clojure/clojure]]
                    [figwheel-sidecar "0.5.14"
                     :exclusions [org.clojure/tools.nrepl]]
                    [com.cemerick/piggieback "0.2.2"]]
-    :plugins      [[lein-figwheel "0.5.14"
-                    :exclusions [org.clojure/clojure]]
-                   [lein-cljsbuild "1.1.7"]]}}
 
+    :garden
+    {:builds
+     [{:id "style" ;; optional name of the build
+       :source-paths ["src/clj" "src/cljc"]
+       :stylesheet tta.style/app-styles
+       :compiler {:output-to "resources/public/css/build/style.css"
+                  :pretty-print? true}}]}}
+
+   :prd
+   {:source-paths ["src/clj"]
+    :garden
+    {:builds
+     [{:id "style" ;; optional name of the build
+       :source-paths ["src/clj" "src/cljc"]
+       :stylesheet tta.style/app-styles
+       :compiler {:output-to "resources/public/css/build/style.css"
+                  :pretty-print? false}}]}}}
+  
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/cljs" "src/dev-cljs"]
+     :source-paths ["src/cljs" "src/cljc" "src/dev-cljs"]
      :figwheel     {:websocket-host :js-client-host
                     :on-jsload "tta.core/mount-root"}
      :compiler     {:main                 tta.core
@@ -67,7 +93,7 @@
                     }}
 
     {:id           "min"
-     :source-paths ["src/cljs" "src/prd-cljs"]
+     :source-paths ["src/cljs" "src/cljc" "src/prd-cljs"]
      :compiler     {:main            tta.core
                     :output-to       "resources/public/js/min/app.js"
                     :language-in     :ecmascript5

@@ -4,6 +4,7 @@
     <meta charset='utf-8'>
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/hint.min.css">
+    <link rel="stylesheet" href="css/build/style.css">
 
     <!-- the following 2 style tags must be the last style tags in head -->
     <style id="_stylefy-constant-styles_"></style>
@@ -14,7 +15,11 @@
     <script src="js/babel-polyfill.min.js"></script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="app-loading">
+        <div id="spinner"></div>
+      </div>
+    </div>
     <script src="js/config.js"></script>
     <script>tta.core.init();</script>
   </body>

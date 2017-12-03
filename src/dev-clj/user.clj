@@ -1,6 +1,6 @@
 (ns user
-  (:require
-   [figwheel-sidecar.repl-api :as f]))
+  (:require [figwheel-sidecar.repl-api :as f]
+            [ht.template :as template]))
 
 ;; user is a namespace that the Clojure runtime looks for and
 ;; loads if its available
@@ -40,3 +40,16 @@
   "Launch a ClojureScript REPL that is connected to your build and host environment."
   []
   (f/cljs-repl))
+
+
+
+;;; project template tools
+(defn new-comp
+  "create new component with given name or symbol"
+  [name-or-sym]
+  (template/create-comp
+   (cond
+     (symbol? name-or-sym) (name name-or-sym)
+     (string? name-or-sym) name-or-sym
+     :error
+     (throw (ex-info "invalid name! provide a string or symbol!" {})))))

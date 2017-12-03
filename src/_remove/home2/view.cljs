@@ -1,4 +1,4 @@
-(ns tta.component.home.views
+(ns tta.component.home.view
   (:require [re-frame.core :as rf]
             [stylefy.core :refer [use-style]]
             [cljs-react-material-ui.reagent :as ui]

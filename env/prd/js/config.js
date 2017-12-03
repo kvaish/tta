@@ -1,6 +1,7 @@
-// set to "" when hosted in portal
-var portalSiteRoot = "";
-
+var htAppConfig = {
+  // set to "" when hosted in portal
+  portalUri: ""
+}
 
 // Must be the last line!!
 // use appropriate build

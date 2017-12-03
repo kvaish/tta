@@ -2,87 +2,98 @@
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
-            [tta.app.style :refer [color]]
-            [goog.object :as g]))
+            [ht.style :as ht]
+            [tta.app.style :as app-style
+             :refer [color color-hex color-rgba]]))
 
-(def config {:top-bar-h 66
-             :menu-bar-h 50})
+(defn content-height [view-size]
+  (let [{:keys [head-row-height sub-head-row-height]} ht/root-layout]
+    (- (:height view-size)
+       head-row-height
+       sub-head-row-height)))
 
-(defn main-container-height [view-size]
-  (- (:height view-size)
-     (:top-bar-h config)
-     (:menu-bar-h config)))
+(def header
+  (let [{h :head-row-height} ht/root-layout
+        logo-h 18
+        logo-s (/ (- h logo-h) 2)]
+    {:background (:blue-spot-light ht/gradients)
+     :height (px h)
+     :position "relative"
+     ;; children styles
+     ::stylefy/sub-styles
+     {:logo {:background-image "url('images/ht_logo_white.png')"
+             :height (px logo-h)
+             :background-repeat "no-repeat"
+             :background-size "contain"
+             :top (px logo-s)
+             :left (px logo-s)
+             :width "33%"
+             :position "absolute"}
+      :right {:float "right"
+              :font-size "12px"
+              :padding "24px 30px 12px 12px"}
+      :link {:text-decoration "none"
+             :color (color :white)
+             :margin-left "30px"}
+      :link-icon {:margin-right "5px"}
+      :icon-only {:font-size "18px"}}}))
+
+(def sub-header
+  (let [{h :sub-head-row-height} ht/root-layout]
+    {:background-color (color :alumina-grey 80)
+     :height (px h)
+     :color (color :royal-blue)
+     :position "relative"}))
+
+(def sub-header-left
+  (let [{h :sub-head-row-height} ht/root-layout]
+    {:position "relative"
+     :display "inline-block"
+     :height (px (- h 24))
+     :padding "12px 0 12px 30px"} ))
+
+(def sub-header-middle
+  (let [{h :sub-head-row-height} ht/root-layout
+        link {:text-decoration "none"
+              :margin-left "50px"
+              :font-size "14px"
+              :color (color :royal-blue)}]
+    (merge sub-header-left {:padding "12px 0 12px 50px"}
+           {;; children styles
+            ::stylefy/sub-styles
+            {:link link
+             :active-link (merge link {:font-weight 700
+                                       :font-size "16px"})}})))
+
+(def sub-header-right
+  (let [{h :sub-head-row-height} ht/root-layout]
+    (merge sub-header-left {:height (px (- h 18))
+                            :padding "8px 0px 10px 30px"
+                            :overflow "hidden"
+                            :max-width "25%"
+                            :min-width "12%"
+                            :float "right"
+                            :background (color :alumina-grey 20)
+                            :color (color :slate-grey)
+                            :font-size "12px"}
+           {;; children styles
+            ::stylefy/sub-styles
+            {:info-p {:margin 0}
+             :info-head {:font-weight 300
+                         :font-size "10px"
+                         :line-height "12px"}
+             :info-body {}}})))
+
+(def no-access
+  {:padding "10% 15%"
+   ::stylefy/sub-styles
+   {:p {:font-size "18px"
+        :font-weight 700
+        :margin 0
+        :color (color :red)}}})
+
+(def content {:padding 0
+              :background (color :slate-grey 20)})
 
 
-
-(defn color-rgb [color-key]
-  (let [{:keys [red green blue]} (gc/as-rgb (color color-key))]
-    (str "rgba(" red "," green "," blue ",1)")))
-
-;; logo height: 18px
-;; spacing top/bottom: 24px
-;; total height: 66px
-(def top-bar
-  {;:background "linear-gradient(-90deg, rgba(57,135,192, 1), rgba(85,165,203, 1) 30%, rgba(25, 99, 182, 1))"
-   ;:background "radial-gradient(farthest-side at 70% 200%, rgba(85,165,203, 1),rgba(25, 99, 182, 1) 200%)"
-   :background "radial-gradient(circle farthest-side at 60% 400%,rgba(84,201,233,1),rgba(0,72,187,1)100%)"
-   :height (px (:top-bar-h config))
-   :color (color :white)
-   :font-size "12px"
-   ::stylefy/mode {:hover {:color (color :white)}}})
-
-(def menu-bar
-  {:background-color "#f5f5f5"
-   :height (px (:menu-bar-h config))
-   :color (color :bitumen-grey)})
-
-(def menu-bar-right
-  {:background-color (color :alumina-grey 10)
-   :height "100%"
-   :color (color :slate-grey)
-   :display "inline-block"
-   :padding-right "5%"
-   })
-
-
-(def main-container
-  {:background-color (color :slate-grey)
-   :background-image "url('images/background.jpg')"
-   :background-repeat "no-repeat"
-   :background-size "cover"})
-
-(def top-bar-logo
-  {:background-image "url('images/ht_logo_white.png')"
-   :height "18px"
-   :background-repeat "no-repeat"
-   :background-size "contain"
-   :top "24px"
-   :left "24px"
-   :width "50%"
-   :position "relative"})
-
-(def top-bar-menu-link
-  {:padding "8px 24px 0px 30px"
-   :display "inline-block"
-   :text-decoration "none"
-   :color (color :white)
-   })
-(def menu-bar-spacing
-  {:padding  "0 3% 0 0"
-   :text-decoration "none"
-   :color  (color :royal-blue)
-   ::stylefy/mode {:active {:color (color :royal-blue)}}})
-(def menu-bar-active
-  {:color (color :royal-blue)
-   :font-weight "600"})
-
-(def pull-left
-  {:float "left"})
-
-(def pull-right
-     {:float "right" })
-
-
-
-(def root
-  {:background-color (color :white)})
+(def root {:background-color (color :white)})
