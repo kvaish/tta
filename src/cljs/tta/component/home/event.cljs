@@ -5,14 +5,19 @@
             [tta.app.event :as app-event]))
 
 (rf/reg-event-db
- ::set-data
- (fn [db [_ data]]
-   (assoc-in db [:component :home :data] data)))
+ ::nav-data-entry
+ (fn [db _]
+   ;;TODO:
+   db))
 
-(rf/reg-event-fx
- ::send-data
- (fn [{:keys [db]} [_ data]]
-   {:db (assoc db :busy? true)
-    ;; raise more side effects, such as
-    ;; :my-fx [my-data]
-    }))
+(rf/reg-event-db
+ ::nav-import-logger
+ (fn [db _]
+   ;;TODO:
+   db))
+
+(rf/reg-event-db
+ ::print-logsheet
+ (fn [db _]
+   ;;TODO:
+   db))

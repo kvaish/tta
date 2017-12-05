@@ -10,8 +10,7 @@
             [tta.component.root.style :as style]
             [tta.component.root.subs :as subs]
             [tta.component.root.event :as event]
-            ;[tta.component.home.view :refer [home]]
-            ))
+            [tta.component.home.view :refer [home]]))
 
 ;;; header ;;;
 
@@ -122,8 +121,8 @@
                   assoc :height (style/content-height view-size))
      (if content-allowed?
        (case active-content
-         ;:home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
-         :home  [:div "home"]
+         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         ;; :home  [:div "home"]
          ;; primary
          :dataset-creator   [:div "dataset-creator"]
          :dataset-analyzer  [:div "dataset-analyzer"]

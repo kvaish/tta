@@ -38,13 +38,13 @@
  ::active-client
  (fn [db _]
    (let [{:keys [active] :as client} (:client db)]
-     (get client active))))
+     (get-in client [:all active]))))
 
 (rf/reg-sub
  ::active-plant
  (fn [db _]
    (let [{:keys [active] :as plant} (:plant db)]
-     (get plant active))))
+     (get-in plant [:all active]))))
 
 (rf/reg-sub
  ::busy?

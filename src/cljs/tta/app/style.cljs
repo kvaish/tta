@@ -3,6 +3,9 @@
             [garden.color :as gc]
             [ht.style :as ht]))
 
+
+(def vendors ["webkit" "ms" "moz" "o"])
+
 (defn color
   "get color suitable for use with stylefy and garden"
   ([color-key]
