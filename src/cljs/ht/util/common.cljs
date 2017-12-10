@@ -1,17 +1,12 @@
-(ns tta.util.common
-  (:require [re-frame.core :as rf]
-            [tta.config :refer [config]]
-            [tta.util.interop :as i]
-            [clojure.string :as str]))
+(ns ht.util.common
+  (:require [clojure.string :as str]
+            [ht.config :refer [config]]
+            [ht.util.interop :as i]))
 
 (defn get-window-size []
   ;; (js/console.log js/window.innerHeight)
   {:width (i/oget js/window :innerWidth)
    :height (i/oget js/window :innerHeight)})
-
-(defn translate [key-v default]
-  (or @(rf/subscribe (conj [:tta.app.subs/translate] key-v))
-      default))
 
 (defn get-storage-js
   "get from localStorage as a js Object"

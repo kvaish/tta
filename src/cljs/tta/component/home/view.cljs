@@ -1,9 +1,12 @@
 ;; view elements component home
 (ns tta.component.home.view
-  (:require [re-frame.core :as rf]
+  (:require [reagent.core :as r]
+            [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
-            [tta.util.common :refer [translate]]
+            [ht.app.style :as ht-style]
+            [ht.app.subs :as ht-subs :refer [translate]]
+            [ht.app.event :as ht-event]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -18,14 +21,15 @@
       (:enabled :disabled)
       [ui/paper (merge (use-style
                         (if (= access :enabled)
-                          (style/set-cursor card-style (not buttons))
+                          (style/set-clickable card-style true #_(not buttons))
                           (style/disable-card card-style)))
                        (if (and (= access :enabled)
-                                (not buttons))
+                                true #_(not buttons))
                          {:on-click #(on-select id)}))
        [:div (use-sub-style card-style :title)
         title]
        [:hr (use-sub-style card-style :hr)]
+       [:br]
        (if buttons
          (doall
           (map (fn [{:keys [id label action] btn-access :access}]
@@ -39,6 +43,8 @@
                      :label-style (if disabled?
                                     (style/disable-button label-style)
                                       label-style)
+                     :icon (r/as-element
+                            [ui/font-icon {:class-name "fa fa-arrow-right"}])
                      :style (:root style/card-button)}]))
                buttons)))
        [:p (use-sub-style card-style :desc)
@@ -78,7 +84,7 @@
               :title (translate [:home-card :dataset-analyzer :title]
                                 "Analyse Dataset")
               :desc (translate [:home-card :dataset-analyzer :description]
-                               "Preview the Overall, TWT, Burner status of latest publishe dataset")
+                               "Preview the Overall, TWT, Burner status of latest published dataset")
               :icon nil}
              {:id :trendline
               :primary? true

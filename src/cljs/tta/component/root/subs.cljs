@@ -1,12 +1,18 @@
 (ns tta.component.root.subs
   (:require [re-frame.core :as rf]
-            [tta.util.auth :as auth]
-            [tta.app.subs :as app-subs]))
+            [ht.app.subs :as ht-subs :refer [translate]]
+            [tta.app.subs :as app-subs]
+            [tta.util.auth :as auth]))
+
+(rf/reg-sub
+ ::root
+ (fn [db _] (get-in db [:component :root])))
 
 (rf/reg-sub
  ::active-content
- (fn [db _]
-   (get-in db [:component :root :content :active])))
+ :<- [::root]
+ (fn [root _]
+   (get-in root [:content :active])))
 
 (rf/reg-sub
  ::active-dataset-action
@@ -16,7 +22,7 @@
 
 (rf/reg-sub
  ::content-allowed?
- :<- [::app-subs/auth-claims]
+ :<- [::ht-subs/auth-claims]
  :<- [::active-content]
  (fn [[claims active-content] _]
    (auth/allow-root-content? claims active-content)))

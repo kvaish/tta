@@ -36,8 +36,8 @@
 
 (def root-layout
   {:head-row-height 66 ;; logo 18px + top/bottom: 24px = 66px
-   :sub-head-row-height 50})
+   :sub-head-row-height 44})
 
 (def gradients
-  {:blue-spot-light "radial-gradient(circle farthest-side at 60% 400%,rgba(84,201,233,1),rgba(0,72,187,1)100%)"})
+  {:blue-spot-light "radial-gradient(circle farthest-side at 70% 600%,rgba(84,201,233,1),rgba(0,72,187,1)150%)"})
 

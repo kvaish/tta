@@ -1,8 +1,11 @@
 (ns tta.component.root.view
-  (:require [re-frame.core :as rf]
+  (:require [reagent.core :as r]
+            [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
-            [tta.util.common :refer [translate]]
+            [ht.app.style :as ht-style]
+            [ht.app.subs :as ht-subs :refer [translate]]
+            [ht.app.event :as ht-event]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -16,7 +19,8 @@
 
 (defn header []
   [:div (use-style style/header)
-   [:div (use-sub-style style/header :logo)]
+   [:div (use-sub-style style/header :left)]
+   [:div (use-sub-style style/header :middle)]
    [:div (use-sub-style style/header :right)
     (doall
      (map
@@ -36,28 +40,26 @@
        [:settings
         "fa fa-caret-right"
         (translate [:header-link :settings :label] "Settings")
-        #(rf/dispatch [::event/show-settings-menu])]
-       [:logout
-        nil
-        (translate [:header-link :logout :label] "Logout")
-        #(rf/dispatch [::app-event/logout])]]))]])
+        #(rf/dispatch [::event/show-settings-menu])]]))]])
 
 
 ;;; sub-header ;;;
 
-(defn sub-header-left []
-  [:div (use-style style/sub-header-left)
-   [:span {:style {:font-family "arial"
-                   :font-weight "900"
-                   :font-size "18px"}} "True"]
-   [:span {:style {:font-weight "300"
-                   :font-size "18px"}} "Temp™"]])
+(defn app-logo [props]
+    [:div props
+     [:span {:style {:font-family "arial"
+                     :font-weight "900"
+                     :font-size "18px"}} "True"]
+     [:span {:style {:font-weight "300"
+                     :font-size "18px"}} "Temp"]
+     [:span {:style {:font-size "12px"
+                     :vertical-align "text-top"}} "™"]])
 
-(defn sub-header-middle []
-  (let [active-content @(rf/subscribe [::subs/active-content])]
-    (if (= :home active-content)
-      [:span]
-      [:div (use-style style/sub-header-middle)
+(defn hot-links []
+  [:div (use-style style/hot-links)
+   (let [active-content @(rf/subscribe [::subs/active-content])]
+     (if (= :home active-content)
+       [:span]
        (doall
         (map
          (fn [[id label target]]
@@ -65,7 +67,7 @@
                  active? (= target active-content)]
              ^{:key id}
              [:a
-              (merge (use-sub-style style/sub-header-middle
+              (merge (use-sub-style style/hot-links
                                     (if active? :active-link :link))
                      {:href "#"
                       :on-click (if-not active?
@@ -77,15 +79,17 @@
            (translate [:quickLaunch :dataset :label] "Dataset")
            @(rf/subscribe [::subs/active-dataset-action])]
           [:trendline
-           (translate [:quickLaunch :trendline :label] "Trendline")]]))])))
+           (translate [:quickLaunch :trendline :label] "Trendline")]]))))])
+
+(defn messages [] ;; TODO: define comp for message and warning
+  [:div (use-style style/messages)])
 
 (defn info [label text]
-  [:div (use-style style/sub-header-right)
-   [:p (use-sub-style style/sub-header-right :info-p)
-    [:span (use-sub-style style/sub-header-right :info-head)
+  [:div (use-style style/info)
+   [:p (use-sub-style style/info :p)
+    [:span (use-sub-style style/info :head)
      label]
-    [:br]
-    [:span (use-sub-style style/sub-header-right :info-body)
+    [:span (use-sub-style style/info :body)
      text]]])
 
 (defn company-info []
@@ -100,11 +104,14 @@
 
 (defn sub-header []
   [:div (use-style style/sub-header)
-   [sub-header-left]
-   [sub-header-middle]
-   [plant-info]
-   [company-info]])
-
+   [:div (use-sub-style style/sub-header :left)
+    [app-logo (use-sub-style style/sub-header :logo)]
+    [hot-links]
+    [:div (use-sub-style style/sub-header :spacer)]
+    [messages]]
+   [:div (use-sub-style style/sub-header :right)
+    [company-info]
+    [plant-info]]])
 
 ;;; content ;;;
 
@@ -114,7 +121,7 @@
     (translate [:root :noAccess :message] "Insufficient rights!")]])
 
 (defn content []
-  (let [view-size @(rf/subscribe [::app-subs/view-size])
+  (let [view-size @(rf/subscribe [::ht-subs/view-size])
         active-content @(rf/subscribe [::subs/active-content])
         content-allowed? @(rf/subscribe [::subs/content-allowed?])]
     [:div (update (use-style style/content) :style
@@ -143,7 +150,6 @@
   [:div (use-style style/root)
    [header]
    [sub-header]
-   [content]
-   [app-view/busy-screen]])
+   [content]])
 
 

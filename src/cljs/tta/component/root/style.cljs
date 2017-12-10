@@ -3,8 +3,9 @@
             [garden.color :as gc]
             [garden.units :refer [px]]
             [ht.style :as ht]
-            [tta.app.style :as app-style
-             :refer [color color-hex color-rgba]]))
+            [ht.app.style :as ht-style
+             :refer [color color-hex color-rgba vendors]]
+            [tta.app.style :as app-style]))
 
 (defn content-height [view-size]
   (let [{:keys [head-row-height sub-head-row-height]} ht/root-layout]
@@ -18,20 +19,24 @@
         logo-s (/ (- h logo-h) 2)]
     {:background (:blue-spot-light ht/gradients)
      :height (px h)
-     :position "relative"
+     :display "flex"
+     :flex-direction "row"
+     ::stylefy/vendors vendors
+     ::stylefy/auto-prefix #{:flex-direction}
      ;; children styles
      ::stylefy/sub-styles
-     {:logo {:background-image "url('images/ht_logo_white.png')"
+     {:left {:background-image "url('images/ht_logo_white.png')"
              :height (px logo-h)
              :background-repeat "no-repeat"
              :background-size "contain"
-             :top (px logo-s)
-             :left (px logo-s)
-             :width "33%"
-             :position "absolute"}
-      :right {:float "right"
-              :font-size "12px"
-              :padding "24px 30px 12px 12px"}
+             :margin-top (px logo-s)
+             :margin-left (px logo-s)
+             :width "200px"}
+      :middle {:flex 1
+               ::stylefy/vendors vendors
+               ::stylefy/auto-prefix #{:flex}}
+      :right {:font-size "12px"
+              :padding "24px 30px 0 12px"}
       :link {:text-decoration "none"
              :color (color :white)
              :margin-left "30px"}
@@ -39,50 +44,59 @@
       :icon-only {:font-size "18px"}}}))
 
 (def sub-header
-  (let [{h :sub-head-row-height} ht/root-layout]
-    {:background-color (color :alumina-grey 80)
-     :height (px h)
-     :color (color :royal-blue)
-     :position "relative"}))
+  (let [{h :sub-head-row-height} ht/root-layout
+        col {:display "flex"
+             :flex-direction "row"
+             ::stylefy/auto-prefix #{:flex-direction :flex}
+             ::stylefy/vendors vendors}]
+    (merge col
+           {:background-color (color :alumina-grey 50)
+            :height (px h)
+            ;;sub-styles
+            ::stylefy/sub-styles
+            {:left (assoc col :flex 3)
+             :right (assoc col :flex 1
+                           :background-color (color :alumina-grey))
+             :logo {:height "26px"
+                    :padding (px (/ (- h 26) 2))
+                    :padding-left "20px"
+                    :color (color :royal-blue)}
+             :spacer (assoc col :flex 1)}})))
 
-(def sub-header-left
-  (let [{h :sub-head-row-height} ht/root-layout]
-    {:position "relative"
-     :display "inline-block"
-     :height (px (- h 24))
-     :padding "12px 0 12px 30px"} ))
-
-(def sub-header-middle
+(def hot-links
   (let [{h :sub-head-row-height} ht/root-layout
         link {:text-decoration "none"
-              :margin-left "50px"
-              :font-size "14px"
+              :margin-left "20px"
+              :font-size "12px"
               :color (color :royal-blue)}]
-    (merge sub-header-left {:padding "12px 0 12px 50px"}
-           {;; children styles
-            ::stylefy/sub-styles
-            {:link link
-             :active-link (merge link {:font-weight 700
-                                       :font-size "16px"})}})))
+    {:height (px (- h 18))
+     :padding "9px 0 9px 10px"
+     ;; children styles
+     ::stylefy/sub-styles
+     {:link link
+      :active-link (merge link {:font-weight 700})}}))
 
-(def sub-header-right
+(def messages {}) ;; TODO: define style for warning and comment
+
+(def info
   (let [{h :sub-head-row-height} ht/root-layout]
-    (merge sub-header-left {:height (px (- h 18))
-                            :padding "8px 0px 10px 30px"
-                            :overflow "hidden"
-                            :max-width "25%"
-                            :min-width "12%"
-                            :float "right"
-                            :background (color :alumina-grey 20)
-                            :color (color :slate-grey)
-                            :font-size "12px"}
-           {;; children styles
-            ::stylefy/sub-styles
-            {:info-p {:margin 0}
-             :info-head {:font-weight 300
-                         :font-size "10px"
-                         :line-height "12px"}
-             :info-body {}}})))
+    {:height (px (- h 18))
+     :padding "8px 0px 10px 30px"
+     :overflow "hidden"
+     :background (color :alumina-grey)
+     :color (color :slate-grey -20)
+     :font-size "12px"
+     :flex 1
+     ::stylefy/auto-prefix #{:flex}
+     ::stylefy/vendors vendors
+     ;; children styles
+     ::stylefy/sub-styles
+     {:p {:margin 0}
+      :head {:font-weight 300
+             :font-size "10px"
+             :display "block"}
+      :body {:line-height "12px"
+             :display "block"}}}))
 
 (def no-access
   {:padding "10% 15%"

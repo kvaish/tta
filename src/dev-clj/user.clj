@@ -1,6 +1,8 @@
 (ns user
   (:require [figwheel-sidecar.repl-api :as f]
-            [ht.template :as template]))
+            [ht.comp-template :as comp-template]
+            [ht.dlg-template :as dlg-template]
+            [ht.exports :as exports]))
 
 ;; user is a namespace that the Clojure runtime looks for and
 ;; loads if its available
@@ -47,9 +49,25 @@
 (defn new-comp
   "create new component with given name or symbol"
   [name-or-sym]
-  (template/create-comp
+  (comp-template/create-comp
    (cond
      (symbol? name-or-sym) (name name-or-sym)
      (string? name-or-sym) name-or-sym
      :error
      (throw (ex-info "invalid name! provide a string or symbol!" {})))))
+
+(defn new-dlg
+  "create new dialog with given name or symbol"
+  [name-or-sym]
+  (dlg-template/create-dlg
+   (cond
+     (symbol? name-or-sym) (name name-or-sym)
+     (string? name-or-sym) name-or-sym
+     :error
+     (throw (ex-info "invalid name! provide a string or symbol!" {})))))
+
+
+(defn export-info
+  "export app info including features and operations list"
+  []
+  (exports/export-info))

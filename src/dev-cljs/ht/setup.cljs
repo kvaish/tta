@@ -1,4 +1,4 @@
-(ns tta.setup
+(ns ht.setup
   (:require [re-frisk.core :refer [enable-re-frisk!]]))
 
 

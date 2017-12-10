@@ -1,20 +1,15 @@
 (ns tta.core
-  (:require [cljsjs.material-ui] ;; the first thing to ensure react loade
-            [reagent.core :as r]
-            [re-frame.core :as rf]
-            [tta.config]
-            [tta.setup]
-            [tta.app.core :refer [app]]))
+  (:require [ht.core :as ht]
+            [tta.app.db :as db]
+            [tta.app.cofx] ;; ensure load
+            [tta.app.fx]   ;; ensure load
+            [tta.app.view] ;; ensure load
+            [tta.component.root.view :refer [root]]))
 
 (js/console.log "!VERSION!")
 
-(defn mount-root []
-  (rf/clear-subscription-cache!)
-  (r/render [app]
-            (.getElementById js/document "app")))
+(def mount-root (ht/create-root-mounter root))
 
 (defn ^:export init []
-  (tta.setup/init)
-  (tta.config/init)
-  (tta.app.core/init)
+  (ht/init db/default-db)
   (mount-root))

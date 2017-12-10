@@ -1,22 +1,16 @@
 (ns tta.app.db
-  (:require [tta.util.common :as u]))
+  (:require [tta.info :refer [about features operations]]))
 
 (defonce default-db
-  {:view-size (u/get-window-size)
-   :busy? false
-   :storage {}
-   :language   {:options [{:id :en, :name "English"}
-                          {:id :es, :name "Español"}
-                          {:id :ru, :name "pусский"}]
-                :active :en
-                :translation {:en {:main {:language {:label "English"}}}
-                              :es {:main {:language {:label "Español"}}}
-                              :ru {:main {:language {:label "pусский"}}}}}
-   :auth {:token nil, :claims {}}
-
+  {:about about
+   :features features
+   :operations operations
+   
    ;; entities
-   :user {:active "demo@demo.com"
-          :all {"demo@demo.com" {:name "Demo User"}}}
+   :user {:active nil
+          :all {:user-id {:info {:name ""}
+                          :settings {:plant-id ""
+                                     :client-id ""}}}}
    :client {:active "demo"
             :all {"demo" {:name "DemoCom"}}}
    :plant {:active "demo"
@@ -29,18 +23,20 @@
    {:root {:header {}
            :sub-header {}
            :content {:active :home}}
+    :home {}
 
-    :home {;; primary
-           :dataset-creator {}
-           :dataset-analyzer {}
-           :trendline {}
-           ;; secondary
-           :settings {}
-           :config-history {}
-           :goldcup {}
-           :config {}
-           :logs {}}}
+    ;; primary
+    :dataset-creator {}
+    :dataset-analyzer {}
+    :trendline {}
+
+    ;; secondary
+    :settings {}
+    :config-history {}
+    :goldcup {}
+    :config {}
+    :logs {}}
    
    :dialog
-   {}
-})
+   {}})
+

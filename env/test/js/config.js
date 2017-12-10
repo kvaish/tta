@@ -1,7 +1,7 @@
 var htAppConfig = {
   appId: "truetemp",
 
-  // set to "" when hosted in portal itself
+  // set to "" when hosten in portal itself
   portalUri: "",
 
   serviceUri: "", //TODO: provide the correct url

@@ -4,7 +4,7 @@ var htAppConfig = {
   // set to "" when hosted in portal itself
   portalUri: "",
 
-  serviceUri: "", //TODO: provide the correct url
+  serviceUri: "", //TODO: set to correct url
 
   languages: [
     { code: 'en', flag: 'gb', name: 'English' },

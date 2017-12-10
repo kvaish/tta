@@ -4,14 +4,14 @@
             [garden.color :as gc]
             [garden.units :refer [px]]
             [ht.style :as ht]
-            [tta.app.style :as app-style
-             :refer [color color-hex color-rgba vendors]]))
+            [ht.app.style :as ht-style
+             :refer [color color-hex color-rgba vendors]]
+            [tta.app.style :as app-style]))
 
 (def home
   {:height "100%"
    :background "url('images/background.jpg')"
    :background-size "cover"
-   :background-repeat "no-repeat"
    :display "flex"
    :flex-direction "column"
    ::stylefy/auto-prefix #{:flex-direction}
@@ -34,14 +34,24 @@
   {:label {:text-transform "none"
            :font-size "18px"
            :color (color :royal-blue)}
-   :root {:display "block"}})
+   :root {:display "block"
+          :margin "0 0 5px 0"}})
 
-(defn set-cursor [style pointer?]
-  (assoc style :cursor (if pointer? "pointer")))
+(defn set-clickable [style pointer?]
+  (merge style
+         (if pointer?
+           {:cursor "pointer"
+            ::stylefy/mode {:hover
+                            {:background (str (color-rgba :white nil 0.9)
+                                              " !important")
+                             :box-shadow "rgba(0, 0, 0, 0.12) 10px 8px 6px, rgba(0, 0, 0, 0.12) 10px 8px 4px !important"
+                             :transform "translate(-5px, -5px)"}}}
+           {:background (color-rgba :white nil 0.8)})))
 
 (defn disable-card [style]
-  (assoc style :background-color (str (color-hex :alumina-grey) " !important")
-         :cursor nil))
+  (assoc style
+         :background-color (str (color-rgba :alumina-grey nil 0.8)
+                                " !important")))
 
 (defn disable-button [style]
   (assoc style :color (color-hex :slate-grey)))
@@ -51,24 +61,28 @@
    :position "relative"
    :margin "0 20px 0 0"
    :padding "30px"
-   :opacity 0.8
+   :background-color (str (color-rgba :white nil 0.6) " !important")
+   :border-radius "10px !important"
+   :-ms-transition-duration "100ms !important"
    ::stylefy/vendors vendors
-   ::stylefy/auto-prefix #{:flex}
+   ::stylefy/auto-prefix #{:flex :transform}
    ::stylefy/sub-styles
-   {:title {:font-weight 700
+   {:title {:font-weight 600
             :font-size "24px"
             :color (color :royal-blue)}
-    :hr {:width "30px"
-         :margin-left 0
+    :hr {:display "block"
+         :float "left"
+         :width "30px"
          :margin-top 0
-         :border (str "1.5px solid" (color-hex :royal-blue))}
+         :border (str "1px solid " (color-hex :royal-blue))}
     :icon {:color (color :royal-blue)
            :width "100px"
            :position "absolute"
            :bottom "30px"
            :right 0}
     :desc {:color (color :royal-blue)
-           :max-width "200px"
+           :max-width "260px"
+           :font-weight 300
            :font-size "18px"}}})
 
 (def card-secondary
@@ -76,8 +90,10 @@
     (-> card-primary
         (assoc :padding "20px")
         (assoc-in [ss :title :font-size] "20px")
-        (assoc-in [ss :hr :width] "24px")
-        (assoc-in [ss :hr :border-width] "1px")
+        (update-in [ss :hr] merge
+                   {:width "24px"
+                    :border-width "0.5px"
+                    :-ms-border-width "1px"})
         (update-in [ss :desc] merge { :font-size "16px"
                                      :position "absolute"
                                      :bottom "20px"}))))

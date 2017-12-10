@@ -46,16 +46,20 @@
                       ["clean"]
                       ["garden" "once"]
                       ["cljsbuild" "once" "min"]]]}
+
+  :source-paths ["src/clj" "src/cljc"]
   
   :profiles
   {:dev
-   {:source-paths ["src/clj" "src/dev-clj"]
+   {:source-paths ["src/dev-clj"]
     :dependencies [[binaryage/devtools "0.9.8"]
                    [re-frisk "0.5.2"
                     :exclusions [org.clojure/clojure]]
                    [figwheel-sidecar "0.5.14"
                     :exclusions [org.clojure/tools.nrepl]]
-                   [com.cemerick/piggieback "0.2.2"]]
+                   [com.cemerick/piggieback "0.2.2"]
+                   [org.clojure/data.json "0.2.6"
+                    :exclusions [org.clojure/clojure]]]
 
     :garden
     {:builds
@@ -66,8 +70,7 @@
                   :pretty-print? true}}]}}
 
    :prd
-   {:source-paths ["src/clj"]
-    :garden
+   {:garden
     {:builds
      [{:id "style" ;; optional name of the build
        :source-paths ["src/clj" "src/cljc"]

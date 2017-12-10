@@ -1,52 +1,50 @@
 (ns tta.app.subs
   (:require [re-frame.core :as rf]))
 
-(rf/reg-sub
- ::view-size
- (fn [db]
-   (get-in db [:view-size])))
+;;;;;;;;;;;;;;;;;;;;;
+;; Primary signals ;;
+;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
- ::language-options
- (fn [db]
-   (get-in db [:language :options])))
+ ::user
+ (fn [db _] (:user db)))
 
 (rf/reg-sub
- ::active-language
- (fn [db]
-   (get-in db [:language :active])))
+ ::client
+ (fn [db _] (:client db)))
 
 (rf/reg-sub
- ::translate
- (fn [db [_ key-v]]
-   (let [{:keys [active translation]} (:language db)]
-     (-> translation
-         (get active)
-         (get-in key-v)))))
+ ::plant
+ (fn [db _] (:plant db)))
 
 (rf/reg-sub
- ::auth-claims
- (fn [db _]
-   (get-in db [:auth :claims])))
+ ::dataset
+ (fn [db _] (:dataset db)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Derived signals/subscriptions ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
- ::auth-token
- (fn [db _]
-   (get-in db [:auth :token])))
+ ::active-user
+ :<- [::user]
+ (fn [user _]
+   (get-in user [:all (:active user)])))
 
 (rf/reg-sub
  ::active-client
- (fn [db _]
-   (let [{:keys [active] :as client} (:client db)]
-     (get-in client [:all active]))))
+ :<- [::client]
+ (fn [client _]
+   (get-in client [:all (:active client)])))
 
 (rf/reg-sub
  ::active-plant
- (fn [db _]
-   (let [{:keys [active] :as plant} (:plant db)]
-     (get-in plant [:all active]))))
+ :<- [::plant]
+ (fn [plant _]
+   (get-in plant [:all (:active plant)])))
 
 (rf/reg-sub
- ::busy?
- (fn [db _]
-   (get-in db [:busy?])))
+ ::active-dataset
+ :<- [::dataset]
+ (fn [dataset _]
+   (get-in dataset [:all (:active dataset)])))

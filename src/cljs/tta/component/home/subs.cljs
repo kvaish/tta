@@ -1,19 +1,22 @@
 ;; subscriptions for component home
 (ns tta.component.home.subs
   (:require [re-frame.core :as rf]
-            [tta.util.auth :as auth]
-            [tta.app.subs :as app-subs]))
+            [ht.app.subs :as ht-subs :refer [translate]]
+            [tta.app.subs :as app-subs]
+            [tta.util.auth :as auth]))
 
 (rf/reg-sub
- ::data
- (fn [db _]
-   (get-in db [:component :home :data])))
+ ::home
+ (fn [db _] (get-in db [:component :home])))
 
 (rf/reg-sub
  ::access-rules
- (fn [db _]
+ :<- [::ht-subs/auth-claims]
+ :<- [::ht-subs/features]
+ :<- [::ht-subs/operations]
+ (fn [[claims features operations] _]
    ;;TODO: implement access rules based on claim
-   ;; valid values -  enabled disabled hidden
+   ;; valid values -  :enabled :disabled :hidden
    {:card
     {:dataset-creator :enabled
      :dataset-analyzer :enabled
