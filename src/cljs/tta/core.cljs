@@ -11,5 +11,7 @@
 (def mount-root (ht/create-root-mounter root))
 
 (defn ^:export init []
-  (ht/init db/default-db)
+  (ht/init)
+  (db/init)
+  (ht/init-db @db/default-db)
   (mount-root))

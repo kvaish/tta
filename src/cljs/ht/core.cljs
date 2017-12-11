@@ -18,12 +18,15 @@
 (defn bind-resize-event []
   (i/oset js/window :onresize #(rf/dispatch [::event/update-view-size])))
 
-(defn init [app-db]
+(defn init []
   (setup/init)
   (config/init)
+  (db/init)
   (style/init)
-  (rf/dispatch-sync [::event/initialize-db (merge db/default-db app-db)])
   (bind-resize-event))
+
+(defn init-db [app-db]
+  (rf/dispatch-sync [::event/initialize-db (merge @db/default-db app-db)]))
 
 (defn create-app [root]
   (fn []
