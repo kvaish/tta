@@ -54,7 +54,7 @@
 (rf/reg-sub
  ::active-language
  :<- [::language]
- (fn [db _] (:active language)))
+ (fn [language _] (:active language)))
 
 (rf/reg-sub
  ::translation

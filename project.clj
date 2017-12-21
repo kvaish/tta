@@ -1,5 +1,5 @@
-(defproject tta "0.1.0-SNAPSHOT"
-  :dependencies [[org.clojure/clojure "1.9.0-RC1"]
+(defproject tta "1.0.0.D.1"
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.9.946"]
                  [org.clojure/core.async "0.3.465"]
                  [reagent "0.7.0"

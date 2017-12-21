@@ -22,13 +22,19 @@
 
 
 (defn init []
-  (swap! default-db
-         (fn [db]
-           (-> db
-            (assoc :view-size (u/get-window-size))
-            (assoc :config @config)
-            (assoc-in [:language :options]
-                      (mapv (fn [{:keys [code flag name]}]
-                                {:id (keyword code)
-                                 :name name})
-                              (:languages @config)))))))
+  (let [language-options (mapv (fn [{:keys [code flag name]}]
+                                 {:id (keyword code)
+                                  :name name})
+                               (:languages @config))
+        language-active (-> (u/get-storage :language true)
+                            (:code)
+                            (keyword)
+                            ((set (map :id language-options)))
+                            (or :en))]
+    (swap! default-db
+           (fn [db]
+             (-> db
+                 (assoc :view-size (u/get-window-size))
+                 (assoc :config @config)
+                 (update :language merge {:options language-options
+                                          :active language-active}))))))

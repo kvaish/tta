@@ -3,7 +3,8 @@
             [re-frame.cofx :refer [inject-cofx]]
             [goog.string :as gstr]
             [goog.string.format]
-            [goog.date :as gdate]))
+            [goog.date :as gdate]
+            [ht.util.common :as u]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -16,10 +17,14 @@
  (fn [{:keys [db window-size]} _]
    {:db (assoc-in db [:view-size] window-size)}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::set-language
- (fn [db [_ id]]
-   (assoc-in db [:language :active] id)))
+ (fn [{:keys [db]} [_ id]]
+   (let [lang (u/pick-one #(= (name id) (:code %))
+                          (get-in db [:config :languages]))]
+     {:db (assoc-in db [:language :active] id)
+      :storage/set-common {:key :language
+                           :value lang}})))
 
 (rf/reg-event-db
  ::set-busy?
