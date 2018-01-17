@@ -13,7 +13,8 @@
   (.call (g/get js/JSON "stringify") js/JSON o))
 
 (defn json-parse [s]
-  (.call (g/get js/JSON "parse") js/JSON s))
+  (if string? s
+      (.call (g/get js/JSON "parse") js/JSON s)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;

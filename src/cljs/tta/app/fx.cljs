@@ -11,3 +11,12 @@
     {:user-id user-id
      :evt-success [::event/set-user-settings user-id]
      :evt-failure [::ht-event/service-failure true]})))
+
+(rf/reg-fx
+ :service/update-user
+ (fn [data]
+   (svc/update-user-settings
+    {:user-id (:user-id data)
+     :data (:data data)
+     :evt-success [::event/update-user-settings (:user-id data)]
+     :evt-failure [::ht-event/service-failure true]})))

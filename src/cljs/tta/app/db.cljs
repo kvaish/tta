@@ -9,9 +9,9 @@
     
     ;; entities
     :user {:active nil
-           :all {:user-id {:info {:name ""}
-                           :settings {:plant-id ""
-                                      :client-id ""}}}}
+           :all {:user-id {:is-aggreed? false
+                           :plant-id ""
+                           :client-id ""}}}
     :client {:active "demo"
              :all {"demo" {:name "DemoCom"}}}
     :plant {:active "demo"
@@ -39,7 +39,8 @@
      :logs {}}
     
     :dialog
-    {}}))
+    {:user-agreement
+     {:open? false}}}))
 
 (defn init []
   (swap! default-db

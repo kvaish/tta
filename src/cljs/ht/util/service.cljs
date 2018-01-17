@@ -37,7 +37,7 @@
 (defn fetch-auth [{:keys [evt-success evt-failure]}]
   (go
     (let [{:keys [status body]}
-          (<! (http/get (api-uri :fetch-auth)
+          (<! (http/get  (str (:portal-uri @config) (api-uri :fetch-auth))
                         {:headers {"Accept" "application/edn"}
                          :query-params
                          {:timestamp (i/ocall (js/Date.) :valueOf)}}))]

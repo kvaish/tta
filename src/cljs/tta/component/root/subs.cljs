@@ -26,3 +26,17 @@
  :<- [::active-content]
  (fn [[claims active-content] _]
    (auth/allow-root-content? claims active-content)))
+
+(rf/reg-sub
+ ::active-dataset-action
+ (fn [db _]
+   ;; TODO: implement to choose one of dataset-creator or dataset-analyzer
+   :dataset-creator))
+
+(rf/reg-sub
+ ::agreed?
+ :<- [::app-subs/user]
+ (fn [user db]
+   (let [user-id (get user :active)
+         users (get user :all)]
+     (get-in users [(keyword user-id) :agreed?]))))

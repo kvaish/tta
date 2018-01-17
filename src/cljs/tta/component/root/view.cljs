@@ -13,7 +13,10 @@
             [tta.component.root.style :as style]
             [tta.component.root.subs :as subs]
             [tta.component.root.event :as event]
-            [tta.component.home.view :refer [home]]))
+            [tta.component.home.view :refer [home]]
+            [tta.dialog.user-agreement.view :refer [user-agreement]]
+            [tta.dialog.user-agreement.event :as ua-event]
+            [tta.dialog.user-agreement.subs :as ua-subs]))
 
 ;;; header ;;;
 
@@ -120,6 +123,23 @@
    [:p (use-sub-style style/no-access :p)
     (translate [:root :noAccess :message] "Insufficient rights!")]])
 
+(defn disclaimer-reject []
+  [:div 
+   (use-style style/disclaimer-reject)
+     [:p (use-sub-style style/disclaimer-reject :p)
+      (translate [:root :disclaimerReject :message]
+                 "Use of this application is prohibited without agreement!")]
+   [:div (use-style style/close-button)
+    [:i {:class "fa fa-times"}]
+    ]
+   [:div  (use-style style/disclaimer-reject-buttons) 
+    [ui/raised-button
+     {:label (translate [:app :disclaimer :retry] "Retry")
+      :on-click #(rf/dispatch [::ua-event/open? {}])}]
+    [ui/raised-button
+     {:label (translate [:app :disclaimer :exit] "Exit")
+      }]]])
+
 (defn content []
   (let [view-size @(rf/subscribe [::ht-subs/view-size])
         active-content @(rf/subscribe [::subs/active-content])
@@ -141,15 +161,27 @@
          :config            [:div "config"]
          :logs              [:div "logs"])
        ;; have no rights!!
-       [no-access])]))
+       [no-access])])) 
 
 
 ;;; root ;;;
 
 (defn root []
-  [:div (use-style style/root)
-   [header]
-   [sub-header]
-   [content]])
-
-
+  (let [active-user @(rf/subscribe [::app-subs/active-user])
+        user-detail @(rf/subscribe [::app-subs/user])
+        is-agreed @(rf/subscribe [::subs/agreed?])]
+    (if-not active-user
+      (rf/dispatch [::ht-event/fetch-auth])
+      (rf/dispatch [::app-event/fetch-user (:active user-detail)]))
+    [:div (use-style style/root)
+     [header]
+     (if is-agreed
+       (do
+         [sub-header]
+         [content]))
+     (if (and active-user (not is-agreed))
+       (do (rf/dispatch [::ua-event/open? {}])
+           [user-agreement]))
+     (if-not (or is-agreed
+                  @(rf/subscribe [::ua-subs/open?]))
+       [disclaimer-reject])]))
