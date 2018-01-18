@@ -3,6 +3,7 @@
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.config :refer [config]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -133,7 +134,8 @@
       (translate [:root :disclaimerReject :message]
                  "Use of this application is prohibited without agreement!")]
    [:div (use-style style/close-button)
-    [:i {:class "fa fa-times"}]
+    [:i {:class "fa fa-times"
+         :href (:portal-uri @config)}]
     ]
    [:div  (use-style style/disclaimer-reject-buttons) 
     [ui/raised-button
@@ -141,7 +143,7 @@
       :on-click #(rf/dispatch [::ua-event/open {}])}]
     [ui/raised-button
      {:label (translate [:app :disclaimer :exit] "Exit")
-      }]]])
+      :href (:portal-uri @config)}]]])
 
 (defn content []
   (let [view-size @(rf/subscribe [::ht-subs/view-size])
@@ -166,16 +168,16 @@
          :logs              [:div "logs"])
        ;; have no rights!!
        [no-access])])) 
-
 ;;; root ;;;
 
 (defn root []
   (let [active-user @(rf/subscribe [::app-subs/active-user])
         is-agreed @(rf/subscribe [::subs/agreed?])]
+    (js/console.log is-agreed)
     [:div (use-style style/root)
      [header]
      (if is-agreed
-       (list
+       (list 
         [sub-header]
         [content]))
      (if-not is-agreed

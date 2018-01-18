@@ -8,12 +8,28 @@
             [ht.config :as config]
             [ht.setup :as setup]
             [ht.app.db :as db]
+            [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [ht.app.cofx] ;; ensure load
             [ht.app.fx]   ;; ensure load
             [ht.app.event :as event]
             [ht.app.subs :as subs :refer [translate]]
             [ht.app.style :as style]
-            [ht.app.view :refer [busy-screen]]))
+            [ht.app.view :refer [busy-screen]]
+            [ht.app.style :as style]))
+
+
+(defn no-claims []
+  [:div 
+   (use-style style/center-box)
+   [:p (use-sub-style style/center-box :p)
+    (translate [:root :no-claims :message]
+               "Unauthorized access! Please login again.")]
+   [:div (use-style style/close-button)
+    [:i {:class "fa fa-times"}]]
+   [:div  (use-style style/retry-login-button) 
+    [ui/raised-button
+     {:label (translate [:root :login :label] "Login")
+      :href (:portal-uri @config/config)}]]])
 
 (defn bind-resize-event []
   (i/oset js/window :onresize #(rf/dispatch [::event/update-view-size])))
@@ -37,8 +53,9 @@
     [ui/mui-theme-provider
      {:mui-theme (get-mui-theme style/theme)}
      [:div
-      [root] ;;TODO:  sub claims  - has claims show root
-      ;;TODO: auth fail component
+      (if @(rf/subscribe [::subs/auth-claims])
+        [root]
+        [no-claims]) 
       [busy-screen]]]))
 
 (defn create-root-mounter [root]

@@ -27,12 +27,12 @@
                       {:label (translate [:app :disclaimer :accept]
                                          "I Agree")
                        :on-click #(rf/dispatch
-                                   [::event/set-use-agreement active-user
+                                   [::event/set-user-agreement active-user
                                     {:agreed? true}])}])
        (r/as-element [ui/flat-button
                       {:label (translate [:app :disclaimer :reject]
                                          "I Disagree")
-                       :on-click #(rf/dispatch [::event/set-use-agreement active-user
+                       :on-click #(rf/dispatch [::event/set-user-agreement active-user
                                                 {:agreed? false}])}])]
       }
      (into [:div {:style {:width "100%"
@@ -43,6 +43,4 @@
                                  [:app :disclaimer :description]
                                  "You accept that the TrueTemp™ is provided free of charge and “as is”, and you recognize that HTAS does not provide any warranty or representation of any kind, express or implied, and any warranties, representations, conditions or other terms that may be implied by statute or general law are, to the fullest extent permitted by law excluded, including, without limitation, any implied warranties of quality or fitness for purpose, the accuracy, completeness, or usefulness of the TrueTemp™.
 
-For further details, please refer to the SOFTWARE LICENSE AGREEMENT with HTAS.")))])
-     ])
-  )
+For further details, please refer to the SOFTWARE LICENSE AGREEMENT with HTAS.")))])]))

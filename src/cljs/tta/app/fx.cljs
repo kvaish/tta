@@ -20,3 +20,13 @@
      :data (:data data)
      :evt-success [::event/update-user-settings (:user-id data)]
      :evt-failure [::ht-event/service-failure true]})))
+
+
+(rf/reg-fx
+ :service/create-user
+ (fn [data]
+   (svc/create-user
+    {:user-id (:user-id data)
+     :data (:data data)
+     :evt-success [::event/update-user-settings (:user-id data)]
+     :evt-failure [::ht-event/service-failure true]})))

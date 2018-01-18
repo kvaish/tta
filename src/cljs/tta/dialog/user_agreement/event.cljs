@@ -29,12 +29,13 @@
    (assoc-in db [:dialog :user-agreement :data] data)))
 
 (rf/reg-event-fx
- ::set-use-agreement
- (fn [_ [_ user-id data]]
-   {:service/update-user {:user-id user-id :data data}}))
+ ::set-user-agreement
+ (fn [{:keys [db]} [_ user-id data]]
+   (if (get-in db [:user :all user-id])
+     {:service/update-user {:user-id user-id :data data}}
+     {:service/create-user {:user-id user-id :data data}})))
 
 (rf/reg-event-db
  ::set-options
  (fn [db [_ options]]
    (update-in db [:dialog :user-agreement] merge options)))
-

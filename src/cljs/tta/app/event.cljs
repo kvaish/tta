@@ -49,14 +49,16 @@
  (fn [{:keys [db]} _]
    (let [user-id (get-in db [:user :active])
          {:keys [agreed?]} (get-in db [:user :all user-id])]
-     (js/console.log "show-agreement" agreed?)
-     (if (nil? agreed?)
-       {:dispatch [:tta.dialog.user-agreement.event/open]}))))
+     
+     {:dispatch (if (nil? agreed?)
+                  [:tta.dialog.user-agreement.event/open]
+                  [:tta.dialog.user-agreement.event/close])})))
 
 (rf/reg-event-fx
  ::update-user-settings
  (fn [_ [_ user-id]]
-   {:service/fetch-user user-id}))
+   {:dispatch-n (list 
+                 [::fetch-user user-id])}))
 
 
 (rf/reg-event-fx

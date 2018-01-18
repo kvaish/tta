@@ -54,3 +54,23 @@
         (do
           (js/console.log [status body])
           (rf/dispatch (conj evt-failure)))))))
+
+(defn create-user [{:keys [user-id data evt-success evt-failure]}]
+  (go
+    (let [token @(rf/subscribe [::ht-subs/auth-token])
+          {:keys [status body]} 
+          (<! (http/post (str (:service-uri @config)
+                             (api-uri :fetch-user-settings))
+                        {:headers { "Accept" "application/json"
+                                   "authorization" (str "Token " token)}
+                         :json-params (js->clj (e/to-js :user (assoc data :id user-id)))}))]
+      (if (= status 200)
+        ;;success
+        (let [{:keys [err result]} body]
+          (rf/dispatch (conj evt-success result)))
+        ;;failuer
+        (do
+          (js/console.log [status body])
+          (rf/dispatch (conj evt-failure)))))))
+
+
