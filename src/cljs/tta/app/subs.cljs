@@ -29,7 +29,7 @@
  ::active-user
  :<- [::user]
  (fn [user _]
-   (get user :active)))
+   (get-in user [:all (:active user)])))
 
 (rf/reg-sub
  ::active-client

@@ -9,7 +9,7 @@
  (fn [user-id]
    (svc/fetch-user-settings
     {:user-id user-id
-     :evt-success [::event/set-user-settings user-id]
+     :evt-success [::event/fetch-user-success user-id]
      :evt-failure [::ht-event/service-failure true]})))
 
 (rf/reg-fx

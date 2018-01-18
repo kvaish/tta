@@ -27,7 +27,7 @@
                          {:headers { "Accept" "application/json"
                                     "authorization" (str "Token " token)}
                           #_:query-params
-                          {:timestamp (i/ocall (js/Date.) :valueOf)}}))]
+                          #_{:timestamp (i/ocall (js/Date.) :valueOf)}}))]
       (if (= status 200)
         ;;success
         (let [{:keys [err result]} body]
@@ -45,11 +45,7 @@
                              (api-uri :fetch-user-settings) user-id)
                         {:headers { "Accept" "application/json"
                                    "authorization" (str "Token " token)}
-                         :json-params (js->clj (e/to-js :user data))
-                         #_:content-type #_:json
-                        
-                         #_:query-params
-                         {:timestamp (i/ocall (js/Date.) :valueOf)}}))]
+                         :json-params (js->clj (e/to-js :user data))}))]
       (if (= status 200)
         ;;success
         (let [{:keys [err result]} body]

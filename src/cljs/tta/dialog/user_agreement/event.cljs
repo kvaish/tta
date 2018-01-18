@@ -6,7 +6,7 @@
             [tta.app.event :as app-event]))
 
 (rf/reg-event-db
- ::open?
+ ::open
  (fn [db [_ options]]
       (update-in db [:dialog :user-agreement] merge options {:open? true})))
 

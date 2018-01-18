@@ -9,7 +9,7 @@
     
     ;; entities
     :user {:active nil
-           :all {:user-id {:is-aggreed? false
+           :all {:user-id {:aggreed? false
                            :plant-id ""
                            :client-id ""}}}
     :client {:active "demo"
@@ -40,6 +40,8 @@
     
     :dialog
     {:user-agreement
+     {:open? false}
+     :choose-client
      {:open? false}}}))
 
 (defn init []

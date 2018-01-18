@@ -52,14 +52,17 @@
   (let [now (.valueOf (gdate/DateTime.))
         claims (if claims (update claims :exp gdate/fromIsoString))
         delay (if claims (- (.valueOf (:exp claims)) now 300e3)) ;; 5min
-        fetch-user? (and claims (not (get-in db [:user :active])))
-        user-id (:id claims)]
+        user-id (:id claims)
+        init? (and claims (not (get-in db [:auth :fetched?])))]
     (cond-> {:db (-> db
-                     (update :auth assoc :token token :claims claims)
+                     (update :auth assoc
+                             :token token
+                             :claims claims
+                             :fetched? true)
                      (assoc-in [:user :active] user-id))}
-      delay (assoc :disptach-later [{:ms delay
+      delay (assoc :dispatch-later [{:ms delay
                                      :dispatch [:fetch-auth]}])
-      fetch-user? (assoc :dispatch [:fetch-user user-id]))))
+      init? (assoc :dispatch [:app/init]))))
 
 (rf/reg-event-fx ::set-auth set-auth)
 

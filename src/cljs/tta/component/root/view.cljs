@@ -16,7 +16,10 @@
             [tta.component.home.view :refer [home]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.user-agreement.event :as ua-event]
-            [tta.dialog.user-agreement.subs :as ua-subs]))
+            [tta.dialog.user-agreement.subs :as ua-subs]
+            [tta.dialog.choose-client.subs :as cc-subs]
+            [tta.dialog.choose-client.event :as cc-event]
+            [tta.dialog.choose-client.view :refer [choose-client]]))
 
 ;;; header ;;;
 
@@ -135,7 +138,7 @@
    [:div  (use-style style/disclaimer-reject-buttons) 
     [ui/raised-button
      {:label (translate [:app :disclaimer :retry] "Retry")
-      :on-click #(rf/dispatch [::ua-event/open? {}])}]
+      :on-click #(rf/dispatch [::ua-event/open {}])}]
     [ui/raised-button
      {:label (translate [:app :disclaimer :exit] "Exit")
       }]]])
@@ -148,7 +151,8 @@
                   assoc :height (style/content-height view-size))
      (if content-allowed?
        (case active-content
-         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}
+                :on-load #(rf/dispatch [::ht-event/fetch-auth] )]
          ;; :home  [:div "home"]
          ;; primary
          :dataset-creator   [:div "dataset-creator"]
@@ -163,25 +167,18 @@
        ;; have no rights!!
        [no-access])])) 
 
-
 ;;; root ;;;
 
 (defn root []
   (let [active-user @(rf/subscribe [::app-subs/active-user])
-        user-detail @(rf/subscribe [::app-subs/user])
         is-agreed @(rf/subscribe [::subs/agreed?])]
-    (if-not active-user
-      (rf/dispatch [::ht-event/fetch-auth])
-      (rf/dispatch [::app-event/fetch-user (:active user-detail)]))
     [:div (use-style style/root)
      [header]
      (if is-agreed
-       (do
-         [sub-header]
-         [content]))
-     (if (and active-user (not is-agreed))
-       (do (rf/dispatch [::ua-event/open? {}])
-           [user-agreement]))
-     (if-not (or is-agreed
-                  @(rf/subscribe [::ua-subs/open?]))
+       (list
+        [sub-header]
+        [content]))
+     (if-not is-agreed
+       [user-agreement])
+     (if (false? is-agreed)
        [disclaimer-reject])]))

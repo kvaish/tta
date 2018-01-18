@@ -37,7 +37,8 @@
                                     "resources/public/css/build"
                                     "target"]
 
-  :figwheel {:css-dirs ["resources/public/css"]}
+  :figwheel {:css-dirs ["resources/public/css"]
+             :server-port 5309}
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
@@ -104,7 +105,4 @@
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
                     :pretty-print    false
-                    :externs ["externs.js"]}}
-
-
-    ]})
+                    :externs ["externs.js"]}}]})

@@ -103,11 +103,11 @@
 
 (defn my-dlg []
   (let [open? @(rf/subscribe [::subs/open?])]
-    (ui/dialog
+    [ui/dialog
      {:open open?
       :modal true}
      [:div
-      \"my-dlg\"])))"
+      \"my-dlg\"]]))"
 
    })
 

@@ -16,7 +16,7 @@
                :translation {:en {:main {:language {:label "English"}}}
                              :es {:main {:language {:label "Español"}}}
                              :ru {:main {:language {:label "pусский"}}}}}
-    :auth {:token nil, :claims nil}
+    :auth {:token nil, :claims nil, :fetched? false}
     :component {}
     :dialog {}}))
 
@@ -25,6 +25,7 @@
   (let [language-options (mapv (fn [{:keys [code flag name]}]
                                  {:id (keyword code)
                                   :name name})
+
                                (:languages @config))
         language-active (-> (u/get-storage :language true)
                             (:code)

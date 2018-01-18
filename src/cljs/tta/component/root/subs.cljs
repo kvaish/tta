@@ -39,4 +39,4 @@
  (fn [user db]
    (let [user-id (get user :active)
          users (get user :all)]
-     (get-in users [(keyword user-id) :agreed?]))))
+          (:agreed? (get users user-id)))))

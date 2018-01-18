@@ -18,12 +18,16 @@
 (defn bind-resize-event []
   (i/oset js/window :onresize #(rf/dispatch [::event/update-view-size])))
 
+(defn fetch-auth []
+  (rf/dispatch [::event/fetch-auth]))
+
 (defn init []
   (setup/init)
   (config/init)
   (db/init)
   (style/init)
-  (bind-resize-event))
+  (bind-resize-event)
+  (fetch-auth))
 
 (defn init-db [app-db]
   (rf/dispatch-sync [::event/initialize-db (merge @db/default-db app-db)]))
@@ -33,7 +37,8 @@
     [ui/mui-theme-provider
      {:mui-theme (get-mui-theme style/theme)}
      [:div
-      [root]
+      [root] ;;TODO:  sub claims  - has claims show root
+      ;;TODO: auth fail component
       [busy-screen]]]))
 
 (defn create-root-mounter [root]

@@ -17,7 +17,7 @@
 
 (defn user-agreement []
   (let [open? @(rf/subscribe [::subs/open?])
-        active-user @(rf/subscribe [::app-subs/active-user])]
+        active-user (:active @(rf/subscribe [::app-subs/user]))]
     [ui/dialog
      {:open open?
       :modal true
@@ -28,12 +28,12 @@
                                          "I Agree")
                        :on-click #(rf/dispatch
                                    [::event/set-use-agreement active-user
-                                    {:agreed? true}]
-                                   )}])
+                                    {:agreed? true}])}])
        (r/as-element [ui/flat-button
                       {:label (translate [:app :disclaimer :reject]
                                          "I Disagree")
-                       :on-click #(rf/dispatch [::event/close])}])]
+                       :on-click #(rf/dispatch [::event/set-use-agreement active-user
+                                                {:agreed? false}])}])]
       }
      (into [:div {:style {:width "100%"
                             :height "100%"}}
