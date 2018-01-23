@@ -1,5 +1,9 @@
 (ns tta.app.subs
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [tta.util.service :as svc]
+            [tta.app.event :as event]
+            [ht.app.event :as ht-event]
+            [reagent.ratom :as rr]))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Primary signals ;;
@@ -48,3 +52,15 @@
  :<- [::dataset]
  (fn [dataset _]
    (get-in dataset [:all (:active dataset)])))
+
+(rf/reg-sub-raw
+ ::country-list
+ (fn [dba [_]]
+   (let [countries (get @dba :countries)]
+     (if (or (empty? countries) (nil? countries))
+       (svc/fetch-search-options
+        {:evt-success [::event/set-client-search-options]
+         :evt-failure [::ht-event/service-failure true]}))
+     (rr/make-reaction
+      (fn [] countries)))))
+

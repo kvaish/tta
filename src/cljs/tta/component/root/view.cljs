@@ -20,7 +20,8 @@
             [tta.dialog.user-agreement.subs :as ua-subs]
             [tta.dialog.choose-client.subs :as cc-subs]
             [tta.dialog.choose-client.event :as cc-event]
-            [tta.dialog.choose-client.view :refer [choose-client]]))
+            [tta.dialog.choose-client.view :refer [choose-client]]
+            [tta.dialog.choose-plant.view :refer [choose-plant]]))
 
 ;;; header ;;;
 
@@ -172,14 +173,17 @@
 
 (defn root []
   (let [active-user @(rf/subscribe [::app-subs/active-user])
-        is-agreed @(rf/subscribe [::subs/agreed?])]
-    (js/console.log is-agreed)
+        is-agreed @(rf/subscribe [::subs/agreed?])
+        active-client @(rf/subscribe [::app-subs/active-client])]
     [:div (use-style style/root)
      [header]
      (if is-agreed
        (list 
         [sub-header]
-        [content]))
+        [content]
+        [choose-client]))
+     (if active-client
+       [choose-plant] )
      (if-not is-agreed
        [user-agreement])
      (if (false? is-agreed)
