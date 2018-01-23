@@ -17,31 +17,39 @@
   (let [{h :head-row-height} ht/root-layout
         logo-h 18
         logo-s (/ (- h logo-h) 2)]
-    {:background (:blue-spot-light ht/gradients)
-     :height (px h)
-     :display "flex"
-     :flex-direction "row"
-     ::stylefy/vendors vendors
+    {:background           (:blue-spot-light ht/gradients)
+     :height               (px h)
+     :display              "flex"
+     :flex-direction       "row"
+     ::stylefy/vendors     vendors
      ::stylefy/auto-prefix #{:flex-direction}
      ;; children styles
      ::stylefy/sub-styles
-     {:left {:background-image "url('images/ht_logo_white.png')"
-             :height (px logo-h)
-             :background-repeat "no-repeat"
-             :background-size "contain"
-             :margin-top (px logo-s)
-             :margin-left (px logo-s)
-             :width "200px"}
-      :middle {:flex 1
-               ::stylefy/vendors vendors
-               ::stylefy/auto-prefix #{:flex}}
-      :right {:font-size "12px"
-              :padding "24px 30px 0 12px"}
-      :link {:text-decoration "none"
-             :color (color :white)
-             :margin-left "30px"}
-      :link-icon {:margin-right "5px"}
-      :icon-only {:font-size "18px"}}}))
+                           {:left   {:background-image  "url('images/ht_logo_white.png')"
+                                     :height            (px logo-h)
+                                     :background-repeat "no-repeat"
+                                     :background-size   "contain"
+                                     :margin-top        (px logo-s)
+                                     :margin-left       (px logo-s)
+                                     :width             "200px"}
+                            :middle {:flex                 1
+                                     ::stylefy/vendors     vendors
+                                     ::stylefy/auto-prefix #{:flex}}
+                            :right  {:font-size "12px"
+                                     :padding   "24px 30px 0 12px"}
+                            ;:link {:text-decoration "none"
+                            ;       :color (color :white)
+                            ;:margin-left "30px"}
+     :link                 {:margin-right "15px !important"
+                            :color          "#fff !important"
+                            :text-transform "none"
+                           }
+     :icon-only            {:color          "#fff !important"
+                            :text-transform "none"
+                            :font-size "12px !important"}
+     :active-menu          {:color (str (color :royal-blue) "!important")}
+     }}))
+
 
 (def sub-header
   (let [{h :sub-head-row-height} ht/root-layout

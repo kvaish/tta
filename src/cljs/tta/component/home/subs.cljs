@@ -7,7 +7,8 @@
 
 (rf/reg-sub
  ::home
- (fn [db _] (get-in db [:component :home])))
+ (fn [db _]
+   (get-in db [:component :home])))
 
 (rf/reg-sub
  ::access-rules
@@ -21,10 +22,10 @@
     {:dataset-creator :enabled
      :dataset-analyzer :enabled
      :trendline :enabled
-     :settings :enabled
+     :settings :disabled
      :config-history :enabled
-     :goldcup :disabled
-     :config :disabled
+     :goldcup :enabled
+     :config :enabled
      :logs :enabled}
     :button
     {:data-entry :enabled

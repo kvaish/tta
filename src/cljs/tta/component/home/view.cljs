@@ -30,6 +30,7 @@
         title]
        [:hr (use-sub-style card-style :hr)]
        [:br]
+       [:div (use-sub-style card-style :button-container)
        (if buttons
          (doall
           (map (fn [{:keys [id label action] btn-access :access}]
@@ -46,12 +47,11 @@
                      :icon (r/as-element
                             [ui/font-icon {:class-name "fa fa-arrow-right"}])
                      :style (:root style/card-button)}]))
-               buttons)))
+               buttons)))]
        [:p (use-sub-style card-style :desc)
         desc]
-       (if primary? [:i (use-sub-style card-style :icon
-                                       {::stylefy/with-classes ["fa" "fa-home" "fa-5x"]})])]
-      :hidden [:div {:style {:flex 1}}])))
+       [:img (merge (use-sub-style style/card-primary :icon) {:src icon} )  ]]
+      :hidden [ui/paper (use-style (style/hide-card card-style))])))
 
 (defn home [props]
   (let [{:keys [on-select]} props
@@ -78,21 +78,21 @@
                  :label (translate [:home :button :print-logsheet]
                                    "Print logsheet pdf")
                  :action #(rf/dispatch [::event/print-logsheet])}])
-              :icon nil}
+              :icon "images/Create_dataset.svg"}
              {:id :dataset-analyzer
               :primary? true
               :title (translate [:home-card :dataset-analyzer :title]
                                 "Analyse Dataset")
               :desc (translate [:home-card :dataset-analyzer :description]
                                "Preview the Overall, TWT, Burner status of latest published dataset")
-              :icon nil}
+              :icon "images/Analyse_dataset.svg"}
              {:id :trendline
               :primary? true
               :title (translate [:home-card :trendline :title]
                                 "Trendline Graph")
               :desc (translate [:home-card :trendline :description]
                                "Overview of all the recorded datasets")
-              :icon nil}]
+              :icon "images/Trendline_graph.svg"}]
             (map #(assoc % :access (get-in access-rule [:card (:id %)])
                          :on-select on-select))
             (map (fn [props]
@@ -100,30 +100,35 @@
      [:div (use-sub-style style/home :secondary-row)
       (doall
        (->>
-        [{:id :settings
+        [ {:id :goldcup
+           :title (translate [:home-card :goldcup :title]
+                             "GoldCup")
+           :desc (translate [:home-card :goldcup :description] "")
+           :icon "images/GoldCup.svg"}
+         {:id :settings
           :title (translate [:home-card :settings :title]
                             "Plant Settings")
           :desc (translate [:home-card :settings :description]
-                           "Manage pyrometer, custom emissivity")}
-         {:id :config-history
-          :title (translate [:home-card :config-history :title]
-                            "Configuration History") 
-          :desc (translate [:home-card :config-history :description]
-                           "")}
-         {:id :goldcup
-          :title (translate [:home-card :goldcup :title]
-                            "GoldCup")
-          :desc (translate [:home-card :goldcup :description] "")}
+                           "Manage pyrometer, custom emissivity")
+          :icon "images/Plant_settings2.svg"}
          {:id :config
           :title (translate [:home-card :config :title]
                             "Configure Plant")
           :desc (translate [:home-card :config :description]
-                           "")}
+                           "")
+          :icon "images/Configure_plant2.svg"}
+         {:id :config-history
+          :title (translate [:home-card :config-history :title]
+                            "Reformer History")
+          :desc (translate [:home-card :config-history :description]
+                           "")
+          :icon "images/Reformer_history.svg"}
          {:id :logs
           :title (translate [:home-card :logs :title]
                             "Logs")
           :desc (translate [:home-card :logs :description]
-                           "All deleted dataset logs that can be auto recovered")}]
+                           "All deleted dataset logs that can be auto recovered")
+          :icon "images/Logs.svg"}]
         (map #(assoc % :access (get-in access-rule [:card (:id %)])
                      :on-select on-select))
         (map (fn [props]

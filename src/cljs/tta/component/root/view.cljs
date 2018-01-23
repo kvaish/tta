@@ -24,30 +24,108 @@
 
 ;;; header ;;;
 
+;(defn language-dropdown []
+;  (let [ languages @(rf/subscribe [::subs/languages])]
+;    (doall
+;      (map
+;        (fn [lng ]
+;             ^{:key (:id lng)}
+;             [ui/menu-item   (merge
+;                             (if (= (:active languages) (:id lng))
+;                                  {:style {:color "#002856"}}  )
+;                             {:primary-text (translate [:root :noAccess (:id lng)] (:name lng))
+;                              :on-click #(rf/dispatch [::event/active-language (:id lng)])}
+;                             )
+;
+;              ]
+;             ) (:options languages)))))
+
+
+(defn language-menu []
+  (let [languages @(rf/subscribe [::subs/languages])]
+    (doall
+      (map
+        (fn [lng]
+          ^{:key (:id lng)}
+          [ui/menu-item (merge
+                          (if (= (:active languages) (:id lng))
+                            (use-sub-style style/header :active-menu))
+                          {:primary-text (translate [:root :language (:id lng)] (:name lng))
+                           :on-click     #(rf/dispatch [::event/active-language (:id lng)])}
+                          )
+
+           ]
+          ) (:options languages)))))
+
+(defn settings-menu []
+  (doall
+    (map (fn [[key-v] i]
+           (let [{:keys [id label]} key-v]
+             ^{:key i}
+             [ui/menu-item (merge
+                             (let [active @(rf/subscribe [::subs/active-setting])]
+                               (if (= id active)
+                                 (use-sub-style style/header :active-menu)
+                                 )
+                               )
+                             {:primary-text (translate [:root :settings id] label)
+                              :on-click     #(rf/dispatch [::event/active-setting id])}
+                             )]
+
+             )
+           )
+         [[{:id    :choose-plant
+            :label (translate [:home-card :choose-plant :label] "Choose Plant")}]
+          [{:id    :my-apps
+            :label (translate [:home-card :choose-apps :label] "My Apps")}]]
+         (range))))
+
+
+
 (defn header []
   [:div (use-style style/header)
    [:div (use-sub-style style/header :left)]
    [:div (use-sub-style style/header :middle)]
    [:div (use-sub-style style/header :right)
-    (doall
-     (map
-      (fn [[id icon label action]]
-        ^{:key id}
-        [:a (merge (use-sub-style style/header :link)
-                   {:href "javascript:void(0);" :on-click action })
-         (if icon
-           [:i (use-sub-style style/header
-                              (if (= id :language) :icon-only :link-icon)
-                              {::stylefy/with-classes [icon]})])
-         label])
-      [[:language
-        "fa fa-language"
-        nil
-        #(rf/dispatch [::event/show-language-menu])]
-       [:settings
-        "fa fa-caret-right"
-        (translate [:header-link :settings :label] "Settings")
-        #(rf/dispatch [::event/show-settings-menu])]]))]])
+    ;(doall
+    ; (map
+    ;  (fn [[id icon label action]]
+    ;    ^{:key id}
+    ;    [:a (merge (use-sub-style style/header :link)
+    ;               {:href "javascript:void(0);" :on-click action })
+    ;     (if icon
+    ;       [:i (use-sub-style style/header
+    ;                          (if (= id :language) :icon-only :link-icon)
+    ;                          {::stylefy/with-classes [icon]})])
+    ;     label])
+    ;  [[:language
+    ;    "fa fa-language"
+    ;    nil
+    ;    #(rf/dispatch [::event/show-language-menu])]
+    ;   [:settings
+    ;    "fa fa-caret-right"
+    ;    (translate [:header-link :settings :label] "Settings")
+    ;    #(rf/dispatch [::event/show-settings-menu])]]))
+
+    [ui/icon-menu {:icon-button-element (r/as-element
+                                          [ui/font-icon (use-sub-style style/header :link
+                                                                       {::stylefy/with-classes ["fa fa-language"]})
+                                                               ])
+                   :tab-index 0}
+     (language-menu)]
+    [ui/icon-menu {:icon-button-element (r/as-element
+                                          [ui/flat-button
+                                           {:label "Settings"
+                                            :label-style  {:color "white"
+                                                           :text-transform "none"
+                                                           :font-size "12px"
+                                                           }
+                                            :icon (r/as-element
+                                                    [ui/font-icon (use-sub-style style/header :icon-only
+                                                                                 {::stylefy/with-classes ["fa fa-arrow-right"]}) ])}])
+                   :tab-index           1}
+     (settings-menu)]
+    ]])
 
 
 ;;; sub-header ;;;
@@ -128,7 +206,7 @@
     (translate [:root :noAccess :message] "Insufficient rights!")]])
 
 (defn disclaimer-reject []
-  [:div 
+  [:div
    (use-style style/disclaimer-reject)
      [:p (use-sub-style style/disclaimer-reject :p)
       (translate [:root :disclaimerReject :message]
@@ -137,7 +215,7 @@
     [:i {:class "fa fa-times"
          :href (:portal-uri @config)}]
     ]
-   [:div  (use-style style/disclaimer-reject-buttons) 
+   [:div  (use-style style/disclaimer-reject-buttons)
     [ui/raised-button
      {:label (translate [:app :disclaimer :retry] "Retry")
       :on-click #(rf/dispatch [::ua-event/open {}])}]
@@ -167,7 +245,7 @@
          :config            [:div "config"]
          :logs              [:div "logs"])
        ;; have no rights!!
-       [no-access])])) 
+       [no-access])]))
 ;;; root ;;;
 
 (defn root []
@@ -177,7 +255,7 @@
     [:div (use-style style/root)
      [header]
      (if is-agreed
-       (list 
+       (list
         [sub-header]
         [content]))
      (if-not is-agreed

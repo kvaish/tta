@@ -51,7 +51,12 @@
 (defn disable-card [style]
   (assoc style
          :background-color (str (color-rgba :alumina-grey nil 0.8)
-                                " !important")))
+                                " !important")
+         ))
+(defn hide-card [style]
+  (assoc style
+    :display "none"
+    ))
 
 (defn disable-button [style]
   (assoc style :color (color-hex :slate-grey)))
@@ -72,18 +77,22 @@
             :color (color :royal-blue)}
     :hr {:display "block"
          :float "left"
-         :width "30px"
+         :width "20px"
          :margin-top 0
          :border (str "1px solid " (color-hex :royal-blue))}
-    :icon {:color (color :royal-blue)
-           :width "100px"
+    :icon {:height "80px"
+           :width "80px"
            :position "absolute"
-           :bottom "30px"
-           :right 0}
+           :top "10px"
+           :right "10px"}
     :desc {:color (color :royal-blue)
            :max-width "260px"
            :font-weight 300
-           :font-size "18px"}}})
+           :position "absolute"
+           :bottom "30px"
+           :font-size "18px"}
+    :button-container {:position "absolute"
+                       :bottom "30px"}}})
 
 (def card-secondary
   (let [ss ::stylefy/sub-styles]

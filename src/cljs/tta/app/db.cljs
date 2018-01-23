@@ -6,7 +6,7 @@
    {:about nil
     :features nil
     :operations nil
-    
+
     ;; entities
     :user {:active nil
            :all {:user-id {:aggreed? false
@@ -16,10 +16,10 @@
              :all {"demo" {:name "DemoCom"}}}
     :plant {:active "demo"
             :all {"demo" {:name "DemoPlant"}}}
-    
+
     :dataset {:pools []
               :messages []}
-    
+
     :component
     {:root {:header {}
             :sub-header {}
@@ -37,7 +37,7 @@
      :goldcup {}
      :config {}
      :logs {}}
-    
+
     :dialog
     {:user-agreement
      {:open? false}
