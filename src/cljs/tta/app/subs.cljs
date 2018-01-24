@@ -60,7 +60,6 @@
      (if (or (empty? countries) (nil? countries))
        (svc/fetch-search-options
         {:evt-success [::event/set-client-search-options]
-         :evt-failure [::ht-event/service-failure true]}))
-     (rr/make-reaction
-      (fn [] countries)))))
-
+         :evt-failure [::ht-event/service-failure true]})))
+   (rr/make-reaction
+    (fn [] (get @dba :countries)))))

@@ -61,7 +61,7 @@
 (rf/reg-fx
  :service/fetch-client
  (fn [{:keys [client-id]}]
-   (svc/fetch-plant
+   (svc/fetch-client
     {:client-id  client-id
      :evt-success [::event/fetch-client-success]
      :evt-failure [::ht-event/service-failure true]})))

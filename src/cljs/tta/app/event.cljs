@@ -74,7 +74,7 @@
 (rf/reg-event-fx
  ::fetch-client
  (fn [_ [_ client-id]]
-   {:service/fetch-client client-id} ))
+   {:service/fetch-client {:client-id client-id}}))
 
 
 (rf/reg-event-fx
@@ -82,25 +82,28 @@
  (fn [_ [_ client]]
    {:dispatch-n (list
                  [::ht-event/set-busy? false]
-                 [::set-client client])} ))
+                 [::set-client client]
+                 [::load-plant])} ))
 
 (rf/reg-event-fx
  ::select-client
  (fn [{:keys [db]} [_ user-id client-id]]
    (let [claims (get-in db [:auth :claims])
          selected-client (get-in db [:client :active])]
-
      (if (and (:isTopsoe claims) (not selected-client))
        {:dispatch [:tta.dialog.choose-client.event/open]}
-       {:dispatch [::load-plant user-id client-id]}))))
+       {}))))
 
 (rf/reg-event-fx
  ::load-plant
- (fn [{:keys [db]} [_ user-id client-id]]
-   (let [plant-id (get-in db [:user :all user-id :plant-id])]
+ (fn [{:keys [db]} [_]]
+   (let [user-id (get-in db [:user :active])
+         plant-id (get-in db [:user :all user-id :plant-id])
+         client-id (get-in db [:user :all user-id :client-id])]
+     
      (if plant-id
        {:dispatch-n (list [::ht-event/set-busy? true]
-                          [:fetch-plant client-id plant-id])}
+                          [::fetch-plant client-id plant-id])}
        {:dispatch [:tta.dialog.choose-plant.event/open]}) )))
 
 
@@ -121,12 +124,17 @@
 (rf/reg-event-db
  ::set-plant
  (fn [db [_ data]]
-   (assoc-in db [:plant :active] data)))
+   (-> db
+       (assoc-in [:plant :active] (:id data))
+       (assoc-in [:plant :all (:id data)] data))))
 
 (rf/reg-event-db
  ::set-client
  (fn [db [_ data]]
-   (assoc-in db [:client :active] data)))
+   (-> db
+       (assoc-in [:client :active] (:id data))
+       (assoc-in [:client :all (:id data)] data))))
+
 (rf/reg-event-db
  ::set-client-search-options
  (fn [db [_ data]]

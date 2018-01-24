@@ -54,14 +54,14 @@
 ;;; sub-header ;;;
 
 (defn app-logo [props]
-    [:div props
-     [:span {:style {:font-family "arial"
-                     :font-weight "900"
-                     :font-size "18px"}} "True"]
-     [:span {:style {:font-weight "300"
-                     :font-size "18px"}} "Temp"]
-     [:span {:style {:font-size "12px"
-                     :vertical-align "text-top"}} "™"]])
+  [:div props
+   [:span {:style {:font-family "arial"
+                   :font-weight "900"
+                   :font-size "18px"}} "True"]
+   [:span {:style {:font-weight "300"
+                   :font-size "18px"}} "Temp"]
+   [:span {:style {:font-size "12px"
+                   :vertical-align "text-top"}} "™"]])
 
 (defn hot-links []
   [:div (use-style style/hot-links)
@@ -131,9 +131,9 @@
 (defn disclaimer-reject []
   [:div 
    (use-style style/disclaimer-reject)
-     [:p (use-sub-style style/disclaimer-reject :p)
-      (translate [:root :disclaimerReject :message]
-                 "Use of this application is prohibited without agreement!")]
+   [:p (use-sub-style style/disclaimer-reject :p)
+    (translate [:root :disclaimerReject :message]
+               "Use of this application is prohibited without agreement!")]
    [:div (use-style style/close-button)
     [:i {:class "fa fa-times"
          :href (:portal-uri @config)}]
@@ -174,17 +174,21 @@
 (defn root []
   (let [active-user @(rf/subscribe [::app-subs/active-user])
         is-agreed @(rf/subscribe [::subs/agreed?])
-        active-client @(rf/subscribe [::app-subs/active-client])]
+        active-client @(rf/subscribe [::app-subs/active-client])
+        active-plant @(rf/subscribe [::app-subs/active-plant])]
     [:div (use-style style/root)
      [header]
-     (if is-agreed
+     (if (and is-agreed active-client active-plant) 
        (list 
         [sub-header]
-        [content]
-        [choose-client]))
-     (if active-client
-       [choose-plant] )
-     (if-not is-agreed
-       [user-agreement])
+        [content]))  
      (if (false? is-agreed)
-       [disclaimer-reject])]))
+       [disclaimer-reject])
+
+     ;;dialog
+     (if @(rf/subscribe [:tta.dialog.user-agreement.subs/open?]) 
+       [user-agreement])
+     (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?]) 
+       [choose-client])    
+     (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?]) 
+       [choose-plant])]))
