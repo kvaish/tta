@@ -30,6 +30,13 @@
 
 (rf/reg-event-fx
  ::set-user-agreement
+ (fn [_ [_ user-id data]]
+   {:dispatch-n (list [::ht-event/set-busy? true]
+                      [::close]
+                      [::update-user-agreement user-id data])}))
+
+(rf/reg-event-fx
+ ::update-user-agreement
  (fn [{:keys [db]} [_ user-id data]]
    (if (get-in db [:user :all user-id])
      {:service/update-user {:user-id user-id :data data}}

@@ -6,16 +6,16 @@
    {:about nil
     :features nil
     :operations nil
-    
+    :countries []
     ;; entities
     :user {:active nil
            :all {:user-id {:aggreed? false
                            :plant-id ""
                            :client-id ""}}}
-    :client {:active "demo"
-             :all {"demo" {:name "DemoCom"}}}
-    :plant {:active "demo"
-            :all {"demo" {:name "DemoPlant"}}}
+    :client {:active nil
+             :all {}}
+    :plant {:active nil
+            :all {}}
     
     :dataset {:pools []
               :messages []}
@@ -42,6 +42,8 @@
     {:user-agreement
      {:open? false}
      :choose-client
+     {:open? false}
+     :choose-plant
      {:open? false}}}))
 
 (defn init []

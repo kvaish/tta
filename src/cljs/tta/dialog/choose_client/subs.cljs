@@ -9,7 +9,6 @@
  ::dialog
  (fn [db _] (get-in db [:dialog :choose-client])))
 
-
 ;;derived signals/subscriptions
 (rf/reg-sub
  ::open?
@@ -28,3 +27,16 @@
  :<- [::dialog]
  (fn [dialog [_ id]]
    (get-in dialog [:field id])))
+
+(rf/reg-sub
+ ::client-list
+ :<- [::dialog]
+ (fn [dialog _]
+   (get-in dialog [:data :clients])))
+
+(rf/reg-sub
+ ::selected-client
+ :<- [::dialog]
+ (fn [dialog _]
+   (get-in dialog [:data :selected-client])))
+

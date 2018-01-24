@@ -33,6 +33,17 @@
                 :params    "params"
                 :date      "date"
                 :by        "by"}
+        client-list {:id "id"
+                     :name "name"
+                     :short-name "shortName"
+                     :adress {:name "address"
+                              :parse js->clj
+                              :unpasre clj->js}
+                     :sap-id "sapId"
+                     :city "city"
+                     :state "state"
+                     :location "location"
+                     :country "country"}
         db-log (assoc log :date "date")
 
         pyrometer    {:serial-number       "serialNumber"
@@ -41,8 +52,7 @@
                       :wavelength          "wavelength"
                       :name                "name"
                       :emissivity          "emissivity"
-                      :id                  "id"}
-        ]
+                      :id                  "id"}]
     (merge
      sap-client/schema, sap-plant/schema
      user/schema, client/schema, plant/schema,
@@ -62,10 +72,11 @@
 
       :log       log
       :db/log    db-log
+      :client-list client-list
       #_:log/query #_{:utc-start {:name  "utcStart"
-                              :parse u/parse-date}
-                  :utc-end   {:name  "utcEnd"
-                              :parse u/parse-date}}})))
+                                  :parse u/parse-date}
+                      :utc-end   {:name  "utcEnd"
+                                  :parse u/parse-date}}})))
 
 (defn from-js
   "Parse an entity from js object.
