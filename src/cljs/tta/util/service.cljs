@@ -10,8 +10,6 @@
             [ht.util.service :refer [add-to-api-map api-uri]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-
-
 (defonce init-once
   (add-to-api-map
    {:service {:root (:service-uri @config)
@@ -27,6 +25,7 @@
                               (api-uri :fetch-user-settings) user-id )
                          {:headers { "Accept" "application/json"
                                     "authorization" (str "Token " token)}
+                          :with-credentials? false
                           #_:query-params
                           #_{:timestamp (i/ocall (js/Date.) :valueOf)}}))]
       (if (= status 200)
@@ -46,6 +45,7 @@
                              (api-uri :fetch-user-settings) user-id)
                         {:headers { "Accept" "application/json"
                                    "authorization" (str "Token " token)}
+                         :with-credentials? false
                          :json-params (js->clj (e/to-js :user data))}))]
       (if (= status 200)
         ;;success
@@ -64,6 +64,7 @@
                               (api-uri :fetch-user-settings))
                          {:headers { "Accept" "application/json"
                                     "authorization" (str "Token " token)}
+                          :with-credentials? false
                           :json-params (js->clj (e/to-js :user (assoc data :id user-id)))}))]
       (if (= status 200)
         ;;success
@@ -81,7 +82,8 @@
           (<! (http/get (str (:service-uri @config)
                              (api-uri :fetch-search-options))
                         {:headers { "Accept" "application/json"
-                                   "authorization" (str "Token " token)}}))]
+                                   "authorization" (str "Token " token)}
+                         :with-credentials? false}))]
       (if (= status 200)
         ;;success
         (let [{:keys [err result]} body]
@@ -98,6 +100,7 @@
                              "/api/client")
                         {:headers {"Accept" "application/json"
                                    "authorization" (str "Token " token)}
+                         :with-credentials? false
                          :query-params query}))]
       (if (= status 200)
         ;;success
@@ -116,6 +119,7 @@
                              (api-uri :fetch-client)  client-id)
                         {:headers {"Accept" "application/json"
                                    "authorization" (str "Token " token)}
+                         :with-credentials? false
                          :json-params (js->clj
                                        (e/to-js :user {:client-id client-id}))}))]
       (if (= status 200)
@@ -135,6 +139,7 @@
                              (api-uri :fetch-client) client-id  "/plant/" plant-id)
                         {:headers {"Accept" "application/json"
                                    "authorization" (str "Token " token)}
+                         :with-credentials? false
                          :json-params (js->clj
                                        (e/to-js :user {:client-id client-id
                                                        :plant-id plant-id}))}))]
@@ -149,14 +154,14 @@
 
 (defn fetch-plant-list [{:keys [client-id evt-success evt-failure]}]
   (go
-    (js/console.log "h" client-id)
+    
     (let [token @(rf/subscribe [::ht-subs/auth-token])
           {:keys [status body]} 
           (<! (http/get (str (:service-uri @config)
                              (api-uri :fetch-client) client-id "/plant")
                         {:headers {"Accept" "application/json"
                                    "authorization" (str "Token " token)}
-                         }))]
+                         :with-credentials? false}))]
       (if (= status 200)
         ;;success
         (let [{:keys [err result]} body]
