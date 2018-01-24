@@ -83,10 +83,10 @@
        
        [ui/radio-button
         (merge (use-style style/filter-fields)
-               {:style {:height "50px"}
+               {:style {:padding "10px"}
                 :label (translate [:chooseClientPrompt :havePlant :label]
-                                  "Have Plant")}
-               )]]
+                                  "Have Plant")})]]
+      
       [:div (use-style style/results-container)
        #_[:div (use-style style/filter-results-busy)]
        [:div (use-style style/results-header)
@@ -117,10 +117,7 @@
                                       (get-in res [:state])
                                       "-"
                                       (get-in res [:country]))]]
-                         #_[:p [:i (:name res)]]
-                         #_[:span [:b (:short-name res)]
-                            #_[:span {:style {:margin-left "10px"}}
-                               #_(:location res)]]]) client-list))]]
+                         ]) client-list))]]
       
       (if selected-client [:div (use-style style/selected-client)
                            [:p [:b (:name selected-client)]]

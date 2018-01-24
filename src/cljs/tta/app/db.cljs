@@ -19,7 +19,7 @@
     
     :dataset {:pools []
               :messages []}
-    
+
     :component
     {:root {:header {}
             :sub-header {}
@@ -37,7 +37,7 @@
      :goldcup {}
      :config {}
      :logs {}}
-    
+
     :dialog
     {:user-agreement
      {:open? false}

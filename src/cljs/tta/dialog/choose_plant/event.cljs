@@ -43,7 +43,6 @@
 (rf/reg-event-fx
  ::set-plant-list
  (fn [{:keys [db] } [_ data]]
-   (js/console.log "data" data)
    {:dispatch [::set-data {:plant-list
                            (mapv (fn [pl]
                                    (e/from-js :sap-plant (clj->js pl)))

@@ -182,6 +182,7 @@
        (list 
         [sub-header]
         [content]))  
+
      (if (false? is-agreed)
        [disclaimer-reject])
 

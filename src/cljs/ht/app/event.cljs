@@ -40,7 +40,7 @@
 (rf/reg-event-fx
  ::service-failure
  (fn [_ [_ fatal? status]]
-   {:dispatch [:dialog/open :service-failure {:status status
+   #_{:dispatch [:dialog/open :service-failure {:status status
                                               :fatal? fatal?}]}))
 
 (rf/reg-event-fx

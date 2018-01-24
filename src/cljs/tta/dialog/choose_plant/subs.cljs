@@ -42,14 +42,12 @@
 (rf/reg-sub-raw
  ::plant-list
  (fn [dba [_]]
-   (let [plant-list (get-in @dba [:dialog :choose-plant :data :plant-list])
-         selected-client-id (get-in @dba [:client :active])
+   (let [selected-client-id (get-in @dba [:client :active])
          fetched (get-in @dba [:dialog :choose-plant :data :fetched])]
-     (if (not fetched)
+     (if-not fetched
        (svc/fetch-plant-list
         {:client-id selected-client-id
          :evt-success [::cp-event/set-plant-list]
          :evt-failure [::ht-event/service-failure true]}))
      (rr/make-reaction
-      (fn [] plant-list)))))
-
+      (fn [] (get-in @dba [:dialog :choose-plant :data :plant-list]))))))
