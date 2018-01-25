@@ -1,12 +1,11 @@
 ;; subscriptions for dialog choose-plant
 (ns tta.dialog.choose-plant.subs
   (:require [re-frame.core :as rf]
+            [reagent.ratom :as rr]
             [ht.app.subs :as ht-subs :refer [translate]]
-            [tta.app.subs :as app-subs]
             [ht.app.event :as ht-event]
             [tta.util.service :as svc]
-            [tta.dialog.choose-plant.event :as cp-event]
-            [reagent.ratom :as rr]))
+            [tta.dialog.choose-plant.event :as event]))
 
 ;; primary signals
 (rf/reg-sub
@@ -33,21 +32,43 @@
  (fn [dialog [_ id]]
    (get-in dialog [:field id])))
 
-(rf/reg-sub
- ::fetched
- :<- [::dialog]
- (fn [dialog [_ id]]
-   (get-in dialog [:data :fetched])))
+(rf/reg-sub-raw
+ ::client
+ (fn [dba _]
+   (let [f #(get-in @dba [:dialog :choose-plant :data :client])
+         client (f)]
+     (if-not (:plants client)
+       (svc/fetch-client
+        {:client-id (:id client)
+         :evt-success [::event/set-client]
+         :evt-failure [::ht-event/service-failure false]}))
+     (rr/make-reaction f))))
 
 (rf/reg-sub-raw
- ::plant-list
- (fn [dba [_]]
-   (let [selected-client-id (get-in @dba [:client :active])
-         fetched (get-in @dba [:dialog :choose-plant :data :fetched])]
-     (if-not fetched
-       (svc/fetch-plant-list
-        {:client-id selected-client-id
-         :evt-success [::cp-event/set-plant-list]
-         :evt-failure [::ht-event/service-failure true]}))
-     (rr/make-reaction
-      (fn [] (get-in @dba [:dialog :choose-plant :data :plant-list]))))))
+ ::sap-plants
+ (fn [dba _]
+   (if @(rf/subscribe [::ht-subs/topsoe?])
+     (let [f #(get-in @dba [:dialog :choose-plant :data :sap-plants])
+           plants (f)]
+       (if-not plants
+         (svc/fetch-client-plants
+          {:client-id (get-in @dba [:dialog :choose-plant :data :client :id])
+           :evt-success [::event/set-sap-plants]
+           :evt-failure [::ht-event/service-failure false]}))
+       (rr/make-reaction f))
+     (rr/make-reaction (constantly nil)))))
+
+(rf/reg-sub
+ ::plants
+ :<- [::client]
+ :<- [::sap-plants]
+ :<- [::ht-subs/topsoe?]
+ (fn [[client sap-plants topsoe?] _]
+   (if-not topsoe?
+     (:plants client)
+     (if sap-plants
+       (mapv (fn [{:keys [id name capacity capacity-unit]}]
+               {:id id, :name name
+                :capacity (str capacity " " capacity-unit)
+                :config? (some #(= id (:id %)) (:plants client))})
+             sap-plants)))))

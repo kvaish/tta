@@ -25,31 +25,30 @@
      ::stylefy/auto-prefix #{:flex-direction}
      ;; children styles
      ::stylefy/sub-styles
-                           {:left   {:background-image  "url('images/ht_logo_white.png')"
-                                     :height            (px logo-h)
-                                     :background-repeat "no-repeat"
-                                     :background-size   "contain"
-                                     :margin-top        (px logo-s)
-                                     :margin-left       (px logo-s)
-                                     :width             "200px"}
-                            :middle {:flex                 1
-                                     ::stylefy/vendors     vendors
-                                     ::stylefy/auto-prefix #{:flex}}
-                            :right  {:font-size "12px"
-                                     :padding   "24px 30px 0 12px"}
-                            ;:link {:text-decoration "none"
-                            ;       :color (color :white)
-                            ;:margin-left "30px"}
-     :link                 {:margin-right "15px !important"
-                            :color          "#fff !important"
-                            :text-transform "none"
-                           }
-     :icon-only            {:color          "#fff !important"
-                            :text-transform "none"
-                            :font-size "12px !important"}
-     :active-menu          {:color (str (color :royal-blue) "!important")}
-     }}))
-
+     {:left   {:background-image  "url('images/ht_logo_white.png')"
+               :height            (px logo-h)
+               :background-repeat "no-repeat"
+               :background-size   "contain"
+               :margin-top        (px logo-s)
+               :margin-left       (px logo-s)
+               :width             "200px"}
+      :middle {:flex                 1
+               ::stylefy/vendors     vendors
+               ::stylefy/auto-prefix #{:flex}}
+      :right  {:font-size "12px"
+               :padding   "24px 30px 0 12px"}
+                                        ;:link {:text-decoration "none"
+                                        ;       :color (color :white)
+                                        ;:margin-left "30px"}
+      :link                 {:margin-right "15px !important"
+                             :color          "#fff !important"
+                             :text-transform "none"
+                             }
+      :icon-only            {:color          "#fff !important"
+                             :text-transform "none"
+                             :font-size "12px !important"}
+      :active-menu          {:color (str (color :royal-blue) "!important")}
+      }}))
 
 (def sub-header
   (let [{h :sub-head-row-height} ht/root-layout
@@ -117,40 +116,4 @@
 (def content {:padding 0
               :background (color :slate-grey 20)})
 
-
 (def root {:background-color (color :white)})
-(def disclaimer-reject
-  {:padding "10px 0 10px 10px"
-   :width "40%"
-   :height "15%"
-   :border "3px solid grey"
-   :position "absolute"
-   :top 0
-   :bottom 0
-   :left 0
-   :right 0
-   :margin "auto"
-   ::stylefy/sub-styles
-   {:p {:font-size "18px"
-        :margin-top "20px"
-        :color (color :red)}}})
-
-(def disclaimer-reject-buttons
-  {:display "inline-block"
-   :padding-top "2%"
-   :width "auto"
-   :height "auto"
-   :padding "2%"
-   :position "absolute"
-   :bottom 0
-   :right 0})
-
-(def close-button
-  {:display "inline-block"
-   :width "32px"
-   :height "50px"
-   :color "grey"
-   :position "absolute"
-   :font-size "30px"
-   :top "-10px"
-   :right "-5px"} )

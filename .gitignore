@@ -3,5 +3,6 @@
 /*.log
 /target
 /resources/public/js/dev
-/resources/public/js/min/out
-
+/resources/public/js/min
+/resources/public/css/build
+/resources/public/data/app-info.json

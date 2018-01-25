@@ -40,9 +40,9 @@
 
 (def theme
   {:font-family "open_sans"
-   :palette {:primary1Color (color-hex :royal-blue)
+   :palette {:primary1Color (color-hex :sky-blue #_:royal-blue)
              :primary2Color (color-hex :ocean-blue)
-             :primary3Color (color-hex :slate-grey 20)
+             :primary3Color (color-hex :alumina-grey #_:slate-grey 20)
              :accent1Color (color-hex :monet-pink)
              :accent2Color (color-hex :alumina-grey)
              :accent3Color (color-hex :slate-grey)
@@ -58,7 +58,7 @@
 
 (defn init []
   (stylefy/init)
-  
+
   (stylefy/font-face
    {:font-family "open_sans"
     :src "url('./fonts/open-sans-light.woff') format('woff')"
@@ -96,43 +96,12 @@
    :paper {:background "none"
            :box-shadow "none"}
    :spinner {:width "100px"
-               :height "100px"
-               :background-image "url(images/hexagon_spinner.gif)"
-               :background-repeat "no-repeat"
-               :background-size "contain"}})
+             :height "100px"
+             :background-image "url(images/hexagon_spinner.gif)"
+             :background-repeat "no-repeat"
+             :background-size "contain"}})
 
-(def center-box
-  {:padding "10px 0 10px 10px"
-   :width "40%"
-   :height "15%"
-   :border "3px solid grey"
-   :position "absolute"
-   :top 0
-   :bottom 0
-   :left 0
-   :right 0
-   :margin "auto"
-   ::stylefy/sub-styles
-   {:p {:font-size "18px"
-        :margin-top "20px"
-        :color (color :red)}}})
-
-(def retry-login-button
-  {:display "inline-block"
-   :padding-top "2%"
-   :width "auto"
-   :height "auto"
-   :padding "2%"
-   :position "absolute"
-   :bottom 0
-   :right 0})
-
-(def close-button
-  {:display "inline-block"
-   :width "32px"
-   :height "50px"
-   :color "grey"
-   :position "absolute"
-   :font-size "30px"
-   :top "-10px"
-   :right "-5px"} )
+(def app-fault
+  {:title {:color (color :red)}
+   :icon {:color (color :red)
+          :margin-right 20}})

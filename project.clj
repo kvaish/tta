@@ -38,22 +38,22 @@
                                     "target"]
 
   :figwheel {:css-dirs ["resources/public/css"]
-             :server-port 5309}
+             :server-port 3450}
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :aliases {"build" ["with-profile" "prd"
                      ["do"
                       ["clean"]
+                      ["run" "-m" "ht.exports"]
                       ["garden" "once"]
                       ["cljsbuild" "once" "min"]]]}
 
   :source-paths ["src/clj" "src/cljc"]
-  
+
   :profiles
   {:dev
-   {:source-paths ["src/dev-clj"]
-    :dependencies [[binaryage/devtools "0.9.8"]
+   {:dependencies [[binaryage/devtools "0.9.8"]
                    [re-frisk "0.5.2"
                     :exclusions [org.clojure/clojure]]
                    [figwheel-sidecar "0.5.14"
@@ -78,7 +78,7 @@
        :stylesheet tta.style/app-styles
        :compiler {:output-to "resources/public/css/build/style.css"
                   :pretty-print? false}}]}}}
-  
+
   :cljsbuild
   {:builds
    [{:id           "dev"
@@ -93,8 +93,7 @@
                     :preloads             [devtools.preload
                                            re-frisk.preload]
                     :external-config      {:devtools/config
-                                           {:features-to-install :all}}
-                    }}
+                                           {:features-to-install :all}}}}
 
     {:id           "min"
      :source-paths ["src/cljs" "src/cljc" "src/prd-cljs"]

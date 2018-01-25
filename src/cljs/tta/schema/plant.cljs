@@ -1,61 +1,40 @@
 (ns tta.schema.plant
   (:require [tta.schema.sap-plant :as sap-plant]
-            [ht.util.interop :as u]))
-
-(defn- add-prefix-1 [prefix schema]
-  (reduce-kv (fn [m k v]
-               (assoc m k
-                      (if (map? v)
-                        (update v :name #(str prefix "." %))
-                        (str prefix "." v))))
-             {} schema))
+            [ht.util.schema :as u]))
 
 (def schema
   (let [;; settings
-        pinch    {:end-date "endDate"
+        pinch    {:end-date (u/date-field "endDate")
                   ;; 2D array of indices of pinched tubes
                   :tubes    {:name    "tubes"
                              :parse   js->clj
                              :unparse clj->js}}
-        std-temp {:end-date "endDate"
+        std-temp {:end-date (u/date-field "endDate")
                   :target   "target"
                   :design   "design"}
-        settings {:emissivity-type  "emissivityType"
-                  :emissivity       "emissivity"
-                  :pyrometer-id     "pyrometerId"
-                  :pyrometers       {:name   "pyrometers"
-                                     :schema :pyrometer
-                                     :array? true}
-                  :temp-unit        "tempUnit"
-                  :target-temp      "targetTemp"
-                  :design-temp      "designTemp"
-                  :pinch-history    {:name   "pinchHistory"
-                                     :schema pinch
-                                     :array? true}
-                  :std-temp-history {:name   "stdTempHistory"
-                                     :schema std-temp
-                                     :array? true}
-                  :min-tubes%       "minPctTubesMeasured"
-                  :sf-settings      {:name   "sfSettings"
-                                     :schema ::sf-settings}
-                  :tf-settings      {:name   "tfSettings"
-                                     :schema ::tf-settings}
-                  :date-modified    "dateModified"
-                  :modified-by      "modifiedBy"}
-
-        update-settings ;; schema for receiving from api
-        (-> settings
-            (dissoc :pinch-history :std-temp-history)
-            (assoc :archive-pinch {:name   "archivePinch"
-                                   :schema pinch}
-                   :archive-std-temp {:name   "archiveStdTemp"
-                                      :schema std-temp}))
-        db-settings     ;; schema for sending to db
-        (as-> settings $
-          (assoc $ :date-modified "dateModified")
-          (assoc-in $ [:pyrometers :schema] :db/pyrometer)
-          (assoc-in $ [:pinch-history :schema :end-date] "endDate")
-          (assoc-in $ [:std-temp-history :schema :end-date] "endDate"))
+        settings {:gold-cup-wavelength "goldCupWavelength"
+                  :emissivity-type     "emissivityType"
+                  :emissivity          "emissivity"
+                  :pyrometer-id        "pyrometerId"
+                  :pyrometers          {:name   "pyrometers"
+                                        :schema :pyrometer
+                                        :array? true}
+                  :temp-unit           "tempUnit"
+                  :target-temp         "targetTemp"
+                  :design-temp         "designTemp"
+                  :pinch-history       {:name   "pinchHistory"
+                                        :schema pinch
+                                        :array? true}
+                  :std-temp-history    {:name   "stdTempHistory"
+                                        :schema std-temp
+                                        :array? true}
+                  :min-tubes%          "minPctTubesMeasured"
+                  :sf-settings         {:name   "sfSettings"
+                                        :schema ::sf-settings}
+                  :tf-settings         {:name   "tfSettings"
+                                        :schema ::tf-settings}
+                  :date-modified       (u/date-field "dateModified")
+                  :modified-by         "modifiedBy"}
 
         ;; configuration
         config {:name          "name"
@@ -66,63 +45,57 @@
                 :tf-config     {:name   "tfConfig"
                                 :schema ::tf-config}
                 :modified-by   "modifiedBy"
-                :date-modified "dateModified"
-                :date-archived "dateArchived"
-                :archived-by   "archivedBy"}
-        db-history (assoc config
-                          :date-modified "dateModified"
-                          :date-archived "dateArchived")
-        db-config (dissoc db-history :date-archived :archived-by)
+                :date-modified (u/date-field "dateModified")}
 
-        ;; plant
-        plant {:id            "id"
-               :client-id     "clientId"
-               :name          "name"
-               :settings      {:name   "settings"
-                               :schema settings}
-               :history       {:name   "history"
-                               :schema config
-                               :array? true}
-               :config        {:name   "configuration"
-                               :schema config}
-               :created-by    "createdBy"
-               :date-created  "dateCreated"
-               :modified-by   "modifiedBy"
-               :date-modified "dateModified"}
+        history (assoc config
+                       :archived-by   "archivedBy"
+                       :date-archived (u/date-field "dateArchived"))]
 
-        db-plant (-> plant
-                     (assoc :date-created  "dateCreated"
-                            :date-modified "dateModified")
-                     (assoc-in [:settings :schema] db-settings)
-                     (assoc-in [:history :schema] db-history)
-                     (assoc-in [:config :schema] db-config))
-        ]
+    {:plant (merge (into {}
+                         (map (fn [[k f]]
+                                [k (if (map? f)
+                                     (assoc f :scope #{:api})
+                                     {:name f, :scope #{:api}})])
+                              (:sap-plant sap-plant/schema)))
+                   {:id            u/id-field
+                    :client-id     "clientId"
+                    :name          "name"
+                    :settings      {:name   "settings"
+                                    :schema settings}
+                    :history       {:name   "history"
+                                    :schema history
+                                    :array? true}
+                    :config        {:name   "configuration"
+                                    :schema config}
+                    :created-by    "createdBy"
+                    :date-created  (u/date-field "dateCreated")
+                    :modified-by   "modifiedBy"
+                    :date-modified (u/date-field "dateModified")})
 
+     :plant/update-settings ^:api {:last-modified (u/date-field "lastModified")
+                                   :settings      {:name   "settings"
+                                                   :schema settings}}
 
-    {:plant (merge plant
-                   (:db/sap-plant sap-plant/schema))
+     :plant/update-config ^:api {:last-modified (u/date-field "lastModified")
+                                 :config        {:name   "configuration"
+                                                 :schema config}}
 
-     :db/plant          db-plant
-     :plant/settings    update-settings
-     :db.plant/settings (add-prefix-1 "settings" db-settings)
-     :plant/config      {:archive {:name   "archive"
-                                   :schema config}
-                         :update  {:name   "update"
-                                   :schema config}}
-     :db.plant/config   (add-prefix-1 "configuration" db-config)
-     :db.plant/history  db-history
+     :plant/push-history (with-meta history {:db true})
 
      ::tf-settings {}
 
-     ::sf-settings {:gold-cup-emissivity {:name    "goldCupEmissivity"
-                                          :parse   js->clj
-                                          :unparse clj->js}
-                    :custom-emissivity   {:name    "customEmissivity"
-                                          :parse   js->clj
-                                          :unparse clj->js}
-                    :tube-prefs          {:name    "tubePrefs"
-                                          :parse   js->clj
-                                          :unparse clj->js}}
+     ::sf-settings {:chambers {:name   "chambers"
+                               :array? true
+                               :schema
+                               {:gold-cup-emissivity {:name    "goldCupEmissivity"
+                                                      :parse   js->clj
+                                                      :unparse clj->js}
+                                :custom-emissivity   {:name    "customEmissivity"
+                                                      :parse   js->clj
+                                                      :unparse clj->js}
+                                :tube-prefs          {:name    "tubePrefs"
+                                                      :parse   js->clj
+                                                      :unparse clj->js}}}}
 
      ::tf-config {}
 
@@ -133,7 +106,7 @@
                   :dual-nozzle?     "dualFuelNozzle"}
 
      ::chamber {:name                 "name"
-                :side-names           {:name    "sideName"
+                :side-names           {:name    "sideNames"
                                        :parse   js->clj
                                        :unparse clj->js}
                 :section-count        "sectionCount"

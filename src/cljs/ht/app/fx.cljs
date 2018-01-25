@@ -2,14 +2,20 @@
   (:require [re-frame.core :as rf]
             [ht.util.common :as u]
             [ht.util.service :as svc]
+            [ht.util.interop :as i]
+            [ht.config :refer [config]]
             [ht.app.event :as event]))
 
 (rf/reg-fx
- :service/fetch-auth
+ :app/exit
  (fn [_]
-   (svc/fetch-auth {:evt-success [::event/set-auth]
-                    :evt-failure [::event/service-failure true]}) ))
+   (i/oset js/htAppEnv :leaveSilently true)
+   (let [{:keys [portal-uri]} @config]
+     (i/oset js/window.location :href portal-uri))))
 
+;;;;;;;;;;;;;
+;; storage ;;
+;;;;;;;;;;;;;
 
 (rf/reg-fx
  :storage/set
@@ -20,3 +26,13 @@
  :storage/set-common
  (fn [{:keys [key value]}]
    (u/set-storage key value true)))
+
+;;;;;;;;;;;;;
+;; service ;;
+;;;;;;;;;;;;;
+
+(rf/reg-fx
+ :service/fetch-auth
+ (fn [with-busy?]
+   (svc/fetch-auth {:evt-success [::event/set-auth with-busy?]
+                    :evt-failure [::event/set-auth with-busy? nil nil]})))

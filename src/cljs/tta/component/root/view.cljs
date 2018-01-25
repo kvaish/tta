@@ -16,12 +16,9 @@
             [tta.component.root.event :as event]
             [tta.component.home.view :refer [home]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
-            [tta.dialog.user-agreement.event :as ua-event]
-            [tta.dialog.user-agreement.subs :as ua-subs]
-            [tta.dialog.choose-client.subs :as cc-subs]
-            [tta.dialog.choose-client.event :as cc-event]
             [tta.dialog.choose-client.view :refer [choose-client]]
-            [tta.dialog.choose-plant.view :refer [choose-plant]]))
+            [tta.dialog.choose-plant.view :refer [choose-plant]]
+            [tta.util.auth :as auth]))
 
 ;;; header ;;;
 
@@ -101,12 +98,12 @@
      text]]])
 
 (defn company-info []
-  (let [client @(rf/subscribe [::app-subs/active-client])
+  (let [client @(rf/subscribe [::app-subs/client])
         label (translate [:info :company :label] "Company")]
     (info label (:name client))))
 
 (defn plant-info []
-  (let [plant @(rf/subscribe [::app-subs/active-plant])
+  (let [plant @(rf/subscribe [::app-subs/plant])
         label (translate [:info :plant :label] "Plant")]
     (info label (:name plant))))
 
@@ -127,24 +124,6 @@
   [:div (use-style style/no-access)
    [:p (use-sub-style style/no-access :p)
     (translate [:root :noAccess :message] "Insufficient rights!")]])
-
-(defn disclaimer-reject []
-  [:div 
-   (use-style style/disclaimer-reject)
-   [:p (use-sub-style style/disclaimer-reject :p)
-    (translate [:root :disclaimerReject :message]
-               "Use of this application is prohibited without agreement!")]
-   [:div (use-style style/close-button)
-    [:i {:class "fa fa-times"
-         :href (:portal-uri @config)}]
-    ]
-   [:div  (use-style style/disclaimer-reject-buttons) 
-    [ui/raised-button
-     {:label (translate [:app :disclaimer :retry] "Retry")
-      :on-click #(rf/dispatch [::ua-event/open {}])}]
-    [ui/raised-button
-     {:label (translate [:app :disclaimer :exit] "Exit")
-      :href (:portal-uri @config)}]]])
 
 (defn content []
   (let [view-size @(rf/subscribe [::ht-subs/view-size])
@@ -169,27 +148,25 @@
          :logs              [:div "logs"])
        ;; have no rights!!
        [no-access])])) 
+
 ;;; root ;;;
 
 (defn root []
-  (let [active-user @(rf/subscribe [::app-subs/active-user])
-        is-agreed @(rf/subscribe [::subs/agreed?])
-        active-client @(rf/subscribe [::app-subs/active-client])
-        active-plant @(rf/subscribe [::app-subs/active-plant])]
+  (let [agreed? @(rf/subscribe [::subs/agreed?])
+        client @(rf/subscribe [::app-subs/client])
+        plant @(rf/subscribe [::app-subs/plant])
+        app-allowed? @(rf/subscribe [::subs/app-allowed?])]
     [:div (use-style style/root)
      [header]
-     (if (and is-agreed active-client active-plant) 
-       (list 
-        [sub-header]
-        [content]))  
-
-     (if (false? is-agreed)
-       [disclaimer-reject])
-
-     ;;dialog
-     (if @(rf/subscribe [:tta.dialog.user-agreement.subs/open?]) 
+     (if app-allowed?
+       (if (and agreed? client plant)
+         (list [sub-header {:key "sub-header"}]
+               [content {:key "content"}]))
+       [no-access])
+     ;;dialogs
+     (if @(rf/subscribe [:tta.dialog.user-agreement.subs/open?])
        [user-agreement])
-     (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?]) 
-       [choose-client])    
-     (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?]) 
+     (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?])
+       [choose-client])
+     (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?])
        [choose-plant])]))

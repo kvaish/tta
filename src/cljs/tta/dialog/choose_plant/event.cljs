@@ -3,13 +3,14 @@
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
             [ht.app.event :as ht-event]
-            [tta.app.event :as app-event]
-            [tta.entity :as e]))
+            [tta.app.event :as app-event]))
 
 (rf/reg-event-db
  ::open
  (fn [db [_ options]]
-   (update-in db [:dialog :choose-plant] merge options {:open? true})))
+   (let [options (update-in options [:data :client]
+                            #(or % @(rf/subscribe [:tta.app.subs/client])))]
+     (update-in db [:dialog :choose-plant] merge options {:open? true}))))
 
 (rf/reg-event-db
  ::close
@@ -19,15 +20,13 @@
 (rf/reg-event-db
  ::set-field
  (fn [db [_ id value]]
-   (assoc-in db [:dialog :choose-plant :field id]
-             {:valid? false
-              :error nil
-              :value value})))
+   (assoc-in db [:dialog :choose-plant :field id] {:valid? false
+                                                   :error nil
+                                                   :value value})))
 
 (rf/reg-event-db
  ::set-data
  (fn [db [_ data]]
-   (js/console.log "Set-data" data)
    (assoc-in db [:dialog :choose-plant :data] data)))
 
 (rf/reg-event-db
@@ -37,21 +36,39 @@
 
 (rf/reg-event-fx
  ::change-client
- (fn [{:keys [db] } _]
+ (fn [_ _]
    {:dispatch-n (list [::close]
                       [:tta.dialog.choose-client.event/open])}))
-(rf/reg-event-fx
- ::set-plant-list
- (fn [{:keys [db] } [_ data]]
-   {:dispatch [::set-data {:plant-list
-                           (mapv (fn [pl]
-                                   (e/from-js :sap-plant (clj->js pl)))
-                                 data)
-                           :fetched true}]}))
+
+(rf/reg-event-db
+ ::set-client
+ (fn [db [_ client]]
+   (assoc-in db [:dialog :choose-plant :data :client]
+             (update client :plants #(or % [])))))
+
+(rf/reg-event-db
+ ::set-sap-plants
+ (fn [db [_ sap-plants]]
+   (assoc-in db [:dialog :choose-plant :data :sap-plants] sap-plants)))
 
 (rf/reg-event-fx
  ::select-plant
- (fn [{:keys [db]} [_ plant-id client-id]]
-   {:service/update-user {:user-id (get-in db [:user :active])
-                          :data {:plant-id plant-id
-                                 :client-id client-id}}}))
+ (fn [{:keys [db]} [_ plant]]
+   (let [client (get-in db [:dialog :choose-plant :data :client])
+         {:keys [id]} @(rf/subscribe [:ht.app.subs/auth-claims])
+         user @(rf/subscribe [:tta.app.subs/user])
+         new? (nil? user)
+         user (assoc user :id id
+                     :client-id (:id client)
+                     :plant-id (:id plant))]
+     {:dispatch-n (list [::close]
+                        [::app-event/set-client client]
+                        [::app-event/fetch-plant (:id client) (:id plant)])
+      :service/save-user {:user user, :new? new?
+                          :evt-success [::app-event/set-user user]
+                          :evt-failure [::ht-event/service-failure false]}})))
+
+(rf/reg-event-fx
+ ::configure-plant
+ (fn [_ [_ plant]]
+   (js/alert (str "Configure plant: " (:name plant) ". Not implemented!"))))

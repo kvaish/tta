@@ -1,31 +1,38 @@
 (ns tta.schema.client
-  (:require [ht.util.interop :as u]
+  (:require [ht.util.schema :as u]
             [tta.schema.sap-client :as sap-client]))
 
 (def schema
-  (let [client {:id     "id"
-                :name   "name"
-                :plants {:name   "plants"
-                         :schema ::plant
-                         :array? true}
+  {:client (merge (into {}
+                        (map (fn [[k f]]
+                               [k (if (map? f)
+                                    (assoc f :scope #{:api})
+                                    {:name f, :scope #{:api}})])
+                             (:sap-client sap-client/schema)))
+                  {:id            u/id-field
+                   :name          "name"
+                   :plants        {:name   "plants"
+                                   :schema ::plant
+                                   :array? true}
+                   :created-by    "createdBy"
+                   :date-created  (u/date-field "dateCreated")
+                   :modified-by   "modifiedBy"
+                   :date-modified (u/date-field "dateModified")})
 
-                :date-created  "dateCreated"
-                :created-by    "createdBy"
-                :modified-by   "modifiedBy"
-                :date-modified "dateModified"}
+   :client/query {:name       "name"
+                  :short-name "shortName"
+                  :location   "location"
+                  :country    "country"
+                  :skip       {:name  "skip"
+                               :parse u/parse-int}
+                  :limit      {:name  "limit"
+                               :parse u/parse-int}
+                  :plant?     {:name  "withPlants"
+                               :parse u/parse-bool}}
 
-        db-client (assoc client
-                         :date-created "dateCreated"
-                         :date-modified "dateModified")]
+   :client/search-options ^:api {:country {:name   "country"
+                                           :array? true}}
 
-    {:client (merge client
-                    (:db/sap-client sap-client/schema))
-
-     :db/client db-client
-
-     :client/search-options {:country {:name   "country"
-                                       :array? true}}
-
-     ::plant {:id       "id"
-              :name     "name"
-              :capacity "capacity"}}))
+   ::plant {:id       "id"
+            :name     "name"
+            :capacity "capacity"}})

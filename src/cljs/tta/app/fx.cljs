@@ -8,46 +8,35 @@
 (rf/reg-fx
  :service/fetch-user
  (fn [user-id]
-   (svc/fetch-user-settings
+   (svc/fetch-user
     {:user-id user-id
-     :evt-success [::event/fetch-user-success user-id]
+     :evt-success [::event/fetch-user-success]
      :evt-failure [::ht-event/service-failure true]})))
 
 (rf/reg-fx
- :service/update-user
- (fn [data]
-   (svc/update-user-settings
-    {:user-id (:user-id data)
-     :data (:data data)
-     :evt-success [::event/update-user-settings (:user-id data)]
-     :evt-failure [::ht-event/service-failure true]})))
-
-
-(rf/reg-fx
- :service/create-user
- (fn [data]
-   (svc/create-user
-    {:user-id (:user-id data)
-     :data (:data data)
-     :evt-success [::event/update-user-settings (:user-id data)]
-     :evt-failure [::ht-event/service-failure true]})))
-
+ :service/save-user
+ (fn [{:keys [user new? evt-success evt-failure]}]
+   (svc/save-user
+    {:user user
+     :new? new?
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
 
 (rf/reg-fx
- :service/fetch-client-search-options
- (fn [_]
-   (svc/fetch-search-options
-    {:evt-success [::event/set-client-search-options]
+ :service/fetch-client
+ (fn [client-id]
+   (svc/fetch-client
+    {:client-id client-id
+     :evt-success [::event/fetch-client-success]
      :evt-failure [::ht-event/service-failure true]})))
 
-
 (rf/reg-fx
- :service/search-client
- (fn [data id]
+ :service/search-clients
+ (fn [{:keys [query evt-success evt-failure]}]
    (svc/search-clients
-    {:query  (:query data)
-     :evt-success [::cc-event/set-client-list]
-     :evt-failure [::ht-event/service-failure true]})))
+    {:query query
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
 
 (rf/reg-fx
  :service/fetch-plant
@@ -56,12 +45,4 @@
     {:client-id client-id
      :plant-id plant-id
      :evt-success [::event/fetch-plant-success]
-     :evt-failure [::ht-event/service-failure true]})))
-
-(rf/reg-fx
- :service/fetch-client
- (fn [{:keys [client-id]}]
-   (svc/fetch-client
-    {:client-id  client-id
-     :evt-success [::event/fetch-client-success]
      :evt-failure [::ht-event/service-failure true]})))

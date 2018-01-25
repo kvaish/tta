@@ -13,7 +13,7 @@
        (gc/lighten pct-lighten))))
 
 (defstyles app-styles
-  
+
   [:div#app-loading {:position "fixed"
                      :width "100%"
                      :height "100%"}

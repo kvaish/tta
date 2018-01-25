@@ -3,10 +3,16 @@
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
             [ht.app.event :as ht-event]
-            [tta.app.event :as app-event]
-            [tta.util.service :as svc]
-            [tta.entity :as e]
-            [tta.dialog.choose-plant.event :as cp-event]))
+            [ht.util.common :refer [dev-log]]
+            [tta.app.event :as app-event]))
+
+(defonce ^:private state (atom {:counter 0}))
+
+(defn- next-id []
+  (:counter (swap! state update :counter inc)))
+
+(defn- active-id? [id]
+  (= id (:counter @state)))
 
 (rf/reg-event-db
  ::open
@@ -21,10 +27,9 @@
 (rf/reg-event-db
  ::set-field
  (fn [db [_ id value]]
-   (assoc-in db [:dialog :choose-client :field id]
-             {:valid? false
-              :error nil
-              :value value})))
+   (assoc-in db [:dialog :choose-client :field id] {:valid? true
+                                                    :error nil
+                                                    :value value})))
 
 (rf/reg-event-db
  ::set-data
@@ -37,64 +42,61 @@
    (update-in db [:dialog :choose-client] merge options)))
 
 (rf/reg-event-fx
- ::change-field
- (fn [{:keys [db]} [_ field value id]]
-   {:dispatch-n (list [::set-field field value]
-                      [::set-field :active-dispatch-id id])
-    :dispatch-later [{:ms 1000
-                      :dispatch [::search-clients id]}]}))
+ ::update-query
+ (fn [_ [_ field-id value]]
+   {:dispatch [::set-field field-id value]
+    :dispatch-later [{:ms 500
+                      :dispatch [::search-clients (next-id)]}]}))
+
 (rf/reg-event-fx
  ::search-clients
  (fn [{:keys [db]} [_ id]]
-   (let [query {:name (get-in db
-                              [:dialog :choose-client :field :name
-                               :value])
-                :country (get-in db
-                                 [:dialog :choose-client :field :country
-                                  :value])
-                :shortName (get-in db
-                                   [:dialog :choose-client :field :short-name
-                                    :value])
-                :location (get-in db
-                                  [:dialog :choose-client :field :location
-                                   :value])
-                :havePlants (get-in db
-                                    [:dialog :choose-client :field :have-plant :value
-                                     ])}]
-     (if (= (get-in db [:dialog :choose-client :field
-                        :active-dispatch-id :value]) id)                         
-       {:service/search-client
-        {:query (into {} (remove (fn [[k v]] (nil? v)) query))
-         :id id}}
-       {}))))
-
+   (if (active-id? id)
+     (let [fields (get-in db [:dialog :choose-client :field])
+           query (->> [:name :short-name :location :country :plant?]
+                      (map (fn [fid]
+                             [fid
+                              (let [v (get-in fields [fid :value])]
+                                (if (string? v) (not-empty v) v))]))
+                      (remove #(nil? (second %)))
+                      (into {:skip 0, :limit 10}))]
+       ;; ensure at least 3 letters in one of name, short-name or location
+       (if (some #(> (count (% query)) 2)
+                 [:name :short-name :location])
+         {:db (assoc-in db [:dialog :choose-client :data :busy?] true)
+          :service/search-clients {:query query
+                                   :evt-success [::set-clients id query]}})))))
 
 (rf/reg-event-db
- ::set-client-list
- (fn [db [_ clients]]
-   (assoc-in db [:dialog :choose-client :data :clients]
-             (mapv (fn [cl]
-                     (e/from-js :sap-client (clj->js cl)))
-                   clients))))
-
-(rf/reg-event-db
- ::select-client
- (fn [db [_ selected-client]]
-   (assoc-in db [:dialog :choose-client :data :selected-client]
-              selected-client)))
+ ::set-clients
+ (fn [db [_ id query clients]]
+   (if-not (active-id? id)
+     db ;; no action
+     (let [{:keys [limit]} query
+           more? (= (count clients) limit)]
+       (update-in db [:dialog :choose-client :data]
+                  #(if (= id (:id %))
+                     ;; append
+                     (-> (assoc % :more? more?, :busy? false, :query query)
+                         (update :clients into clients))
+                     ;; reset
+                     {:id id
+                      :more? more?, :busy? false, :query query
+                      :clients clients}))))))
 
 (rf/reg-event-fx
- ::set-active-client
- (fn [_ [_ client]]
-   {:dispatch-n (list [::set-active-client-db client]
-                      [::close]
-                      [::cp-event/set-data {:fetched false
-                                           }]
-                      [::cp-event/open])}))
+ ::search-more-clients
+ (fn [{:keys [db]} _]
+   (let [{:keys [query id more?]} (get-in db [:dialog :choose-client :data])
+         query (update query :skip + (:limit query))]
+     (if (and (active-id? id) more?)
+       {:db (assoc-in db [:dialog :choose-client :data :busy?] true)
+        :service/search-clients {:query query
+                                 :evt-success [::set-clients id query]}}))))
 
-(rf/reg-event-db
- ::set-active-client-db
+(rf/reg-event-fx
+ ::select-client
  (fn [db [_ client]]
-   (-> db
-       (assoc-in  [:client :active] (:id client))
-       (assoc-in [:client :all (:id client)] client))))
+   (dev-log "selected client id: " (:id client))
+   {:dispatch-n (list [::close]
+                      [:tta.dialog.choose-plant.event/open {:data {:client client}}])}))
