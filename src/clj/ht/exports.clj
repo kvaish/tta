@@ -17,3 +17,7 @@
    (get-info)
    (json/write-str)
    (spit "resources/public/data/app-info.json")))
+
+(defn -main [& args]
+  (export-info)
+  (println "exported app-info.json"))

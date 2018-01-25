@@ -25,8 +25,7 @@
              :lime         "#cddc39"
              :yellow       "#ffeb3b"
              :orange       "#ff9800"
-             :brown        "#795548"
-             })
+             :brown        "#795548"})
 
 (def palettes
   {:chart [(:royal-blue colors)
@@ -40,4 +39,3 @@
 
 (def gradients
   {:blue-spot-light "radial-gradient(circle farthest-side at 70% 600%,rgba(84,201,233,1),rgba(0,72,187,1)150%)"})
-

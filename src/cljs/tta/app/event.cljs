@@ -1,141 +1,125 @@
 (ns tta.app.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
-            [tta.entity :refer [from-js]]
-            [tta.schema.user :as us]
-            [ht.util.common :as u]
+            [ht.util.common :refer [dev-log]]
             [ht.app.event :as ht-event]
-            [tta.entity :as e]))
+            [tta.util.auth :as auth]))
+
+;;;;;;;;;;;;;;
+;; app init ;;
+;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
  :app/init
  (fn [{:keys [db]} _]
-   {:dispatch-n (list [::ht-event/set-busy? true]
-                      [::fetch-user (get-in db [:user :active])])}))
+   (let [claims (get-in db [:auth :claims])]
+     (if (auth/allow-app? claims)
+       {:dispatch [::fetch-user (:id claims)]}))))
+
+;;;;;;;;;;
+;; user ;;
+;;;;;;;;;;
 
 (rf/reg-event-fx
  ::fetch-user
  (fn [_ [_ user-id]]
-   {:service/fetch-user user-id}))
+   (dev-log "fetch user: " user-id)
+   {:service/fetch-user user-id
+    :dispatch [::ht-event/set-busy? true]}))
 
 (rf/reg-event-fx
  ::fetch-user-success
- (fn [_ [_ user-id user]]
-   {:dispatch-n (list [::ht-event/set-busy? false]
-                      [::set-user user-id user])}))
+ (fn [_ [_ user]]
+   {:dispatch-n (list [::set-user user]
+                      [::ht-event/set-busy? false]
+                      [::check-agreement])}))
 
-
-;; ->fx, dispatch
-;; show agreement if external and not agreed
-;; choose client if internal and no last client
-;; choose plant if no last plant
-(rf/reg-event-fx
+(rf/reg-event-db
  ::set-user
- (fn [{:keys [db]} [_ user-id user]]
-   {:db (assoc-in db  [:user :all user-id] (e/from-js :user (clj->js user)))
-    :dispatch [::check-agreement]}))
+ (fn [db [_ user]]
+   (assoc db :user user)))
+
+;;;;;;;;;;;;;;;
+;; agreement ;;
+;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
  ::check-agreement
  (fn [{:keys [db]} _]
-   (let [user-id (get-in db [:user :active])
-         {:keys [agreed?]} (get-in db [:user :all user-id])]
-     {:dispatch (if agreed?
-                  [::load-client user-id]
-                  [::show-agreement])})))
+   {:dispatch (if (get-in db [:user :agreed?])
+                [::load-client]
+                [:tta.dialog.user-agreement.event/open
+                 {:then {:on-accept [::load-client]
+                         :on-decline [::ht-event/exit]}}])}))
 
-(rf/reg-event-fx
- ::show-agreement
- (fn [{:keys [db]} _]
-   (let [user-id (get-in db [:user :active])
-         {:keys [agreed?]} (get-in db [:user :all user-id])]
-
-     {:dispatch (if (nil? agreed?)
-                  [:tta.dialog.user-agreement.event/open]
-                  [:tta.dialog.user-agreement.event/close])})))
-
-(rf/reg-event-fx
- ::update-user-settings
- (fn [_ [_ user-id]]
-   {:dispatch-n (list 
-                 [::fetch-user user-id])}))
-
+;;;;;;;;;;;;
+;; client ;;
+;;;;;;;;;;;;
 
 (rf/reg-event-fx
  ::load-client
- (fn [{:keys [db]} [_ user-id]]
-   (let [client-id
-         (get-in db [:user :all user-id :client-id])]
-     (if client-id
-       {:dispatch-n (list [::ht-event/set-busy? true]
-                          [::fetch-client client-id])}
-       {:dispatch  [::select-client user-id client-id]}))))
+ (fn [{:keys [db]} _]
+   {:dispatch (if-let [client-id (or (get-in db [:auth :claims :client-id])
+                                     (get-in db [:user :client-id]))]
+                [::fetch-client client-id]
+                [:tta.dialog.choose-client.event/open])}))
 
 (rf/reg-event-fx
  ::fetch-client
  (fn [_ [_ client-id]]
-   {:service/fetch-client {:client-id client-id}}))
-
+   (dev-log "fetch-client:" client-id)
+   {:service/fetch-client client-id
+    :dispatch  [::ht-event/set-busy? true]}))
 
 (rf/reg-event-fx
  ::fetch-client-success
  (fn [_ [_ client]]
-   {:dispatch-n (list
-                 [::ht-event/set-busy? false]
-                 [::set-client client]
-                 [::load-plant])} ))
+   {:dispatch-n (list [::set-client client]
+                      [::ht-event/set-busy? false]
+                      [::load-plant])} ))
 
-(rf/reg-event-fx
- ::select-client
- (fn [{:keys [db]} [_ user-id client-id]]
-   (let [claims (get-in db [:auth :claims])
-         selected-client (get-in db [:client :active])]
-     (if (and (:isTopsoe claims) (not selected-client))
-       {:dispatch [:tta.dialog.choose-client.event/open]}
-       {}))))
+(rf/reg-event-db
+ ::set-client
+ (fn [db [_ client]]
+   (assoc db :client client)))
+
+;;;;;;;;;;;
+;; plant ;;
+;;;;;;;;;;;
 
 (rf/reg-event-fx
  ::load-plant
- (fn [{:keys [db]} [_]]
-   (let [user-id (get-in db [:user :active])
-         plant-id (get-in db [:user :all user-id :plant-id])
-         client-id (get-in db [:user :all user-id :client-id])]
-     
-     (if plant-id
-       {:dispatch-n (list [::ht-event/set-busy? true]
-                          [::fetch-plant client-id plant-id])}
-       {:dispatch [:tta.dialog.choose-plant.event/open]}) )))
-
+ (fn [{:keys [db]} _]
+   (let [plant-id (get-in db [:user :plant-id])
+         client-id (get-in db [:client :id])]
+     {:dispatch (if plant-id
+                  [::fetch-plant client-id plant-id]
+                  [:tta.dialog.choose-plant.event/open])})))
 
 (rf/reg-event-fx
  ::fetch-plant
  (fn [_ [_ client-id plant-id]]
+   (dev-log "fetch-plant:" client-id plant-id)
    {:service/fetch-plant {:client-id client-id
-                          :plant-id plant-id}} ))
-
+                          :plant-id plant-id}
+    :dispatch [::ht-event/set-busy? true]}))
 
 (rf/reg-event-fx
  ::fetch-plant-success
  (fn [_ [_ plant]]
-   {:dispatch-n (list
-                 [::ht-event/set-busy? false]
-                 [::set-plant plant])} ))
+   {:dispatch-n (list [::ht-event/set-busy? false]
+                      [::set-plant plant])} ))
 
 (rf/reg-event-db
  ::set-plant
- (fn [db [_ data]]
-   (-> db
-       (assoc-in [:plant :active] (:id data))
-       (assoc-in [:plant :all (:id data)] data))))
+ (fn [db [_ plant]]
+   (assoc db :plant plant)))
+
+;;;;;;;;;;;;;;;
+;; countries ;;
+;;;;;;;;;;;;;;;
 
 (rf/reg-event-db
- ::set-client
- (fn [db [_ data]]
-   (-> db
-       (assoc-in [:client :active] (:id data))
-       (assoc-in [:client :all (:id data)] data))))
-
-(rf/reg-event-db
- ::set-client-search-options
- (fn [db [_ data]]
-   (assoc-in db [:countries] (get data :country))))
+ ::set-search-options
+ (fn [db [_ options]]
+   (assoc db :countries (:country options))))

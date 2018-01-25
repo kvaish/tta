@@ -1,13 +1,11 @@
 (ns ht.config
   (:require [ht.util.interop :as i]))
 
-(def debug?
-  ^boolean goog.DEBUG)
-
-(def key-map {:app-id :appId
-              :portal-uri :portalUri
+(def key-map {:app-id      :appId
+              :build-id    :buildId
+              :portal-uri  :portalUri
               :service-uri :serviceUri
-              :languages :languages})
+              :languages   :languages})
 
 (defonce config (atom {}))
 

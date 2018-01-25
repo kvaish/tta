@@ -55,3 +55,9 @@ none matched, returns nil."
    (set-storage key value false))
   ([key value common?]
    (set-storage-js (key->str key) (clj->js value) common?)))
+
+(defn dev? [] (= "dev" (i/oget js/htAppEnv :mode)))
+
+(defn dev-log [& args]
+  (if (dev?)
+    (i/oapply js/console :log args)))

@@ -10,58 +10,75 @@
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
+            [tta.app.view :as app-view]
             [tta.dialog.choose-plant.style :as style]
             [tta.dialog.choose-plant.subs :as subs]
             [tta.dialog.choose-plant.event :as event]))
 
+(defn plant-comp [p]
+  [ui/list-item
+   {:primary-text (:name p) :style {}
+    :secondary-text (:capacity p)
+    :on-click #(rf/dispatch [::event/select-plant p])
+    :disabled (not (:config? p))
+    :right-icon-button
+    (if-not (:config? p)
+      (r/as-element
+       [ui/icon-button
+        {:tooltip (translate [:choose-plant :configure :hint]
+                             "Click to configure this plant..")
+         :tooltip-position "top-left"
+         :icon-class-name "fa fa-wrench"
+         :icon-style style/btn-config
+         :on-click #(rf/dispatch [::event/configure-plant p])}]))}])
+
 (defn choose-plant []
-  (let [open? @(rf/subscribe [::subs/open?])
-        selected-client @(rf/subscribe
-                          [:tta.dialog.choose-client.subs/selected-client])
-        plant-list @(rf/subscribe [::subs/plant-list])
-        fetched  @(rf/subscribe [::subs/fetched])]
+  (let [title (translate [:choose-plant :title :text] "Choose plant")
+        on-close #(rf/dispatch [::event/close])
+        close-tooltip (translate [:choose-plant :close :hint] "Close")
+        optional? (some? @(rf/subscribe [::app-subs/plant]))]
     [ui/dialog
-     {:open open?
-      :modal true
-      :title (translate [:choosePlantPrompt :lavel] "Choose Plant")}
+     {:modal (not optional?)
+      :open @(rf/subscribe [::subs/open?])
+      :on-request-close on-close
+      :title (if optional? (r/as-element (app-view/optional-dialog-head
+                                          {:title title
+                                           :on-close on-close
+                                           :close-tooltip close-tooltip}))
+                 title)}
+
+     ;; left pane - client info
      [:div (use-style style/container)
-      [:div (use-style style/selected-client)
-       [:p [:b (:name selected-client)]]
-       [:p [:i (str (:country selected-client)
-                    ", " (:state selected-client)
-                    ", " (:city selected-client))]]
-       [ui/raised-button (merge
-                          (use-sub-style
-                           app-style/activated-result :button)
-                          {:label (translate
-                                   [:choosePlantPrompt :lavel]
-                                   "Change Client")
-                           :on-click #(rf/dispatch
-                                       [::event/change-client])})]]
-      [:div (use-style app-style/result-header)
-       (translate
-        [:choosePlantPrompt :label]
-        "Choose plant")]
-      [:div
-       [:ul (use-sub-style app-style/filter-results :ul)
-        (if-not fetched
-          [:li "Loading..."])
-        (if (and (empty? plant-list) fetched)
-          [:li (merge (use-sub-style app-style/filter-results :li))
-           [:p [:i "No plants found."]]]
-          (map (fn [res]
-                 [:li (merge (use-sub-style app-style/filter-results :li)
-                             {:key (:id res)
-                              :on-click #(rf/dispatch
-                                          [::event/select-plant
-                                           (:id res)
-                                           (:id selected-client)])})
-                  [:p [:i (:name res)]]
-                  [:p [:b (str (:capacity res)
-                               "-"
-                               (:capacity-unit res)
-                               "-"
-                               (:service res)
-                               "-"
-                               (:licensor res))]]
-                  ]) plant-list))]]]]))
+      (let [client @(rf/subscribe [::subs/client])]
+        [:div (use-sub-style style/container :left)
+         [:p [:b (:name client)]]
+         [:p [:i (:short-name client)]
+          [:br] (:location client)]
+         (let [a (:address client)]
+           [:p (str (:po-box-name a) " - " (:po-box a))
+            [:br] (str (:po-zip-code a)
+                       ", " (:po-city a)
+                       ", " (:zip-code a))])
+         [:p (:city client)
+          [:br] (:state client)
+          [:br] (:country client)]
+         (if @(rf/subscribe [::ht-subs/topsoe?])
+           [ui/flat-button
+            {:label (translate [:choose-plant :change-client :label] "Change")
+             :secondary true
+             :on-click #(rf/dispatch [::event/change-client])}])])
+
+      ;; right pane - plant selection
+      [:div (use-sub-style style/container :right)
+       (let [plants @(rf/subscribe [::subs/plants])
+             list-style (use-style (style/plant-selector
+                                    @(rf/subscribe [::ht-subs/view-size])))]
+         (-> [ui/list list-style
+              (if-not plants
+                [ui/linear-progress (use-style style/progress-bar)]
+                (if (empty? plants)
+                  [ui/list-item
+                   {:disabled true
+                    :secondary-text (translate [:choose-plant :no-plants :text]
+                                               "No plants found!")}]))]
+             (into (map plant-comp plants))))]]]))

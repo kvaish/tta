@@ -10,6 +10,7 @@
     :config {}
     :view-size {:width 1024, :height 768}
     :busy? false
+    :service-failure nil
     :storage {}
     :language {:options []
                :active :en
@@ -17,13 +18,12 @@
                              :es {:main {:language {:label "Español"}}}
                              :ru {:main {:language {:label "pусский"}}}}}
     :auth {:token nil, :claims nil, :fetched? false}
-    :settings {:active nil}
     :component {}
     :dialog {}}))
 
 
 (defn init []
-  (let [language-options (mapv (fn [{:keys [code flag name]}]
+  (let [language-options (mapv (fn [{:keys [code _ name]}]
                                  {:id (keyword code)
                                   :name name})
                                (:languages @config))
