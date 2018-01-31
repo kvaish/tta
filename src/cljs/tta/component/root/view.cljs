@@ -17,7 +17,8 @@
             [tta.component.home.view :refer [home]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
-            [tta.dialog.choose-plant.view :refer [choose-plant]]))
+            [tta.dialog.choose-plant.view :refer [choose-plant]]
+            [tta.util.auth :as auth]))
 
 ;;; language-menu ;;;
 
