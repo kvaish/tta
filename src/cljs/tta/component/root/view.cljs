@@ -19,7 +19,8 @@
             [tta.dialog.user-agreement.subs :as ua-subs]
             [tta.dialog.choose-client.subs :as cc-subs]
             [tta.dialog.choose-client.event :as cc-event]
-            [tta.dialog.choose-client.view :refer [choose-client]]))
+            [tta.dialog.choose-client.view :refer [choose-client]]
+            [tta.dialog.test-design.view :refer [test-design]]))
 
 ;;; header ;;;
 
@@ -174,11 +175,14 @@
         is-agreed @(rf/subscribe [::subs/agreed?])]
     [:div (use-style style/root)
      [header]
-     (if is-agreed
-       (list
-        [sub-header]
-        [content]))
-     (if-not is-agreed
-       [user-agreement])
-     (if (false? is-agreed)
-       [disclaimer-reject])]))
+     [test-design]
+
+     (comment
+       (if is-agreed
+         (list
+           [sub-header]
+           [content]))
+       (if-not is-agreed
+         [user-agreement])
+       (if (false? is-agreed)
+         [disclaimer-reject]))]))

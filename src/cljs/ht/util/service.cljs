@@ -47,6 +47,6 @@
           (rf/dispatch (conj evt-success token claims)))
         ;;failuer
         (do
-          (js/console.log [status body])
+          ;(js/console.log [status body])
           (rf/dispatch (conj evt-failure status)))))))
 

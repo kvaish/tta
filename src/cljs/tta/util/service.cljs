@@ -24,7 +24,8 @@
           {:keys [status body]} 
           (<! (http/get  (str (:service-uri @config)
                               (api-uri :fetch-user-settings) user-id )
-                         {:headers { "Accept" "application/json"
+                         {:with-credentials? false
+                          :headers { "Accept" "application/json"
                                     "authorization" (str "Token " token)}
                           #_:query-params
                           #_{:timestamp (i/ocall (js/Date.) :valueOf)}}))]
@@ -43,7 +44,8 @@
           {:keys [status body]} 
           (<! (http/put (str (:service-uri @config)
                              (api-uri :fetch-user-settings) user-id)
-                        {:headers { "Accept" "application/json"
+                        {:with-credentials? false
+                         :headers { "Accept" "application/json"
                                    "authorization" (str "Token " token)}
                          :json-params (js->clj (e/to-js :user data))}))]
       (if (= status 200)
