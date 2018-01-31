@@ -1,11 +1,12 @@
-(ns tta.schema.sap-plant)
+(ns tta.schema.sap-plant
+  (:require [ht.util.schema :as u]))
 
 (def schema
-  {:sap-plant {:name          "name"
-                  :id            "id"
-                  :client-id     "clientId"
-                  :sapId         "sapId"
-                  :capacity      "capacity"
-                  :capacity-unit "capacityUnit"
-                  :service       "service"
-                  :licensor      "licensor"}})
+  {:sap-plant {:id            u/id-field
+               :name          "name"
+               :client-id     "clientId"
+               :sap-id        "sapId"
+               :capacity      "capacity"
+               :capacity-unit "capacityUnit"
+               :service       "service"
+               :licensor      "licensor"}})

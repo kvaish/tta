@@ -10,127 +10,95 @@
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
+            [tta.app.view :as app-view]
             [tta.dialog.choose-client.style :as style]
             [tta.dialog.choose-client.subs :as subs]
             [tta.dialog.choose-client.event :as event]))
-(defonce id (atom 0))
+
+(defn- query-field [id label]
+  [ui/text-field
+   {:on-change #(rf/dispatch [::event/update-query id %2])
+    :default-value (:value @(rf/subscribe [::subs/field id]))
+    :hint-text (translate [:choose-client :field :hint] "start typing..")
+    :floating-label-text label
+    :name (name id)}])
+
+(defn- select-field [id label options]
+  (into
+   [ui/select-field
+    {:value (:value @(rf/subscribe [::subs/field id]))
+     :on-change #(rf/dispatch [::event/update-query id %3])
+     :floating-label-text label
+     :name (name id)}
+    [ui/menu-item {:key "_", :value ""}]]
+   (map (fn [o]
+          [ui/menu-item {:key o, :value o, :primary-text o}])
+        options)))
+
+(defn- toggle-field [id label]
+  [ui/toggle
+   (merge (use-style style/toggle-field)
+          {:toggled (:value @(rf/subscribe [::subs/field id]))
+           :on-toggle #(rf/dispatch [::event/update-query id %2])
+           :label label
+           :name (name id)})])
+
 (defn choose-client []
-  (let [open? @(rf/subscribe [::subs/open?])
-        countries @(rf/subscribe [::app-subs/country-list])
-        value (:value @(rf/subscribe [::subs/field :country]))
-        client-list @(rf/subscribe [::subs/client-list])
-        selected-client @(rf/subscribe [::subs/selected-client])]
-    
+  (let [busy? @(rf/subscribe [::subs/busy?])
+        title (translate [:choose-client :title :text] "Choose client")
+        on-close #(rf/dispatch [::event/close])
+        close-tooltip (translate [:choose-client :close :hint] "Close")
+        optional? (some? @(rf/subscribe [::app-subs/client]))]
     [ui/dialog
-     {:open  open?
-      :modal true
-      :title (translate [:chooseClientPrompt :title :label] "Choose Client")}
-     [:div (use-style style/select-client-container)
-      [:p (use-sub-style style/select-client-container :p)
-       (translate [:chooseClientPrompt :searchClient :text]
-                  "Specify any of the following to search for clients")]
-      [:div (use-style style/select-client-filters)
-       (r/as-element [ui/text-field
-                      (merge  (use-style style/filter-fields)
-                              {:hint-text (translate
-                                           [:chooseClientPrompt
-                                            :shortName :label] "Short Name")
-                               :label (translate [:chooseClientPrompt
-                                                  :shortName :label] "Short Name")
-                               :on-change #(rf/dispatch [::event/change-field
-                                                         :short-name %2
-                                                         (swap! id inc)] )})])
-       [ui/text-field
-        (merge (use-style style/filter-fields)
-               {:hint-text (translate [:chooseClientPrompt :name :label] "Name")
-                :label (translate
-                        [:chooseClientPrompt :name :label]
-                        "Name")
-                :on-change #(rf/dispatch [::event/change-field :name
-                                          %2
-                                          (swap! id inc)])
-                :name "name"})]
-       [ui/text-field
-        (merge (use-style style/filter-fields)
-               {:hint-text (translate
-                            [:chooseClientPrompt :location :label]
-                            "Location")
-                :label (translate
-                        [:chooseClientPrompt :location :label]
-                        "Location")
-                :on-change #(rf/dispatch [::event/change-field
-                                          :location
-                                          %2
-                                          (swap! id inc)] )
-                :name "location"})]
+     {:modal (not optional?)
+      :open @(rf/subscribe [::subs/open?])
+      :on-request-close on-close
+      :title (if optional? (r/as-element (app-view/optional-dialog-head
+                                          {:title title
+                                           :on-close on-close
+                                           :close-tooltip close-tooltip}))
+                 title)}
 
-       (into [ui/select-field
-              (merge (use-style style/filter-fields)
-                     {:style {:vertical-align "top"}
-                      :label (translate [:chooseClientPrompt :country :label]
-                                        "Country")
-                      :value value
-                      :on-change #(rf/dispatch [::event/change-field
-                                                :country
-                                                %3
-                                                (swap! id inc)] )
-                      :name "country"})]
+     [(if busy? ui/linear-progress :div) (use-style style/progress-bar)]
 
-             (map (fn [a]
-                    [ui/menu-item {:key a
-                                   :value a
-                                   :primary-text a}]) countries))  
-       
-       [ui/radio-button
-        (merge (use-style style/filter-fields)
-               {:style {:padding "10px"}
-                :label (translate [:chooseClientPrompt :havePlant :label]
-                                  "Have Plant")})]]
-      
-      [:div (use-style style/results-container)
-       #_[:div (use-style style/filter-results-busy)]
-       [:div (use-style style/results-header)
-        "Choose Client"]
-       [:ul (use-sub-style style/filter-results :ul)
-        (if (empty? client-list)
-          [:li (merge (use-sub-style style/filter-results :li))
-           [:p [:i "No clients found."]]]
-          (map (fn [res] [:li (merge (use-sub-style style/filter-results :li)
-                                    {:key (:id res)
-                                     :on-click #(rf/dispatch
-                                                 [::event/select-client res])})
+     ;; left pane - query fields
+     [:div (use-style style/container)
+      [:div (use-sub-style style/container :left)
+       (select-field :country
+                     (translate [:choose-client :country :label] "Country")
+                     @(rf/subscribe [::app-subs/countries]))
+       (query-field :name
+                    (translate [:choose-client :name :label] "Name"))
+       (query-field :short-name
+                    (translate [:choose-client :short-name :label] "Short name"))
+       (query-field :location
+                    (translate [:choose-client :location :label] "Location"))
+       (toggle-field :plant?
+                     (translate [:choose-client :with-plant :label] "Only with plant?"))]
 
-                         [:p [:b (:name res)]]
-                         [:p [:i (get-in res  [:address :address])]]
-                         [:p [:i (str
-                                  (get-in res  [:address :po-box-name])
-                                  "-"
-                                  (get-in res  [:address :po-city])
-                                  "-"
-                                  (get-in res [:address :zip-code]))]]
-                         [:p [:i (str (get-in res  [:short-name])
-                                      "-"
-                                      (get-in res [:location])
-                                      "-"
-                                      (get-in res  [:city])
-                                      "-"
-                                      (get-in res [:state])
-                                      "-"
-                                      (get-in res [:country]))]]
-                         ]) client-list))]]
-      
-      (if selected-client [:div (use-style style/selected-client)
-                           [:p [:b (:name selected-client)]]
-                           [:p [:i (str (:country selected-client)
-                                        ", " (:state selected-client)
-                                        ", " (:city selected-client))]]
-                           [ui/raised-button (merge
-                                              (use-sub-style
-                                               style/selected-client :button)
-                                              {:label (translate
-                                                       [:choosePlantPrompt :lavel]
-                                                       "Select Client")
-                                               :on-click #(rf/dispatch
-                                                           [::event/set-active-client
-                                                            selected-client])}
-                                              )]])]]))
+      ;; right pane - client selection
+      [:div (use-sub-style style/container :right)
+       (let [clients @(rf/subscribe [::subs/clients])
+             list-style (use-style (style/client-selector
+                                    @(rf/subscribe [::ht-subs/view-size])))]
+         (-> [ui/list list-style
+              (if (zero? (count clients))
+                [ui/list-item
+                 {:disabled true
+                  :secondary-text (translate [:choose-client :no-clients :text]
+                                             "No clients found!")}])]
+             (into (map (fn [c]
+                          [ui/list-item
+                           {:primary-text (:name c)
+                            :secondary-text-lines 2
+                            :secondary-text
+                            (r/as-element
+                             [:p (:short-name c) [:br]
+                              (str (:location c) " - " (:country c))])
+                            :on-click #(rf/dispatch [::event/select-client c])}])
+                        clients))
+             (conj (if (and (not busy?) @(rf/subscribe [::subs/more?]))
+                     [ui/list-item
+                      {:secondary-text (translate [:choose-client :more :text]
+                                                  "Show more..")
+                       :on-click #(rf/dispatch [::event/search-more-clients])}]))))]]]))

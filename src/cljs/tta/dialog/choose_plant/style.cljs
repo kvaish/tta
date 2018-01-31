@@ -8,32 +8,28 @@
              :refer [color color-hex color-rgba vendors]]
             [tta.app.style :as app-style]))
 
+(def flex-col {:display "flex"
+               :flex-direction "column"
+               ::stylefy/auto-prefix #{:flex-direction :flex}
+               ::stylefy/vendors vendors})
 
+(def flex-row (assoc flex-col :flex-direction "row"))
 
+(def progress-bar {:height "10px !important"
+                   :margin-bottom "10px !important"})
 
 (def container
-  {
-   #_:width #_"100%"
-   :height "auto"
-   :min-height "200px"
-   :max-height "400px"
-  
-   :margin-top "10px"
-   :border "1px solid #e0e0e0"
-   #_:border #_"1px solid grey"})
+  (-> flex-row
+      (merge {:width "100%", :height "100%"
+              :min-height "100px"})
+      (assoc ::stylefy/sub-styles
+             {:left (assoc flex-col :width "200px" :margin-right "20px")
+              :right (assoc flex-col :flex 1
+                            :border-left (str "1px solid "
+                                              (color-hex :alumina-grey)))})))
 
-(def selected-client
-  {:height "60px"
-   :margin-top "10px"
-   :font-size "14px"
-   :padding "10px"
-   :color (color :white)
-   :background (color :royal-blue)
-   :display ""
-   ::stylefy/sub-styles
-   { :button {
-              :display "inline"
-              :float "right"
-              :position "absolute"
-              :right "30px"
-              :bottom "140px"}}})
+(defn plant-selector [view-size]
+  {:overflow-y "auto"
+   :max-height (px (- (:height view-size) 300))})
+
+(def btn-config {:color (color-hex :monet-pink)})

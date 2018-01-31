@@ -29,14 +29,16 @@
    (get-in dialog [:field id])))
 
 (rf/reg-sub
- ::client-list
- :<- [::dialog]
- (fn [dialog _]
-   (get-in dialog [:data :clients])))
+ ::clients
+ :<- [::data]
+ (fn [data _] (:clients data)))
 
 (rf/reg-sub
- ::selected-client
- :<- [::dialog]
- (fn [dialog _]
-   (get-in dialog [:data :selected-client])))
+ ::more?
+ :<- [::data]
+ (fn [data _] (:more? data)))
 
+(rf/reg-sub
+ ::busy?
+ :<- [::data]
+ (fn [data _] (:busy? data)))

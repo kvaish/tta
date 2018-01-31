@@ -21,45 +21,21 @@
  ::plant
  (fn [db _] (:plant db)))
 
-(rf/reg-sub
- ::dataset
- (fn [db _] (:dataset db)))
+(rf/reg-sub-raw
+ ::countries
+ (fn [dba [_]]
+   (let [f #(:countries @dba)]
+     (if (empty? (f))
+       (svc/fetch-search-options
+        {:evt-success [::event/set-search-options]
+         :evt-failure [::ht-event/service-failure true]}))
+     (rr/make-reaction f))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Derived signals/subscriptions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
- ::active-user
- :<- [::user]
- (fn [user _]
-   (get-in user [:all (:active user)])))
-
-(rf/reg-sub
- ::active-client
- :<- [::client]
- (fn [client _]
-   (get-in client [:all (:active client)])))
-
-(rf/reg-sub
- ::active-plant
+ ::temp-unit
  :<- [::plant]
- (fn [plant _]
-   (get-in plant [:all (:active plant)])))
-
-(rf/reg-sub
- ::active-dataset
- :<- [::dataset]
- (fn [dataset _]
-   (get-in dataset [:all (:active dataset)])))
-
-(rf/reg-sub-raw
- ::country-list
- (fn [dba [_]]
-   (let [countries (get @dba :countries)]
-     (if (or (empty? countries) (nil? countries))
-       (svc/fetch-search-options
-        {:evt-success [::event/set-client-search-options]
-         :evt-failure [::ht-event/service-failure true]})))
-   (rr/make-reaction
-    (fn [] (get @dba :countries)))))
+ (fn [plant _] (get-in plant [:settings :temp-unit])))

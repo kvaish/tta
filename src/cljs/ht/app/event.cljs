@@ -1,10 +1,8 @@
 (ns ht.app.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
-            [goog.string :as gstr]
-            [goog.string.format]
             [goog.date :as gdate]
-            [ht.util.common :as u]))
+            [ht.util.common :as u :refer [dev-log]]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -31,38 +29,41 @@
  (fn [db [_ busy?]]
    (assoc-in db [:busy?] busy?)))
 
-(rf/reg-event-db
- ::logout
- (fn [db _]
-   ;;TODO:
-   db))
+(rf/reg-event-fx
+ ::exit
+ (fn [_ _]
+   {:app/exit nil}))
 
 (rf/reg-event-fx
+ ::logout
+ (fn [_ _]
+   {:db {:busy? true}
+    :service/logout nil}))
+
+(rf/reg-event-db
  ::service-failure
- (fn [_ [_ fatal? status]]
-   #_{:dispatch [:dialog/open :service-failure {:status status
-                                              :fatal? fatal?}]}))
+ (fn [db [_ fatal? res]]
+   (assoc db :busy? false, :service-failure (assoc res :fatal? fatal?))))
 
 (rf/reg-event-fx
  ::fetch-auth
- (fn [_ _]
-   {:service/fetch-auth nil}))
+ (fn [_ [_ with-busy?]]
+   (cond-> {:service/fetch-auth with-busy?}
+     with-busy? (assoc :dispatch [::set-busy? true]))))
 
-(defn set-auth [{:keys [db]} [_ token claims]]
-  (let [now (.valueOf (gdate/DateTime.))
-        claims (if claims (update claims :exp gdate/fromIsoString))
-        delay (if claims (- (.valueOf (:exp claims)) now 300e3)) ;; 5min
-        user-id (:id claims)
-        init? (and claims (not (get-in db [:auth :fetched?])))]
-    (cond-> {:db (-> db
-                     (update :auth assoc
-                             :token token
-                             :claims claims
-                             :fetched? true)
-                     (assoc-in [:user :active] user-id))}
-      delay (assoc :dispatch-later [{:ms delay
-                                     :dispatch [:fetch-auth]}])
-      init? (assoc :dispatch [:app/init]))))
-
-(rf/reg-event-fx ::set-auth set-auth)
-
+(rf/reg-event-fx
+ ::set-auth
+ (fn [{:keys [db]} [_ with-busy? token claims]]
+   (let [now (.valueOf (gdate/DateTime.))
+         delay (if claims (- (.valueOf (:exp claims)) now 300e3)) ;; 5min
+         init? (and claims (not (get-in db [:auth :fetched?])))]
+     (dev-log "fetch-auth after delay: " delay)
+     (cond-> {:db (-> db
+                      (update :auth assoc
+                              :token token
+                              :claims claims
+                              :fetched? true))}
+       delay (assoc :dispatch-later [{:ms delay
+                                      :dispatch [::fetch-auth false]}])
+       init? (update :dispatch-n conj [:app/init])
+       with-busy? (update :dispatch-n conj [::set-busy? false])))))

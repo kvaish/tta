@@ -28,10 +28,3 @@
  :<- [::dialog]
  (fn [dialog [_ id]]
    (get-in dialog [:field id])))
-
-
-(rf/reg-sub
- ::field
- :<- [::user]
- (fn [dialog [_ id]]
-   (get-in dialog [:field id])))

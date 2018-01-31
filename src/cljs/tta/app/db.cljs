@@ -7,18 +7,11 @@
     :features nil
     :operations nil
     :countries []
+
     ;; entities
-    :user {:active nil
-           :all {:user-id {:aggreed? false
-                           :plant-id ""
-                           :client-id ""}}}
-    :client {:active nil
-             :all {}}
-    :plant {:active nil
-            :all {}}
-    
-    :dataset {:pools []
-              :messages []}
+    :user nil
+    :client nil
+    :plant nil
 
     :component
     {:root {:header {}

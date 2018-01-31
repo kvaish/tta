@@ -35,7 +35,9 @@
            :font-size "18px"
            :color (color :royal-blue)}
    :root {:display "block"
-          :margin "0 0 5px 0"}})
+          :margin "0 0 5px 0"
+          :border-radius "5px"
+          :height "48px"}})
 
 (defn set-clickable [style pointer?]
   (merge style
@@ -51,12 +53,7 @@
 (defn disable-card [style]
   (assoc style
          :background-color (str (color-rgba :alumina-grey nil 0.8)
-                                " !important")
-         ))
-(defn hide-card [style]
-  (assoc style
-    :display "none"
-    ))
+                                " !important")))
 
 (defn disable-button [style]
   (assoc style :color (color-hex :slate-grey)))
@@ -83,13 +80,13 @@
     :icon {:height "80px"
            :width "80px"
            :position "absolute"
-           :top "10px"
-           :right "10px"}
+           :top "60px"
+           :right "30px"}
     :desc {:color (color :royal-blue)
-           :max-width "260px"
+           :max-width "200px"
            :font-weight 300
-           :position "absolute"
-           :bottom "30px"
+           ;; :position "absolute"
+           ;; :bottom "30px"
            :font-size "18px"}
     :button-container {:position "absolute"
                        :bottom "30px"}}})
@@ -99,10 +96,15 @@
     (-> card-primary
         (assoc :padding "20px")
         (assoc-in [ss :title :font-size] "20px")
+        (update-in [ss :icon] merge
+                   {:height "60px"
+                    :width "60px"
+                    :top "50px"
+                    :right "20px"})
         (update-in [ss :hr] merge
                    {:width "24px"
                     :border-width "0.5px"
                     :-ms-border-width "1px"})
-        (update-in [ss :desc] merge { :font-size "16px"
+        (update-in [ss :desc] merge {:font-size "16px"
                                      :position "absolute"
                                      :bottom "20px"}))))
