@@ -1,6 +1,6 @@
 var htAppConfig = {
   appId: "truetemp",
-  buildId: "dev",
+  buildId: "min",
 
   // set to "" when hosted in portal itself
   portalUri: "",
