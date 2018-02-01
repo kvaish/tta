@@ -22,4 +22,5 @@
     :logs             true
     :data-entry       true
     :import-logger    true
-    :print-logsheet   true))
+    :print-logsheet   true
+    false))

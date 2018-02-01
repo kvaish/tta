@@ -10,8 +10,7 @@
  :app/exit
  (fn [_]
    (i/oset js/htAppEnv :leaveSilently true)
-   (let [{:keys [portal-uri]} @config]
-     (i/oset js/window.location :href portal-uri))))
+   (i/oset js/window.location :href "/")))
 
 ;;;;;;;;;;;;;
 ;; storage ;;
