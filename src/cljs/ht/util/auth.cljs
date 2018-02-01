@@ -43,7 +43,7 @@
 
 (defn parse-claims [c]
   (if c
-    (let [app-id (:app-id @config)
+    (let [app-id (keyword (:app-id @config))
           app (get-in c [:apps app-id])
           fs  (not-empty (mapv keyword (:features app)))
           ops (not-empty (mapv keyword (:operations app)))]
