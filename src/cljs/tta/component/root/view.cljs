@@ -18,7 +18,9 @@
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
             [tta.dialog.choose-plant.view :refer [choose-plant]]
-            [tta.util.auth :as auth]))
+            [tta.util.auth :as auth]
+            [tta.component.setting.view :refer [setting]]
+            [tta.component.setting.event :as setting-event]))
 
 ;;; language-menu ;;;
 
@@ -263,7 +265,8 @@
          :trendline         [:div "trendline"]
          ;; secondary
          :config            [:div "config"]
-         :settings          [:div "settings"]
+         :settings          [setting {:on-select
+                                      #(rf/dispatch [::event/activate-content %])}]
          :goldcup           [:div "goldcup"]
          :config-history    [:div "config-history"]
          :logs              [:div "logs"])

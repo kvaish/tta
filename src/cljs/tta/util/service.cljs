@@ -17,7 +17,8 @@
           :fetch-client "/api/client/:client-id"
           :search-clients "/api/client"
           :fetch-plant "/api/client/:client-id/plant/:plant-id"
-          :fetch-client-plants "/api/client/:client-id/plant"}}))
+          :fetch-client-plants "/api/client/:client-id/plant"
+          :fetch-client-settings "/"}}))
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -79,3 +80,5 @@
         :api-params {:client-id client-id}
         :on-success (dispatch-many evt-success :sap-plant)
         :evt-failure evt-failure}))
+
+

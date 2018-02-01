@@ -3,12 +3,21 @@
   (:require [re-frame.core :as rf]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
-            [tta.util.auth :as auth]))
+            [tta.util.auth :as auth]
+            [ht.util.auth :as ht-auth]
+            [tta.info :as info]))
 
 (rf/reg-sub
  ::home
  (fn [db _]
    (get-in db [:component :home])))
+
+(fn has-access [claims op]
+  (if (ht-auth/allow-operation? claims op info/operations)
+    :enabled
+    :disabled))
+
+
 
 (rf/reg-sub
  ::access-rules
