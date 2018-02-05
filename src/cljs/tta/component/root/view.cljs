@@ -50,11 +50,11 @@
 
 (defn fa-icon [class]
   (r/as-element
-   [ui/font-icon {:class-name class}]))
+    [ui/font-icon {:class-name class}]))
 
 (defn svg-icon [src]
   (r/as-element
-   [:img {:src src}]))
+    [:img {:src src}]))
 
 (def settings-menu-data
   {:top [{:id :choose-plant
@@ -87,19 +87,19 @@
 (defn settings-sub-menu [props]
   (let [{:keys [menu-items]} props]
     (doall
-     (map (fn [{:keys [id event-id
-                      disabled? hidden?
-                      icon label label-key]}]
-            (if-not hidden?
-              [ui/menu-item
-               {:key id
-                :disabled disabled?
-                :left-icon icon
-                :primary-text (translate [:root :menu label-key] label)
-                :on-click #(do
-                             (rf/dispatch [::event/set-menu-open? :settings false])
-                             (rf/dispatch [event-id]))}]))
-          menu-items))))
+      (map (fn [{:keys [id event-id
+                        disabled? hidden?
+                        icon label label-key]}]
+             (if-not hidden?
+               [ui/menu-item
+                {:key id
+                 :disabled disabled?
+                 :left-icon icon
+                 :primary-text (translate [:root :menu label-key] label)
+                 :on-click #(do
+                              (rf/dispatch [::event/set-menu-open? :settings false])
+                              (rf/dispatch [event-id]))}]))
+           menu-items))))
 
 (defn settings-menu [props]
   (let [anchor-el (:settings @(:anchors props))
@@ -114,9 +114,9 @@
       ;; :style {:position "fixed" :top 10000}
       :anchor-el anchor-el
       :anchor-origin {:horizontal "right"
-                               :vertical "bottom"}
+                      :vertical "bottom"}
       :target-origin {:horizontal "right"
-                               :vertical "top"}
+                      :vertical "top"}
       :on-request-close #(rf/dispatch [::event/set-menu-open? :settings false])}
      [ui/menu
       ;; top section
@@ -125,9 +125,9 @@
       ;; middle (context) section
       (if context-menu
         (list
-         [ui/divider {:key :div-middle}]
-         (settings-sub-menu {:key :middle-sub-menu
-                             :menu-items context-menu})))
+          [ui/divider {:key :div-middle}]
+          (settings-sub-menu {:key :middle-sub-menu
+                              :menu-items context-menu})))
 
       ;; bottom section
       [ui/divider]
@@ -143,30 +143,30 @@
        [:div (use-sub-style style/header :middle)]
        [:div (use-sub-style style/header :right)
         (doall
-         (map
-          (fn [[id icon label action]]
-            ^{:key id}
-            [:a (merge (use-sub-style style/header :link)
-                       {:href "#" :on-click action})
-             (if icon
-               [:i (use-sub-style style/header
-                                  (if (= id :language) :icon-only :link-icon)
-                                  {::stylefy/with-classes [icon]})])
-             label])
-          [[:language
-            "fa fa-language"
-            nil
-            #(do
-               (i/ocall % :preventDefault)
-               (swap! anchors assoc :language (i/oget % :target))
-               (rf/dispatch [::event/set-menu-open? :language true]))]
-           [:settings
-            "fa fa-caret-right"
-            (translate [:header-link :settings :label] "Settings")
-            #(do
-               (i/ocall % :preventDefault)
-               (swap! anchors assoc :settings (i/oget % :currentTarget))
-               (rf/dispatch [::event/set-menu-open? :settings true]))]]))
+          (map
+            (fn [[id icon label action]]
+              ^{:key id}
+              [:a (merge (use-sub-style style/header :link)
+                         {:href "#" :on-click action})
+               (if icon
+                 [:i (use-sub-style style/header
+                                    (if (= id :language) :icon-only :link-icon)
+                                    {::stylefy/with-classes [icon]})])
+               label])
+            [[:language
+              "fa fa-language"
+              nil
+              #(do
+                 (i/ocall % :preventDefault)
+                 (swap! anchors assoc :language (i/oget % :target))
+                 (rf/dispatch [::event/set-menu-open? :language true]))]
+             [:settings
+              "fa fa-caret-right"
+              (translate [:header-link :settings :label] "Settings")
+              #(do
+                 (i/ocall % :preventDefault)
+                 (swap! anchors assoc :settings (i/oget % :currentTarget))
+                 (rf/dispatch [::event/set-menu-open? :settings true]))]]))
         [language-menu {:anchors anchors}]
         [settings-menu {:anchors anchors}]]])))
 
@@ -181,7 +181,7 @@
    [:span {:style {:font-weight "300"
                    :font-size "18px"}} "Temp"]
    [:span {:style {:font-size "12px"
-                   :vertical-align "text-top"}} "™"]])
+                   :vertical-align "text-top"}} "â„¢"]])
 
 (defn hot-links []
   [:div (use-style style/hot-links)
@@ -189,25 +189,25 @@
      (if (= :home active-content)
        [:span]
        (doall
-        (map
-         (fn [[id label target]]
-           (let [target (or target id)
-                 active? (= target active-content)]
-             ^{:key id}
-             [:a
-              (merge (use-sub-style style/hot-links
-                                    (if active? :active-link :link))
-                     {:href "#"
-                      :on-click (if-not active?
-                                  #(rf/dispatch [::event/activate-content target]))})
-              label]))
-         [[:home
-           (translate [:quick-launch :home :label] "Home")]
-          [:dataset
-           (translate [:quick-launch :dataset :label] "Dataset")
-           @(rf/subscribe [::subs/active-dataset-action])]
-          [:trendline
-           (translate [:quick-launch :trendline :label] "Trendline")]]))))])
+         (map
+           (fn [[id label target]]
+             (let [target (or target id)
+                   active? (= target active-content)]
+               ^{:key id}
+               [:a
+                (merge (use-sub-style style/hot-links
+                                      (if active? :active-link :link))
+                       {:href "#"
+                        :on-click (if-not active?
+                                    #(rf/dispatch [::event/activate-content target]))})
+                label]))
+           [[:home
+             (translate [:quick-launch :home :label] "Home")]
+            [:dataset
+             (translate [:quick-launch :dataset :label] "Dataset")
+             @(rf/subscribe [::subs/active-dataset-action])]
+            [:trendline
+             (translate [:quick-launch :trendline :label] "Trendline")]]))))])
 
 (defn messages [] ;; TODO: define comp for message and warning
   [:div (use-style style/messages)])
