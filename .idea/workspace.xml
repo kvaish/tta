@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e0a29456-0bad-40c4-adc6-60df7bca8763" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/src/cljs/tta/component/reformer_layout/view.cljs" afterPath="$PROJECT_DIR$/src/cljs/tta/component/reformer_layout/view.cljs" />
-      <change beforePath="$PROJECT_DIR$/src/cljs/tta/dialog/test_design/view.cljs" afterPath="$PROJECT_DIR$/src/cljs/tta/dialog/test_design/view.cljs" />
+      <change beforePath="$PROJECT_DIR$/src/cljs/tta/component/reformer_layout_tf/view.cljs" afterPath="$PROJECT_DIR$/src/cljs/tta/component/reformer_layout_tf/view.cljs" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -48,8 +46,8 @@
       <file leaf-file-name="view.cljs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/cljs/tta/component/reformer_layout/view.cljs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="18">
-              <caret line="151" column="13" lean-forward="false" selection-start-line="151" selection-start-column="10" selection-end-line="151" selection-end-column="13" />
+            <state relative-caret-position="4">
+              <caret line="240" column="85" lean-forward="false" selection-start-line="240" selection-start-column="84" selection-end-line="240" selection-end-column="85" />
               <folding>
                 <element signature="e#810#7028#0" expanded="false" />
               </folding>
@@ -60,11 +58,9 @@
       <file leaf-file-name="view.cljs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/cljs/tta/component/reformer_layout_tf/view.cljs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="410">
-              <caret line="182" column="48" lean-forward="false" selection-start-line="182" selection-start-column="48" selection-end-line="182" selection-end-column="48" />
-              <folding>
-                <element signature="e#9424#12505#0" expanded="false" />
-              </folding>
+            <state relative-caret-position="513">
+              <caret line="133" column="61" lean-forward="false" selection-start-line="133" selection-start-column="61" selection-end-line="133" selection-end-column="61" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -92,6 +88,7 @@
       <find>js/con</find>
       <find>ch</find>
       <find>ch)</find>
+      <find>console</find>
       <find>range</find>
     </findStrings>
     <replaceStrings>
@@ -250,7 +247,7 @@
     <property name="project.structure.side.proportion" value="0.0" />
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
-  <component name="ReplState" timestamp="1517823333528">{:repl-history {:ide [], :local [{:command &quot;(cljs-repl)&quot;, :offset 11, :ns &quot;user&quot;} {:command &quot;:cljs/quit&quot;, :offset 10, :ns &quot;cljs.user&quot;} {:command &quot;(new-dlg \&quot;test-design\&quot;)&quot;, :offset 23, :ns &quot;user&quot;} {:command &quot;(new-comp 'reformer-layout)&quot;, :offset 27, :ns &quot;user&quot;} {:command &quot;(fig-stop)&quot;, :offset 10, :ns &quot;user&quot;} {:command &quot;(fig-start)&quot;, :offset 11, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       (assoc-in reformer-data \n                 [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 139, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data\n       assoc reformer-data\n       [:configuration :sfConfig :placementOfWHS]\n       \&quot;side\&quot;)&quot;, :offset 112, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data\n       assoc [:configuration :sfConfig :placementOfWHS]\n       \&quot;side\&quot;)&quot;, :offset 91, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       (assoc-in [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 107, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       #(assoc-in [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 108, :ns &quot;user&quot;}], :remote []}}</component>
+  <component name="ReplState" timestamp="1517825399593">{:repl-history {:ide [], :local [{:command &quot;(cljs-repl)&quot;, :offset 11, :ns &quot;user&quot;} {:command &quot;:cljs/quit&quot;, :offset 10, :ns &quot;cljs.user&quot;} {:command &quot;(new-dlg \&quot;test-design\&quot;)&quot;, :offset 23, :ns &quot;user&quot;} {:command &quot;(new-comp 'reformer-layout)&quot;, :offset 27, :ns &quot;user&quot;} {:command &quot;(fig-stop)&quot;, :offset 10, :ns &quot;user&quot;} {:command &quot;(fig-start)&quot;, :offset 11, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       (assoc-in reformer-data \n                 [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 139, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data\n       assoc reformer-data\n       [:configuration :sfConfig :placementOfWHS]\n       \&quot;side\&quot;)&quot;, :offset 112, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data\n       assoc [:configuration :sfConfig :placementOfWHS]\n       \&quot;side\&quot;)&quot;, :offset 91, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       (assoc-in [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 107, :ns &quot;user&quot;} {:command &quot;(swap! reformer-data \n       #(assoc-in [:configuration :sfConfig :placementOfWHS]\n                 \&quot;side\&quot;))&quot;, :offset 108, :ns &quot;user&quot;}], :remote []}}</component>
   <component name="RunDashboard">
     <option name="ruleStates">
       <list>
@@ -379,12 +376,12 @@
       <workItem from="1517200981197" duration="26477000" />
       <workItem from="1517285580809" duration="48577000" />
       <workItem from="1517544051343" duration="16388000" />
-      <workItem from="1517804989276" duration="16030000" />
+      <workItem from="1517804989276" duration="18089000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="198600000" />
+    <option name="totallyTimeSpent" value="200659000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1680" height="1050" extended-state="6" />
@@ -396,11 +393,11 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="REPL" active="true" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.24019608" sideWeight="0.62844545" order="9" side_tool="true" content_ui="tabs" />
+      <window_info id="REPL" active="true" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.22487745" sideWeight="0.43109152" order="9" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3296582" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Leiningen" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32965687" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.22487745" sideWeight="0.37155458" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.22487745" sideWeight="0.5689085" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.125" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -806,8 +803,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/cljs/tta/component/reformer_layout/view.cljs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18">
-          <caret line="151" column="13" lean-forward="false" selection-start-line="151" selection-start-column="10" selection-end-line="151" selection-end-column="13" />
+        <state relative-caret-position="4">
+          <caret line="240" column="85" lean-forward="false" selection-start-line="240" selection-start-column="84" selection-end-line="240" selection-end-column="85" />
           <folding>
             <element signature="e#810#7028#0" expanded="false" />
           </folding>
@@ -816,11 +813,9 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/cljs/tta/component/reformer_layout_tf/view.cljs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="410">
-          <caret line="182" column="48" lean-forward="false" selection-start-line="182" selection-start-column="48" selection-end-line="182" selection-end-column="48" />
-          <folding>
-            <element signature="e#9424#12505#0" expanded="false" />
-          </folding>
+        <state relative-caret-position="513">
+          <caret line="133" column="61" lean-forward="false" selection-start-line="133" selection-start-column="61" selection-end-line="133" selection-end-column="61" />
+          <folding />
         </state>
       </provider>
     </entry>

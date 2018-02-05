@@ -109,9 +109,7 @@
                    (i/ocall :append "g")
                    (i/ocall :attr "class" "tube-row"))]
       (-> news
-          (i/ocall :append "line")
-          ;(i/ocall :attr "class" "tube-row")
-          )
+          (i/ocall :append "line"))
 
       ;;update
       (let [tube-rows (i/ocall news :merge coll)]
@@ -128,16 +126,14 @@
       (i/ocall :exit)
       (i/ocall :remove)))
 
-(defn draw-tube-label [coll]
+(defn draw-label [coll]
   (let [news (i/ocall coll :enter)]
     ;;enter
     (let [refs (-> news
                    (i/ocall :append "g")
-                   (i/ocall :attr "class" "tube-row-label"))]
+                   (i/ocall :attr "class" (fn [d i] (:class d))))]
       (-> refs
-          (i/ocall :append "text")
-          ;(i/ocall :attr "class" "tube-row-label")
-          )
+          (i/ocall :append "text"))
 
       ;;update
       (let [tube-rows (i/ocall refs :merge coll)]
@@ -145,7 +141,8 @@
             (i/ocall :select "text")
             (i/ocall :attr "x" (fn [d i] (:x d)))
             (i/ocall :attr "y" (fn [d i] (:y d)))
-            (i/ocall :text (fn [d i] (:text d)))))))
+            (i/ocall :text (fn [d i] (:text d)))
+            (i/ocall :attr "transform" (fn [d i] (:rotate d)))))))
   ;;exit
   (-> coll
       (i/ocall :exit)
@@ -158,9 +155,7 @@
                    (i/ocall :append "g")
                    (i/ocall :attr "class" "burner-row"))]
       (-> refs
-          (i/ocall :append "line")
-          ;(i/ocall :attr "class" "burner-row")
-          )
+          (i/ocall :append "line"))
       ;;update
       (let [tube-rows (i/ocall refs :merge coll)]
         (-> tube-rows
@@ -178,7 +173,6 @@
       (i/ocall :remove)))
 
 (defn draw-walls [ref]
-  (js/console.log "==> " ref)
   (let [news (i/ocall ref :enter)]
     ;;enter
     (let [walls (-> news
@@ -192,7 +186,6 @@
       (let [walls (i/ocall walls :merge ref)]
         (-> walls
             (i/ocall :select "text.side-name")
-            (i/ocall :attr "id" (fn [d i] (js/console.log d i)))
             (i/ocall :attr "x" (fn [d i] (:x d)))
             (i/ocall :attr "y" (fn [d i] (:y d)))
             (i/ocall :text (fn [d i] (:text d)))
@@ -251,8 +244,27 @@
                                (into-array (mapv (fn [i]
                                                    {:x (+ 130 (* i 100))
                                                     :y 90
-                                                    :text (str "Row " (inc i))}) (range row-count))))))
-            (draw-tube-label))
+                                                    :text (str "Row " (inc i))
+                                                    :rotate "rotate(0)"
+                                                    :class "tube-row-label"}) (range row-count))))))
+            (draw-label))
+
+        (-> refs
+            (i/ocall :select "g.tube-rows")
+            (i/ocall :selectAll "g.tube-numbering-label")
+            (i/ocall :data (fn [d]
+                             (let [row-count (get-in d [:configuration :tf-config :tube-row-count])]
+                               (into-array (mapv (fn [i]
+                                                   {:x      (+ 140 (* i 100))
+                                                    :y      200
+                                                    :rotate (str "rotate(270," (+ 140 (* i 100)) ",200)")
+                                                    :text   (str "Tube "
+                                                                 (get-in d [:configuration :tf-config :tube-rows i :start-tube])
+                                                                 "→"
+                                                                 (get-in d [:configuration :tf-config :tube-rows i :end-tube]))
+                                                    :class "tube-numbering-label"})
+                                                 (range row-count))))))
+            (draw-label))
 
         (-> refs
             (i/ocall :select "g.burner-rows")
@@ -267,7 +279,27 @@
                                                     :y1 100
                                                     :x2 (+ start-with (* i 100))
                                                     :y2 400}) (range row-count))))))
-            (draw-burners)))))
+            (draw-burners))
+
+        (-> refs
+            (i/ocall :select "g.burner-rows")
+            (i/ocall :selectAll "g.burner-numbering-label")
+            (i/ocall :data (fn [d]
+                             (let [row-count (get-in d [:configuration :tf-config :burner-row-count])
+                                   start-with (if (= true (get-in d [:configuration :tf-config :burner-first?]))
+                                                100
+                                                200)]
+                               (into-array (mapv (fn [i]
+                                                   {:x      (- (+ start-with (* i 100)) 8)
+                                                    :y      380
+                                                    :rotate (str "rotate(270," (- (+ start-with (* i 100)) 8) ",380)")
+                                                    :text   (str "Burner "
+                                                                 (get-in d [:configuration :tf-config :burner-rows i :start-burner])
+                                                                 "→"
+                                                                 (get-in d [:configuration :tf-config :burner-rows i :end-burner]))
+                                                    :class "burner-numbering-label"})
+                                                 (range row-count))))))
+            (draw-label)))))
 
   ;;exit
   (-> coll
