@@ -105,6 +105,7 @@
   (let [whs (i/ocall coll :merge coll)
         rects (i/ocall whs :select "rect.whs-box")
         texts (i/ocall whs :select "text.whs-text")]
+
     (-> rects
         (i/ocall :attr "fill" "lightgray")
         (i/ocall :attr "stroke" "black")
@@ -113,6 +114,7 @@
         (i/ocall :attr "width" (fn [d] (:width (whs-position d))))
         (i/ocall :attr "x" (fn [d] (:x (whs-position d))))
         (i/ocall :attr "y" (fn [d] (:y (whs-position d)))))
+
     (-> texts
         (i/ocall :attr "stroke" "black")
         (i/ocall :attr "font-size" "45px")
@@ -133,13 +135,16 @@
         (i/ocall :text (fn [d] (:text (whs-position d)))))))
 
 (defn draw-labels [ref-ch data]
+  (js/console.log ref-ch data)
   (-> ref-ch
-      (i/ocall :attr "stroke" "black")
+      (i/ocall :append "text")
+      (i/ocall :attr "class" "chamber-name")
       (i/ocall :attr "font-size" "18px")
       (i/ocall :attr "x" (:x data))
       (i/ocall :attr "y" (:y data))
       (i/ocall :attr "transform" (str "rotate(" (:rotate data) "," (:x data) "," (:y data) ")"))
-      (i/ocall :text (:text data))))
+      (i/ocall :text (:text data))
+      ))
 
 (defn draw-chamber [coll]
   (let [news (i/ocall coll :enter)]
@@ -182,13 +187,12 @@
             (i/ocall :attr "height" (fn [ch i]
                                       (:height ch)))
             (i/ocall :attr "stroke" "black")
-            ;(i/ocall :attr "stroke-width" "0.03em")
             (i/ocall :attr "fill" "lightgray")
             (i/ocall :attr "width" (fn [ch i] (:width ch)))
             (i/ocall :attr "y" (fn [ch i] (:y ch)))
             (i/ocall :attr "x" (fn [ch i]
-                                 (+ (:x ch) (* 300 (:index ch)))))
-            )
+                                 (+ (:x ch) (* 300 (:index ch))))))
+
         (-> chs
             (i/ocall :select "line")
             (i/ocall :attr "stroke" "black")
@@ -285,8 +289,7 @@
   ;; exit
   (-> coll
       (i/ocall :exit)
-      (i/ocall :remove))
-  )
+      (i/ocall :remove)))
 
 (defn draw-reformer [coll]
   (let [news (i/ocall coll :enter)]
@@ -307,14 +310,13 @@
       (-> refs
           (i/ocall :append "g")
           (i/ocall :attr "class" "chambers"))
+
       ;; update
       (let [refs (i/ocall refs :merge coll)]
         (-> refs
             (i/ocall :select "g.whs")
-            (draw-whs)
-            #_(i/ocall :each (fn [d i this]
-                             (update-whs (i/ocall js/d3 :select this)
-                                             (get-in d [:configuration :sfConfig :placementOfWHS])))))
+            (draw-whs))
+
         (-> refs
             (i/ocall :select "g.chambers")
             (i/ocall :selectAll "g.chamber")
@@ -340,11 +342,9 @@
 
 (defn on-mount [this state]
   (let [ele (dom/dom-node this)
-        data (:reformer-data (r/props this))
-        ]
+        data (:reformer-data (r/props this))]
     (swap! state assoc :container ele)
-    (render-init ele data)
-    ))
+    (render-init ele data)))
 
 (defn on-update [this state]
   (let [ele (:container @state)
@@ -354,14 +354,14 @@
 (defn reformer-layout [props]
   (let [state (atom {})]
     (r/create-class
-      {:reagent-render       (fn [props]
-                               (let [{:keys [width height]
-                                      :or   {width "100%" height "100%"}} props]
-                                 [:svg
-                                  {:width  width
-                                   :height height
-                                   :view-box "0 0 600 500"
-                                   :style {:background-color "lightgray"}}]))
+      {:reagent-render (fn [props]
+                         (let [{:keys [width height]
+                                :or   {width "100%" height "100%"}} props]
+                           [:svg
+                            {:width  width
+                             :height height
+                             :view-box "0 0 600 500"
+                             :style {:background-color "lightgray"}}]))
        :component-did-mount  (fn [this]
                                (on-mount this state))
        :component-did-update (fn [this _]

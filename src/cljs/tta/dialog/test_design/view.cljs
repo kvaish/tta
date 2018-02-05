@@ -13,7 +13,8 @@
             [tta.dialog.test-design.style :as style]
             [tta.dialog.test-design.subs :as subs]
             [tta.dialog.test-design.event :as event]
-            [tta.component.reformer-layout.view :refer [reformer-layout reformer-data]]))
+            [tta.component.reformer-layout.view :refer [reformer-layout reformer-data]]
+            [tta.component.reformer-layout-tf.view :refer [reformer-layout-tf reformer-data-tf]]))
 
 
 (defn test-design []
@@ -21,5 +22,13 @@
     [ui/dialog
      {:open  true
       :modal true}
-     [:div {:style {:width 600 :height 500}}
-      [reformer-layout {:reformer-data @reformer-data}]]]))
+     [:div {:style {:width 500 :height 500}}
+      ;[reformer-layout {:reformer-data @reformer-data}]
+      [reformer-layout-tf
+       (let [width (+ 50 (* 100 (get-in @reformer-data-tf [:configuration :tf-config :tube-row-count]))) ]
+         {:reformer-data @reformer-data-tf
+          :view-box      (str "0 0 " width " 500")
+          :svg-width width
+          :height 500
+          })]
+      ]]))
