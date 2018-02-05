@@ -104,4 +104,27 @@
 (def app-fault
   {:title {:color (color :red)}
    :icon {:color (color :red)
-          :margin-right 20}})
+          :font-size "28px"
+          :margin-right "24px"}})
+
+(defn message-box [level]
+  {:icon {:color (color (case level
+                          :error :red
+                          :warning :amber
+                          :green))
+          :font-size "28px"
+          :margin-right "24px"}})
+
+(def icon-plain {:fill "none !important"
+                 :stroke (color-rgba :black 0 0.87)
+                 :stroke-width 0.5})
+
+(def optional-dialog-head
+  {:position "relative"
+   :margin 0
+   :padding 0
+   ::stylefy/sub-styles
+   {:title {:display "block"}
+    :close {:position "absolute !important"
+            :top 0
+            :right 0}}})

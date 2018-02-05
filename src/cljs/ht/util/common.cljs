@@ -61,3 +61,31 @@ none matched, returns nil."
 (defn dev-log [& args]
   (if (dev?)
     (i/oapply js/console :log args)))
+
+
+(defn add-event [el, event, handler]
+  (if el
+    (cond
+      (i/oget el :attachEvent)
+      (i/ocall el :attachEvent (str "on" event) handler)
+      (i/oget el :addEventListener)
+      (i/ocall el :addEventListener event handler true)
+      :else
+      (i/oset el (str "on" event) handler))))
+
+(defn remove-event [el event handler]
+  (if el
+    (cond
+      (i/oget el :detachEvent)
+      (i/ocall el :detachEvent (str "on" event) handler)
+      (i/oget el :removeEventListener)
+      (i/ocall el :removeEventListener event handler true)
+      :else
+      (i/oset el (str "on" event) nil))))
+
+(defn get-control-pos [e]
+  (let [cpos (if-let [ts (i/oget e :touches)]
+               (first ts)
+               e)]
+    {:page-x (i/oget cpos :pageX)
+     :page-y (i/oget cpos :pageY)}))

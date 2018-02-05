@@ -65,7 +65,7 @@
  :<- [::ht-subs/topsoe?]
  (fn [[client sap-plants topsoe?] _]
    (if-not topsoe?
-     (:plants client)
+     (mapv #(assoc % :config? true) (:plants client))
      (if sap-plants
        (mapv (fn [{:keys [id name capacity capacity-unit]}]
                {:id id, :name name
