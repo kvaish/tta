@@ -13,4 +13,5 @@
                 [:span {:style {:display "block"}} d]])
              {"plant"   ic/plant
               "my-apps" ic/my-apps
-              "logout"  ic/logout })))
+              "logout"  ic/logout
+              "camera"  ic/camera})))

@@ -8,9 +8,13 @@
   (do
     (stylefy/class "ht-ic-fill" {:fill "currentColor"})
 
-    (stylefy/class "ht-ic-icon" {:fill "none !important"
+    (stylefy/class "ht-ic-icon" {:fill "none"
                                  :stroke "currentColor"
-                                 :stroke-width 1})
+                                 :stroke-width 1
+                                 :display "inline-block"
+                                 :user-select "none"
+                                 :width "24px"
+                                 :height "24px"})
 
     ))
 
@@ -20,10 +24,11 @@
 (def widget-bg-e (color-hex :sky-blue))
 (def widget-fg (color-hex :white))
 
-(defn toggle [on? enabled?]
-  (let [widget-bg (if enabled? widget-bg-e widget-bg-d)]
-    {:cursor (if enabled? "pointer")
-     :width "48px"
+;; 72x48
+(defn toggle [on? disabled?]
+  (let [widget-bg (if disabled? widget-bg-d widget-bg-e)]
+    {:cursor (if-not disabled? "pointer")
+     :width "46px"
      :height "20px"
      :border (str "1px solid " widget-bg)
      :border-radius "11px"
@@ -33,55 +38,35 @@
      :position "relative"
      :background (if on? widget-bg widget-fg)
      :color (if on? widget-fg widget-bg)
-     ;; :box-shadow (str "inset " (if on? widget-fg widget-bg-d) " -1px 1px 10px 1px")
      :transition (:std widget-transition)
      ::stylefy/sub-styles
-     {:label (merge {:display "block"}
-                    (if on? {:margin-left "10px"}
-                        {:margin-right "10px"
-                         :text-align "right"}))
-      :circle (merge {:border-radius "50%"
-                      :width "14px"
-                      :height "14px"
-                      :border (str "1px solid " widget-bg)
-                      :position "absolute"
-                      :top "2px"
-                      :background widget-fg
-                      ;; :box-shadow (str "inset " widget-bg-d " 3px 3px 3px 1px")
-                      :transition (:std widget-transition)}
-                     {:left (if on? "30px" "2px")})}}))
+     {:container {:display "inline-block"
+                  :padding "13px 12px"
+                  :vertical-align "top"}
+      :label {:display "block"
+              :margin "0 10px 0 10px"
+              :text-align (if on? "left" "right")}
+      :circle {:border-radius "50%"
+               :width "12px"
+               :height "12px"
+               :border (str "1px solid " widget-bg)
+               :position "absolute"
+               :top "3px"
+               :background widget-fg
+               :left (if on? "30px" "3px")
+               :transition (:std widget-transition)}}}))
 
-(def toggle-on (toggle true true))
-(def toggle-off (toggle false true))
-(def toggle-on-d (toggle true false))
-(def toggle-off-d (toggle false false))
+;; 48x48, icon: 24x24
+(defn icon-button [disabled?]
+  {:border-radius "50%"
+   :background (if disabled? widget-bg-d widget-bg-e)
+   :color widget-fg})
 
-(def icon-button
-  {::stylefy/sub-styles
-   {:icon {:border-radius "50%"
-           :background widget-bg-e
-           :color (str widget-fg " !important")}}})
-
-(def icon-button-disabled
-  (assoc-in icon-button [::stylefy/sub-styles :icon :background]
-            widget-bg-d))
-
-(def icon-button-2
-  (update-in icon-button [::stylefy/sub-styles :icon] assoc
-             :width "22px !important"
-             :height "22px !important"))
-
-(def icon-button-2-disabled
-  (assoc-in icon-button-2 [::stylefy/sub-styles :icon :background]
-            widget-bg-d))
-
-(defn selector [enabled?]
-  (let [widget-bg (if enabled? widget-bg-e widget-bg-d)
-        shadow-color (if enabled? (color-hex :sky-blue -20)
-                         (color-hex :white -20))
+(defn selector [disabled?]
+  (let [widget-bg (if disabled? widget-bg-d widget-bg-e)
         label {:position "absolute"
                :display "inline-block"
-               :font-size "11px"
+               :font-size "12px"
                :font-weight 300
                :text-align "center"
                :top 0
@@ -93,14 +78,16 @@
      :border-radius "15px", :min-width "30px"
      :position "relative"
      ::stylefy/sub-styles
-     {:marker {:background widget-bg
+     {:container {:display "inline-block"
+                  :padding "8px 12px"
+                  :vertical-align "top"}
+      :marker {:background widget-bg
                :height "24px"
                :border-radius "12px", :min-width "24px"
                :transition (:std widget-transition)
                :position "absolute"
-               ;; :box-shadow (str "inset " shadow-color " 3px 3px 10px 1px")
                :top "3px"}
-      :label (if enabled? (assoc label :cursor "pointer") label)
+      :label (if disabled? label (assoc label :cursor "pointer"))
       :active-label (assoc label :color widget-fg)}}))
 
 (def scroll-bar

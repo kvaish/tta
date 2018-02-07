@@ -151,7 +151,7 @@
            [:div {:style (assoc body-style
                                 :width sw, :height sh
                                 :position "absolute"
-                                :transition "300ms ease-in-out"
+                                :transition "200ms ease-in-out"
                                 :top (- t), :left (- l))
                   :class-name body-class-name}
             (if render-fn (render-fn {:top t, :left l
@@ -219,7 +219,7 @@
                  (fn [_ children]
                    (let [{:keys [t l]} @state]
                      (into [:div {:style {:position "absolute"
-                                          :transition "300ms ease-in-out"
+                                          :transition "200ms ease-in-out"
                                           :top (- t) :left (- l)}}]
                            children)))}))]
 

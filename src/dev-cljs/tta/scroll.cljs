@@ -34,7 +34,7 @@
                    :style {:top top, :left left
                            :position "absolute"
                            :padding 10
-                           :transition "300ms ease-in-out"}}
+                           :transition "200ms ease-in-out"}}
              [:p [:b "top: " top]]
              [:p [:b "left: " left]]]))]]
 

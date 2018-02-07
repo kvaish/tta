@@ -21,13 +21,13 @@
                                               [:work :comp-set :check1]])))}]
 
     ;; [:span {:style {:width "100px"}}]
-    [app-comp/icon-button-2 {:icon ic/plus-2}]
-    [app-comp/icon-button-2 {:icon ic/minus-2}]
-    [app-comp/icon-button-2 {:icon ic/plus-2, :disabled? true}]
-    [app-comp/icon-button-2 {:icon ic/minus-2, :disabled? true}]]
+    [app-comp/icon-button-s {:icon ic/plus}]
+    [app-comp/icon-button-s {:icon ic/minus}]
+    [app-comp/icon-button-s {:icon ic/plus, :disabled? true}]
+    [app-comp/icon-button-s {:icon ic/minus, :disabled? true}]]
    [:div
     [app-comp/toggle {:path [:work :comp-set :check1]}]
-    [app-comp/icon-button {:icon ic/logout}]
+    [app-comp/icon-button {:icon ic/camera}]
     [app-comp/selector {:path [:work :comp-set :selector1]
                         :options ["Wall" "Burner" "Tube"]
                         :item-width 70}]

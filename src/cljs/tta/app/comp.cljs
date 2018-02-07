@@ -19,66 +19,55 @@
  (fn [db [_ path value]]
    (assoc-in db path value)))
 
-(defn toggle [{:keys [disabled? path style class-name]}]
+;; 72x48
+(defn toggle [{:keys [disabled? path]}]
   (let [on? (:value @(rf/subscribe [::value path]))
-        t-style (if disabled?
-                  (if on? app-style/toggle-on-d app-style/toggle-off-d)
-                  (if on? app-style/toggle-on app-style/toggle-off))]
-    [:span {:style (merge {:display "inline-block"
-                           :padding "13px"
-                           :vertical-align "top"} style)
-            :class-name class-name
-            :on-click (if-not disabled?
-                        #(rf/dispatch [::set-value path
-                                       {:value (not on?)
-                                        :valid? true}]))}
-     [:div (use-style t-style)
-      [:span (use-sub-style t-style :label)
+        style (app-style/toggle on? disabled?)]
+    [:span (-> (use-sub-style style :container)
+               (assoc :on-click
+                      (if-not disabled?
+                        #(rf/dispatch [::set-value path {:value (not on?)
+                                                         :valid? true}]))))
+     [:div (use-style style)
+      [:span (use-sub-style style :label)
        (if on?
          (translate [:ht-comp :toggle :on] "on")
          (translate [:ht-comp :toggle :off] "off"))]
-      [:div (use-sub-style t-style :circle)]]]))
+      [:div (use-sub-style style :circle)]]]))
 
-(defn icon-button [{:keys [disabled? icon style on-click]}]
-  (let [t-style (if disabled? app-style/icon-button-disabled
-                    app-style/icon-button)]
-    [ui/icon-button (merge (use-style t-style)
-                           {:style style
-                            :disabled disabled?
-                            :on-click on-click})
-     [icon (use-sub-style t-style :icon
-                          {::stylefy/with-classes ["ht-ic-icon"]})]]))
+;; 48x48, icon: 24x24
+(defn icon-button [{:keys [disabled? icon on-click]}]
+  [ui/icon-button {:disabled disabled?
+                   :on-click (or on-click (fn []))}
+   [icon (use-style (app-style/icon-button disabled?))]])
 
-(defn icon-button-2 [{:keys [disabled? icon style on-click]}]
-  (let [t-style (if disabled? app-style/icon-button-2-disabled
-                    app-style/icon-button-2)]
-    [ui/icon-button (merge (use-style t-style)
-                           {:style style
-                            :disabled disabled?
-                            :on-click on-click})
-     [icon (use-sub-style t-style :icon
-                          {::stylefy/with-classes ["ht-ic-icon"]})]]))
+;; 48x48, icon: 22x22
+(defn icon-button-s [{:keys [disabled? icon on-click]}]
+  [ui/icon-button {:disabled disabled?
+                   :on-click (or on-click (fn []))}
+   [icon (-> (use-style (assoc (app-style/icon-button disabled?)
+                               :width "22px" :height "22px"
+                               :margin "1px"))
+             (assoc :view-box "1 1 23 23"))]])
 
-(defn selector [{:keys [disabled? path style class-name options item-width]}]
+;; *x48
+(defn selector [{:keys [disabled? path options item-width]}]
   (let [{:keys [index] :or {value (first options) index 0}}
         @(rf/subscribe [::value path])
-        t-style (app-style/selector (not disabled?))]
-    [:span {:style (merge {:display "inline-block"
-                           :padding "10px"
-                           :vertical-align "top"} style)
-            :class-name class-name}
+        style (app-style/selector disabled?)]
+    [:span (use-sub-style style :container)
      (into
-      [:div (update (use-style t-style) :style assoc
-                    :width (+ 8 (* item-width (count options))))
-       [:div (update (use-sub-style t-style :marker) :style assoc
+      [:div (update (use-style style) :style assoc
+                    :width (+ 7 (* item-width (count options))))
+       [:div (update (use-sub-style style :marker) :style assoc
                      :width item-width
-                     :left (+ 4 (* index item-width)))]]
+                     :left (+ 3 (* index item-width)))]]
       (map (fn [o i]
-             [:span (-> (use-sub-style t-style
+             [:span (-> (use-sub-style style
                                        (if (= i index) :active-label
                                            :label))
                         (update :style assoc
-                                :left (+ 4 (* i item-width))
+                                :left (+ 3 (* i item-width))
                                 :width item-width)
                         (assoc :on-click
                                (if-not disabled?
