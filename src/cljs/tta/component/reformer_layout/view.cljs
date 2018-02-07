@@ -338,7 +338,7 @@
       (i/ocall :select ele)
       (i/ocall :selectAll "g.reformer")
       (i/ocall :data #js[data])
-      (draw-reformer)))
+      #_(draw-reformer)))
 
 (defn on-mount [this state]
   (let [ele (dom/dom-node this)
@@ -358,13 +358,12 @@
                          (let [{:keys [width height]
                                 :or   {width "100%" height "100%"}} props]
                            [:svg
-                            {:width  width
-                             :height height
-                             :view-box "0 0 600 500"
-                             :style {:background-color "lightgray"}}]))
+                            {:view-box "0 0 600 500"
+                             :style {:background-color "lightgray"
+                                     :width width
+                                     :height height}}]))
        :component-did-mount  (fn [this]
                                (on-mount this state))
        :component-did-update (fn [this _]
                                (on-update this state))
        })))
-
