@@ -13,11 +13,11 @@
        (gc/lighten pct-lighten))))
 
 (defstyles app-styles
-  
+
   [:div#app-loading {:position "fixed"
                      :width "100%"
                      :height "100%"}
-   [:div#spinner {:margin "30% auto"
+   [:div#spinner {:margin "20% auto"
                   :width "100px"
                   :height "100px"
                   :background-image "url('../../images/hexagon_spinner.gif')"

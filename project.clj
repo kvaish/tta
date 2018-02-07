@@ -21,7 +21,9 @@
                   :exclusions [com.cognitect/transit-cljs]]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljsjs/d3 "4.12.0-0"]
-                 [com.cognitect/transit-cljs "0.8.243"]]
+                 [com.cognitect/transit-cljs "0.8.243"]
+                 [figwheel-sidecar "0.5.14"
+                  :exclusions [org.clojure/tools.nrepl]]]
 
   :plugins [[lein-figwheel "0.5.14"
              :exclusions [org.clojure/clojure]]
@@ -38,26 +40,24 @@
                                     "target"]
 
   :figwheel {:css-dirs ["resources/public/css"]
-             :server-port 5309}
+             :server-port 3450}
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  :aliases {"build" ["with-profile" "prd"
+  :aliases {"build" ["with-profile" "prd,user"
                      ["do"
                       ["clean"]
+                      ["run" "-m" "ht.exports"]
                       ["garden" "once"]
                       ["cljsbuild" "once" "min"]]]}
 
   :source-paths ["src/clj" "src/cljc"]
-  
+
   :profiles
   {:dev
-   {:source-paths ["src/dev-clj"]
-    :dependencies [[binaryage/devtools "0.9.8"]
+   {:dependencies [[binaryage/devtools "0.9.8"]
                    [re-frisk "0.5.2"
                     :exclusions [org.clojure/clojure]]
-                   [figwheel-sidecar "0.5.14"
-                    :exclusions [org.clojure/tools.nrepl]]
                    [com.cemerick/piggieback "0.2.2"]
                    [org.clojure/data.json "0.2.6"
                     :exclusions [org.clojure/clojure]]]
@@ -78,7 +78,7 @@
        :stylesheet tta.style/app-styles
        :compiler {:output-to "resources/public/css/build/style.css"
                   :pretty-print? false}}]}}}
-  
+
   :cljsbuild
   {:builds
    [{:id           "dev"
@@ -93,8 +93,7 @@
                     :preloads             [devtools.preload
                                            re-frisk.preload]
                     :external-config      {:devtools/config
-                                           {:features-to-install :all}}
-                    }}
+                                           {:features-to-install :all}}}}
 
     {:id           "min"
      :source-paths ["src/cljs" "src/cljc" "src/prd-cljs"]

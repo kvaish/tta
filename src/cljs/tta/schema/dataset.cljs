@@ -1,86 +1,81 @@
-(ns tta.schema.dataset)
+(ns tta.schema.dataset
+  (:require [ht.util.schema :as u]))
 
 (def schema
-  (let [dataset {:id               "id"
-                 :client-id        "clientId"
-                 :plant-id         "plantId"
-                 :data-date        "dataDate"
-                 :topsoe?          "isTopsoeInternal"
-                 :reformer-version "reformerVersion"
-                 :summary          {:name   "summary"
-                                    :schema ::summary}
-                 :pyrometer        {:name   "pyrometer"
-                                    :schema :pyrometer}
-                 :emissivity-type  "emissivityType"
-                 :emissivity       "emissivity"
-                 :side-fired       {:name   "sideFired"
-                                    :schema ::side-fired}
-                 :top-fired        {:name   "topFired"
-                                    :schema ::top-fired}
-                 :shift            "shift"
-                 :comment          "comment"
-                 :operator         "operator"
-                 :created-by       "createdBy"
-                 :date-created     "dateCreated"
-                 :modified-by      "modifiedBy"
-                 :date-modified    "dateModified"}
+  {:dataset {:id               u/id-field
+             :client-id        "clientId"
+             :plant-id         "plantId"
+             :data-date        (u/date-field "dataDate")
+             :topsoe?          "isTopsoeInternal"
+             :reformer-version "reformerVersion"
+             :summary          {:name   "summary"
+                                :schema ::summary}
+             :pyrometer        {:name   "pyrometer"
+                                :schema :pyrometer}
+             :emissivity-type  "emissivityType"
+             :emissivity       "emissivity"
+             :side-fired       {:name   "sideFired"
+                                :schema ::side-fired}
+             :top-fired        {:name   "topFired"
+                                :schema ::top-fired}
+             :role-type        "roleType" ;; TODO: remove later :PKPA
+             :shift            "shift"
+             :comment          "comment"
+             :operator         "operator"
+             :created-by       "createdBy"
+             :date-created     (u/date-field "dateCreated")
+             :modified-by      "modifiedBy"
+             :date-modified    (u/date-field "dateModified")}
 
-        db-dataset (-> (assoc dataset
-                              :data-date "dataDate"
-                              :date-created "dateCreated"
-                              :date-modified "dateModified")
-                       (assoc-in [:pyrometer :schema] :db/pyrometer))]
+   :dataset/query ^:api {:utc-start {:name  "utcStart"
+                                     :parse u/parse-date}
+                         :utc-end   {:name  "utcEnd"
+                                     :parse u/parse-date}}
 
-    {:dataset    dataset
-     :db/dataset db-dataset
+   ::summary {:tubes%       "pctTubesMeasured"
+              :gold-cup%    "pctGoldCupMeasured"
+              :min-temp     "minTemp"
+              :avg-temp     "avgTemp"
+              :max-temp     "maxTemp"
+              :min-raw-temp "minRawTemp"
+              :avg-raw-temp "avgRawTemp"
+              :max-raw-temp "maxRawTemp"
+              :sub-summary  {:name   "subSummary"
+                             :schema ::summary
+                             :array? true}}
 
-    #_ :dataset/query #_{:utc-start {:name  "utcStart"
-                                 :parse u/parse-date}
-                     :utc-end   {:name  "utcEnd"
-                                 :parse u/parse-date}}
+   ::top-fired {}
 
-     ::summary {:tubes%       "pctTubesMeasured "
-                :gold-cup%    "pctGoldCupMeasured"
-                :min-temp     "minTemp"
-                :avg-temp     "avgTemp"
-                :max-temp     "maxTemp"
-                :min-raw-temp "minRawTemp"
-                :avg-raw-temp "avgRawTemp"
-                :max-raw-temp "maxRawTemp"
-                :sub-summary  {:name   "subSummary"
-                               :schema ::summary
-                               :array? true}}
+   ::side-fired {:chambers {:name   "chambers"
+                            :schema ::chamber
+                            :array? true}}
 
-     ::top-fired {}
+   ::chamber {:sides {:name   "sides"
+                      :schema ::side
+                      :array? true}}
 
-     ::side-fired {:chambers {:name   "chambers"
-                              :schema ::chamber
-                              :array? true}}
-
-     ::chamber {:sides {:name   "sides"
-                        :schema ::side
+   ::side {:tubes      {:name   "tubes"
+                        :schema ::tube
+                        :array? true}
+           :burners    {:name      "burners"
+                        :schema    ::burner
+                        :array?    true
+                        :array-dim 2}
+           :wall-temps {:name   "wallTemps"
+                        :schema ::wall-temps
                         :array? true}}
 
-     ::side {:tubes      {:name   "tubes"
-                          :schema ::tube
-                          :array? true}
-             :burners    {:name   "burners"
-                          :schema ::burner
-                          :array? true}
-             :wall-temps {:name   "wallTemps"
-                          :schema ::wall-temps
-                          :array? true}}
+   ::tube {:gold-cup-temp         "goldCupTemp"
+           :raw-temp              "rawTemp"
+           :corrected-temp        "correctedTemp"
+           :emissivity            "emissivity"
+           :emissivity-calculated "emissivityCalculated"
+           :emissivity-override   "emissivityOverride"
+           :pinched?              "isPinched"}
 
-     ::tube {:gold-cup-temp         "goldCupTemp"
-             :raw-temp              "rawTemp"
-             :corrected-temp        "correctedTemp"
-             :emissivity            "emissivity"
-             :emissivity-calculated "emissivityCalculated"
-             :emissivity-override   "emissivityOverride"}
+   ::burner {:state "state"}
 
-     ::burner {:state "state"}
-
-     ::wall-temps {:avg   "avg"
-                   :temps {:name    "temps"
-                           :parse   js->clj
-                           :unparse clj->js}}}))
+   ::wall-temps {:avg   "avg"
+                 :temps {:name    "temps"
+                         :parse   js->clj
+                         :unparse clj->js}}})

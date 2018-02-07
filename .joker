@@ -1,0 +1,7 @@
+{:ignored-unused-namespaces [garden.units
+                             cljsjs.material-ui
+                             ht.app.cofx
+                             ht.app.fx
+                             ht.app.style]
+ :known-namespaces []
+ :known-macros [garden.def/defstyles]}

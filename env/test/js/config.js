@@ -1,5 +1,6 @@
 var htAppConfig = {
   appId: "truetemp",
+  buildId: "min",
 
   // set to "" when hosten in portal itself
   portalUri: "",
@@ -13,7 +14,3 @@ var htAppConfig = {
   ],
 
 }
-
-// Must be the last line!!
-// use appropriate build
-document.write("<script src='js/min/app.js' type='text/javascript'></script>");

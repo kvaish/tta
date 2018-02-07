@@ -1,5 +1,6 @@
 (ns ht.app.subs
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [clojure.string :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Primary signals ;;
@@ -41,6 +42,13 @@
  ::auth
  (fn [db _] (:auth db)))
 
+(rf/reg-sub
+ ::service-failure
+ (fn [db _] (:service-failure db)))
+
+(rf/reg-sub
+ ::message-box
+ (fn [db _] (:message-box db)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Derived signals/subscriptions ;;
@@ -65,69 +73,86 @@
        (get active-language)
        (get-in key-v))))
 
+;; helper for translation ;;
+
 (defn translate
   "helper function to subscribe translation in view"
-  [key-v default]
-  (or @(rf/subscribe (conj [::translation] key-v))
-      default))
+  ([key-v default]
+   (or @(rf/subscribe (conj [::translation] key-v))
+       default))
+  ([key-v default params]
+   (let [s (translate key-v default)]
+     (reduce-kv (fn [s k v]
+                  (str/replace s (str "{" (name k) "}") v))
+                s params))))
+
+;; auth derived signals ;;
 
 (rf/reg-sub
  ::auth-token
  :<- [::auth]
  (fn [auth _] (:token auth)))
 
+;; auth-claims - returns nil until fetched, then false or claims
 (rf/reg-sub
  ::auth-claims
  :<- [::auth]
  :<- [::config]
  (fn [[auth config] _]
-   (as-> (:claims auth) $
-     (assoc $ :app
-            (-> (get-in $ [:apps (:app-id config)])
-                (update :features #(mapv keyword %))
-                (update :operations #(mapv keyword %))))
-     (dissoc $ :apps))))
+   (if (:fetched? auth)
+     (if-let [claims (:claims auth)]
+       (as-> claims $
+         (assoc $ :app
+                (-> (get-in $ [:apps (:app-id config)])
+                    (update :features #(mapv keyword %))
+                    (update :operations #(mapv keyword %))))
+         (dissoc $ :apps))
+       false))))
 
 (rf/reg-sub
  ::features
  :<- [::auth-claims]
  :<- [::app-features]
  (fn [[claims app-features] _]
-   (->> (if (:isTopsoe claims)
-          app-features ;; internal user gets all features
-          ;; external user gets only subscribed ones
-          (filter (comp (set (get-in claims [:app :features])) :id)
-                  app-features))
-        ;; arrange in a map by feature id
-        (reduce (fn [fs {:keys [id] :as f}]
-                  (assoc fs id f))
-                {}))))
+   (if claims
+     (->> (if (:isTopsoe claims)
+            app-features ;; internal user gets all features
+            ;; external user gets only subscribed ones
+            (filter (comp (set (get-in claims [:app :features])) :id)
+                    app-features))
+          ;; arrange in a map by feature id
+          (reduce (fn [fs {:keys [id] :as f}]
+                    (assoc fs id f))
+                  {})))))
 
 (rf/reg-sub
  ::operations
  :<- [::auth-claims]
  :<- [::app-operations]
  (fn [[claims app-operations] _]
-   (->>
-    (cond
-      ;; client admin gets all non-internal operations
-      (:isClientAdmin claims) (remove :internal? app-operations)
-      ;; admin and owners get all operations
-      (or
-       (:isAdmin claims)
-       (get-in claims [:app :isOwner])
-       (get-in claims [:app :isAdmin]))
-      app-operations
-      ;; others get only specified operations
-      :others
-      (filter (comp (set (get-in claims [:app :operations])) :id)
-              (if (:isTopsoe claims)
-                app-operations
-                (remove :internal? app-operations))))
-    ;; arrange in a map by operation id
-    (reduce (fn [ops {:keys [id] :as op}]
-              (assoc ops id op))
-            {}))))
+   (if claims
+     (->>
+      (cond
+        ;; client admin gets all non-internal operations
+        (:isClientAdmin claims) (remove :internal? app-operations)
+        ;; admin and owners get all operations
+        (or
+         (:isAdmin claims)
+         (get-in claims [:app :isOwner])
+         (get-in claims [:app :isAdmin]))
+        app-operations
+        ;; others get only specified operations
+        :others
+        (filter (comp (set (get-in claims [:app :operations])) :id)
+                (if (:isTopsoe claims)
+                  app-operations
+                  (remove :internal? app-operations))))
+      ;; arrange in a map by operation id
+      (reduce (fn [ops {:keys [id] :as op}]
+                (assoc ops id op))
+              {})))))
 
-
-
+(rf/reg-sub
+ ::topsoe?
+ :<- [::auth-claims]
+ (fn [claims _] (:topsoe? claims)))

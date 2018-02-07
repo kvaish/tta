@@ -21,6 +21,12 @@
    :dataset-creator))
 
 (rf/reg-sub
+ ::app-allowed?
+ :<- [::ht-subs/auth-claims]
+ (fn [claims _]
+   (auth/allow-app? claims)))
+
+(rf/reg-sub
  ::content-allowed?
  :<- [::ht-subs/auth-claims]
  :<- [::active-content]
@@ -28,15 +34,12 @@
    (auth/allow-root-content? claims active-content)))
 
 (rf/reg-sub
- ::active-dataset-action
- (fn [db _]
-   ;; TODO: implement to choose one of dataset-creator or dataset-analyzer
-   :dataset-creator))
-
-(rf/reg-sub
  ::agreed?
  :<- [::app-subs/user]
- (fn [user db]
-   (let [user-id (get user :active)
-         users (get user :all)]
-          (:agreed? (get users user-id)))))
+ (fn [user _] (:agreed? user)))
+
+(rf/reg-sub
+ ::menu-open?
+ :<- [::root]
+ (fn [root [_ menu-id]]
+   (or (get-in root [:menu menu-id :open?]) false)))

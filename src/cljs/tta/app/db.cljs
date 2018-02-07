@@ -6,20 +6,13 @@
    {:about nil
     :features nil
     :operations nil
-    
+    :countries []
+
     ;; entities
-    :user {:active nil
-           :all {:user-id {:aggreed? false
-                           :plant-id ""
-                           :client-id ""}}}
-    :client {:active "demo"
-             :all {"demo" {:name "DemoCom"}}}
-    :plant {:active "demo"
-            :all {"demo" {:name "DemoPlant"}}}
-    
-    :dataset {:pools []
-              :messages []}
-    
+    :user nil
+    :client nil
+    :plant nil
+
     :component
     {:root {:header {}
             :sub-header {}
@@ -37,11 +30,13 @@
      :goldcup {}
      :config {}
      :logs {}}
-    
+
     :dialog
     {:user-agreement
      {:open? false}
      :choose-client
+     {:open? false}
+     :choose-plant
      {:open? false}}}))
 
 (defn init []

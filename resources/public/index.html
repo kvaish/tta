@@ -1,27 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" href="css/font-awesome.min.css">
-    <link rel="stylesheet" href="css/hint.min.css">
-    <link rel="stylesheet" href="css/build/style.css">
+    <head>
+        <meta charset='utf-8'>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <!-- the following 2 style tags must be the last style tags in head -->
-    <style id="_stylefy-constant-styles_"></style>
-    <style id="_stylefy-styles_"></style>
+        <!-- styles -->
+        <link rel="stylesheet" href="css/font-awesome.min.css">
+        <link rel="stylesheet" href="css/hint.min.css">
+        <link rel="stylesheet" href="css/build/style.css">
 
-    <!-- polyfills for IE -->
-    <script src="js/ie-polyfill.js"></script>
-    <script src="js/babel-polyfill.min.js"></script>
-  </head>
-  <body>
-    <div id="app">
-      <div id="app-loading">
-        <div id="spinner"></div>
-      </div>
-    </div>
-    <script src="js/config.js"></script>
-    <script>tta.core.init();</script>
+        <!-- the following 2 style tags must be the last style tags in head -->
+        <style id="_stylefy-constant-styles_"></style>
+        <style id="_stylefy-styles_"></style>
+
+        <!-- polyfills for IE -->
+        <script src="js/ie-polyfill.js"></script>
+        <script src="js/babel-polyfill.min.js"></script>
+    </head>
+    <body>
+        <!-- placeholder to mount the app root -->
+        <div id="app">
+            <!-- show busy spinner until the app is mounted -->
+            <div id="app-loading">
+                <div id="spinner"></div>
+            </div>
+        </div>
+
+        <!-- scripts -->
+        <script src="js/config.js"></script>
+        <script src="js/init.js"></script>
+
+        <!-- start the app -->
+        <script>tta.core.init();</script>
   </body>
 </html>

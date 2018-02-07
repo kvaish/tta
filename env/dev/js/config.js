@@ -1,10 +1,11 @@
 var htAppConfig = {
   appId: "truetemp",
+  buildId: "min",
 
   // set to "" when hosted in portal itself
   portalUri: "",
 
-  serviceUri: "", //TODO: set to correct url
+  serviceUri: "https://topsoe-dev-truetemp.azurewebsites.net",
 
   languages: [
     { code: 'en', flag: 'gb', name: 'English' },
@@ -13,7 +14,3 @@ var htAppConfig = {
   ],
 
 }
-
-// Must be the last line!!
-// use appropriate build
-document.write("<script src='js/min/app.js' type='text/javascript'></script>");

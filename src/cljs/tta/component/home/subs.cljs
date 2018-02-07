@@ -7,26 +7,35 @@
 
 (rf/reg-sub
  ::home
- (fn [db _] (get-in db [:component :home])))
+ (fn [db _]
+   (get-in db [:component :home])))
 
 (rf/reg-sub
  ::access-rules
  :<- [::ht-subs/auth-claims]
- :<- [::ht-subs/features]
- :<- [::ht-subs/operations]
- (fn [[claims features operations] _]
-   ;;TODO: implement access rules based on claim
-   ;; valid values -  :enabled :disabled :hidden
-   {:card
-    {:dataset-creator :enabled
-     :dataset-analyzer :enabled
-     :trendline :enabled
-     :settings :enabled
-     :config-history :enabled
-     :goldcup :disabled
-     :config :disabled
-     :logs :enabled}
-    :button
-    {:data-entry :enabled
-     :import-logger :enabled
-     :print-logsheet :disabled}}))
+ ;; valid values -  :enabled :disabled :hidden
+ (fn [claims _]
+   (let [f (fn [[id pub?]]
+             [id (if (or pub? (:topsoe? claims))
+                   (if (auth/allow-root-content? claims id)
+                     :enabled
+                     :disabled)
+                   :hidden)])]
+     {:card
+      (->>
+       {:dataset-creator  true
+        :dataset-analyzer true
+        :trendline        true
+        :settings         true
+        :goldcup          false
+        :config-history   false
+        :config           false
+        :logs             true}
+       (map f)
+       (into {}))
+      :button
+      (->> {:data-entry     true
+            :import-logger  true
+            :print-logsheet true}
+           (map f)
+           (into {}))})))

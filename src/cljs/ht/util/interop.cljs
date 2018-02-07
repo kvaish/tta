@@ -1,8 +1,5 @@
 (ns ht.util.interop
-  (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require
-            [cljs.core.async :refer [<! put! chan promise-chan]]
-            [cljs.reader :as r]
+  (:require [clojure.string :as str]
             [goog.object :as g]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13,8 +10,8 @@
   (.call (g/get js/JSON "stringify") js/JSON o))
 
 (defn json-parse [s]
-  (if string? s
-      (.call (g/get js/JSON "parse") js/JSON s)))
+  (if (string? s)
+    (.call (g/get js/JSON "parse") js/JSON s)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -39,7 +36,7 @@
     (if (object? o)
       (g/set o k v)
       (throw (js/Error. (if ks
-                          (str "not an object at ." (clojure.string/join "." ks))
+                          (str "not an object at ." (str/join "." ks))
                           "not an object" ))))))
 
 (defn oset-in+ [o ks v]
@@ -60,7 +57,3 @@
 (defn oapply [o f & args]
   (let [args (concat (butlast args) (last args))]
     (.apply (oget o f) o (to-array args))))
-
-
-
-
