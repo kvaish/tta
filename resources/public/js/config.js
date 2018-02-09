@@ -10,7 +10,7 @@ var htAppConfig = {
 
   // serviceUri: "https://topsoe-dev-truetemp-testing.azurewebsites.net",
   serviceUri: "https://topsoe-dev-truetemp.azurewebsites.net",
-  // serviceUri: "http://"+window.location.hostname+":8081",
+  // serviceUri: "http://"+window.location.hostname+":8000",
 
   languages: [
     { code: 'en', flag: 'gb', name: 'English' },

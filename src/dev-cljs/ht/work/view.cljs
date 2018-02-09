@@ -14,7 +14,8 @@
             [ht.app.comp :as ht-comp]
             [tta.icon-set]
             [tta.comp-set]
-            [tta.scroll]))
+            [tta.scroll]
+            [tta.ref-sketch]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -29,5 +30,6 @@
        :tta/icons [tta.icon-set/icon-set]
        :tta/comps [tta.comp-set/comp-set]
        :tta/scroll [tta.scroll/scroll-test]
+       :tta/ref-sketch [tta.ref-sketch/ref-sketch]
        ;; default
        [:p "empty workspace"])]))
