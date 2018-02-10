@@ -36,4 +36,10 @@
       :options ["Data" "Graph"]
       :disabled? (not (:value @(rf/subscribe [::value
                                               [:work :comp-set :check2]])))
-      :item-width 70}]]])
+      :item-width 70}]]
+   [:div
+    [app-comp/button {:on-click #(js/console.log "clicked!")
+                      :disabled? (not (:value @(rf/subscribe [::value
+                                                              [:work :comp-set :check2]])))
+                      :icon ic/camera
+                      :label "Screenshot"}]]])

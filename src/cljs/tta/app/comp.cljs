@@ -51,6 +51,18 @@
              (assoc :view-box "1 1 23 23"))]])
 
 ;; *x48
+(defn button [{:keys [disabled? label icon on-click]}]
+  (let [style (app-style/button disabled?)]
+    [ui/flat-button {:style (:btn style)
+                     :disabled disabled?
+                     :on-click on-click
+                     :hover-color (:hc style)
+                     :background-color (:bg style)}
+     [:div {:style (:div style)}
+      [icon {:style (:icon style)}]
+      [:span {:style (:span style)} label]]]))
+
+;; *x48
 (defn selector [{:keys [disabled? path options item-width]}]
   (let [{:keys [index] :or {value (first options) index 0}}
         @(rf/subscribe [::value path])

@@ -18,9 +18,9 @@
             [tta.component.reformer-dwg.event :as event])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defn label-attrs
-  ([x y] (label-attrs x y false nil))
-  ([x y v?] (label-attrs x y v? nil))
+(defn label-attr
+  ([x y] (label-attr x y false nil))
+  ([x y v?] (label-attr x y v? nil))
   ([x y v? a]
    {:stroke "none", :fill "black"
     :x x, :y y
@@ -43,11 +43,11 @@
              {})
     :nodes [;; whs box
             {:tag :rect, :class :whs-box
-             :attrs {:x :x, :y :y, :width :w, :height :h}}
+             :attr {:x :x, :y :y, :width :w, :height :h}}
             ;; whs label
             {:tag :text, :class :whs-label
              :text "WHS"
-             :attrs {:x :tx, :y :ty, :transform :tt
+             :attr {:x :tx, :y :ty, :transform :tt
                      :font-size "45px"
                      :stroke "none", :fill "black"}}]}
    ;; chamber group
@@ -64,44 +64,44 @@
                    chs (range))))
     :nodes [ ;; chamber box
             {:tag :rect, :class :ch-box
-             :attrs {:height :h, :width, :w, :y :y, :x :x}}
+             :attr {:height :h, :width, :w, :y :y, :x :x}}
             ;; section label
             {:tag :text, :class :s-label
-             :attrs (label-attrs #(- (:x %) 6) 106 true "end")
+             :attr (label-attr #(- (:x %) 6) 106 true "end")
              :text #(str (get-in % [:ch :section-count]) " Sections")}
             ;; chamber label
             {:tag :text, :class :ch-label
-             :attrs (label-attrs :xm 465 nil "middle")
+             :attr (label-attr :xm 465 nil "middle")
              :text [:ch :name]}
             ;; tube row
             {:tag :line, :class :t-row
-             :attrs {:stroke-width "10px"
+             :attr {:stroke-width "10px"
                      :x1 :xm, :y1 150
                      :x2 :xm, :y2 400
                      :stroke-linecap "round"}}
             ;; tube label
             {:tag :text, :class :t-label
-             :attrs (label-attrs #(- (:xm %) 10) :ym true "middle")
+             :attr (label-attr #(- (:xm %) 10) :ym true "middle")
              :text #(let [{st :start-tube, et :end-tube} (:ch %)
                           sep (if (> et st) " ← " " → ")]
                       (str "Tubes  " et sep st))}
             ;; side A label
             {:tag :text, :class :sa-label
-             :attrs (label-attrs #(- (:x %) 6) 444 true)
+             :attr (label-attr #(- (:x %) 6) 444 true)
              :text [:ch :side-names 0]}
             ;; side B label
             {:tag :text, :class :sb-label
-             :attrs (label-attrs #(+ (:x %) (:w %) 15) 444 true)
+             :attr (label-attr #(+ (:x %) (:w %) 15) 444 true)
              :text [:ch :side-names 1]}
             ;; side A burner label
             {:tag :text, :class :ba-label
-             :attrs (label-attrs #(+ (:x %) 15) :ym true "middle")
+             :attr (label-attr #(+ (:x %) 15) :ym true "middle")
              :text #(let [{sb :start-burner, eb :end-burner} (:ch %)
                           sep (if (> eb sb) " ← " " → ")]
                       (str "Burners  " eb sep sb))}
             ;; side B burner label
             {:tag :text, :class :bb-label
-             :attrs (label-attrs #(- (+ (:x %) (:w %)) 6) :ym true "middle")
+             :attr (label-attr #(- (+ (:x %) (:w %)) 6) :ym true "middle")
              :text #(let [{sb :start-burner, eb :end-burner} (:ch %)
                           sep (if (> eb sb) " ← " " → ")]
                       (str "Burners  " eb sep sb))}]}])
@@ -115,14 +115,14 @@
     [{:tag :g, :class :reformer
       :nodes [;; chamber box
               {:tag :rect, :class :ch-box
-               :attrs {:x x, :y y, :width w, :height h}}
+               :attr {:x x, :y y, :width w, :height h}}
               ;; section label
               {:tag :text, :class :s-label
-               :attrs (label-attrs (- x 6) (+ y 6) true "end")
+               :attr (label-attr (- x 6) (+ y 6) true "end")
                :text #(str (get-in % [:tf-config :section-count]) " Sections")}
               ;; wall label
               {:tag :text, :class :w-label
-               :attrs (merge (label-attrs :x :y :v? :a)
+               :attr (merge (label-attr :x :y :v? :a)
                              {:font-size "18px"})
                :text :text
                :multi? true
@@ -150,7 +150,7 @@
                                :burners burner-rows}))
                :nodes [;; row labels
                        {:tag :text, :class :r-label
-                        :attrs (merge (label-attrs #(- % 6) y1 true "end")
+                        :attr (merge (label-attr #(- % 6) y1 true "end")
                                       {:font-size "16px"
                                        :stroke "black"})
                         :text #(str "Row " (inc %2))
@@ -158,14 +158,14 @@
                         :data :xt-pos}
                        ;; tube row
                        {:tag :line, :class :t-row
-                        :attrs {:x1 identity, :y1 y1, :x2 identity, :y2 y2
+                        :attr {:x1 identity, :y1 y1, :x2 identity, :y2 y2
                                 :stroke-width "5px"
                                 :stroke-linecap "round"}
                         :multi? true
                         :data :xt-pos}
                        ;; tube label
                        {:tag :text, :class :t-label
-                        :attrs (label-attrs #(- (:x %) 6) ym true "middle")
+                        :attr (label-attr #(- (:x %) 6) ym true "middle")
                         :text :text
                         :multi? true
                         :data (fn [{:keys [xt-pos tubes]}]
@@ -175,7 +175,7 @@
                                      xt-pos tubes ))}
                        ;; burner row
                        {:tag :line, :class :b-row
-                        :attrs {:x1 identity, :y1 y1, :x2 identity, :y2 y2
+                        :attr {:x1 identity, :y1 y1, :x2 identity, :y2 y2
                                 :stroke-width "1px"
                                 :stroke "red"
                                 :stroke-dasharray "10 5 2 5 2 5"
@@ -184,7 +184,7 @@
                         :data :xb-pos}
                        ;; burner label
                        {:tag :text, :class :b-label
-                        :attrs (label-attrs #(- (:x %) 6) ym true "middle")
+                        :attr (label-attr #(- (:x %) 6) ym true "middle")
                         :text :text
                         :multi? true
                         :data (fn [{:keys [xb-pos burners]}]
@@ -203,7 +203,7 @@
            :font-family "open_sans"}
    :node {:tag :g, :class :reformer
           :nodes [{:tag :rect, :class :back
-                   :attrs {:x 0, :y 0
+                   :attr {:x 0, :y 0
                           :width 600, :height 500
                           :fill "lightgrey"}}
                   {:tag :g, :class :side-fired

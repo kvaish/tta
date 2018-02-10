@@ -55,23 +55,25 @@
           :class :root
           :on-off-classes {:on "reformer", :off "reactor"}
           :nodes [{:tag :rect, :class :back
-                   :attrs {:x 0, :y 0, :width 200, :height 300
+                   :attr {:x 0, :y 0, :width 200, :height 300
                            :fill "aliceblue"}}
                   {:tag :text, :class :label
-                   :attrs {:x 20, :y 20, :fill "indigo"}
+                   :attr {:x 20, :y 20, :fill "indigo"}
                    :text :name
                    :data #(select-keys % [:name])
                    :did-update #(js/console.log "updated label")}
                   {:tag :text, :class :sub-lable
-                   :attrs {:x 20, :y 50, :fill "indigo"}
+                   :attr {:x 20, :y 50, :fill "indigo"}
                    :text :name
                    :data #(select-keys % [:name])
                    :skip? :name}
                   {:tag :rect, :class :child
                    :multi? true
                    :data [:list]
-                   :attrs {:x :x, :y :y, :width :w, :height :h
-                           :fill "red"}
+                   :attr {:x :x, :y :y, :width :w, :height :h
+                          :fill "red"}
+                   :on {:click #(js/console.log "click: " [js/d3.event.pageX
+                                                           js/d3.event.pageY])}
                    :did-update #(js/console.log "updated rect")}]}})
 
 (defn d3-sketch []
@@ -92,9 +94,11 @@
 (defn ref-sketch []
   [:div {:style {:padding "50px"
                  :background "lightblue"}}
-   ;; [d3-sketch {}]
-   [dwg/reformer-dwg {:width "600px" :height "300px"
+   [d3-sketch {}]
+   [ui/flat-button {:label "Save"
+                    :on-click save-image}]
+   #_[dwg/reformer-dwg {:width "600px" :height "500px"
                       :preserve-aspect-ratio "none"
                       :config @reformer-data-tf}]
-   [ui/flat-button {:label "Save"
+   #_[ui/flat-button {:label "Save"
                     :on-click #(dwg/save-image {:config @reformer-data-tf})}]])
