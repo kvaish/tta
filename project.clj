@@ -21,6 +21,7 @@
                   :exclusions [com.cognitect/transit-cljs]]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljsjs/d3 "4.12.0-0"]
+                 [cljsjs/filesaverjs "1.3.3-0"]
                  [com.cognitect/transit-cljs "0.8.243"]
                  [figwheel-sidecar "0.5.14"
                   :exclusions [org.clojure/tools.nrepl]]]

@@ -4,4 +4,5 @@
                              ht.app.fx
                              ht.app.style]
  :known-namespaces []
- :known-macros [garden.def/defstyles]}
+ :known-macros [garden.def/defstyles
+                cljs.core.async/alt!]}

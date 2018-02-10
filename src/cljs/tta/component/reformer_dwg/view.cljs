@@ -1,19 +1,22 @@
 ;; view elements component reformer-dwg
 (ns tta.component.reformer-dwg.view
-  (:require [reagent.core :as r]
+  (:require [cljs.core.async :refer [<! put!]]
+            [reagent.core :as r]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.util.common :as u :refer [dev-log]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
-            [tta.app.d3 :refer [d3-svg get-value]]
+            [tta.app.d3 :refer [d3-svg get-value d3-svg-2-string]]
             [tta.component.reformer-dwg.style :as style]
             [tta.component.reformer-dwg.subs :as subs]
-            [tta.component.reformer-dwg.event :as event]))
+            [tta.component.reformer-dwg.event :as event])
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn label-attrs
   ([x y] (label-attrs x y false nil))
@@ -190,24 +193,42 @@
                                          {:x x :text (str "Burners " eb sep sb)}))
                                      xb-pos burners))}]}]}]))
 
-(def ref-node
-  {:tag :g, :class :reformer
-   :nodes [{:tag :g, :class :side-fired
-            :skip? #(not= "side" (:firing %))
-            :nodes side-fired-nodes}
-           {:tag :g, :class :top-fired
-            :skip? #(not= "top" (:firing %))
-            :nodes top-fired-nodes}]})
+(def ref-dwg
+  {:view-box "0 0 600 500"
+   :style {:color "grey"
+           :fill "none"
+           :stroke "grey"
+           :stroke-width "1px"
+           :font-size "14px"
+           :font-family "open_sans"}
+   :node {:tag :g, :class :reformer
+          :nodes [{:tag :rect, :class :back
+                   :attrs {:x 0, :y 0
+                          :width 600, :height 500
+                          :fill "lightgrey"}}
+                  {:tag :g, :class :side-fired
+                   :skip? #(not= "side" (:firing %))
+                   :nodes side-fired-nodes}
+                  {:tag :g, :class :top-fired
+                   :skip? #(not= "top" (:firing %))
+                   :nodes top-fired-nodes}]}})
 
-(defn reformer-dwg [{:keys [width height config]}]
-  [d3-svg {:width width, :height height
-           :view-box "0 0 600 500"
-           :style {:background "lightgrey"
-                   :color "grey"
-                   :fill "none"
-                   :stroke "grey"
-                   :stroke-width "1px"
-                   :font-size "14px"}
-           :data (or config
-                     @(rf/subscribe [::subs/config]))
-           :node ref-node}])
+(defn reformer-dwg [{:keys [width height preserve-aspect-ratio config]}]
+  [d3-svg (merge ref-dwg
+                 {:width width, :height height
+                  :preserve-aspect-ratio preserve-aspect-ratio
+                  :data (or config
+                            @(rf/subscribe [::subs/config]))})])
+
+(defn save-image [{:keys [config]}]
+  (let [width 600, height 500
+        svg-string (d3-svg-2-string
+                    (merge ref-dwg
+                           {:width width, :height height
+                            :preserve-aspect-ratio "none"
+                            :data (or config
+                                      @(rf/subscribe [::subs/config]))}))]
+    (go
+      (let [res (<! (u/save-svg-to-file "reformer-drawing.png"
+                                        svg-string width height 10))]
+        (dev-log "download reformer drawing: " (name res))))))

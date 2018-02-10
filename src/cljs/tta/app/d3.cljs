@@ -1,6 +1,7 @@
 (ns tta.app.d3
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
+            [cljsjs.d3]
             [ht.util.interop :as i]))
 
 "class on each node is required for selection purpose.
@@ -8,6 +9,7 @@
   the schema of node:
   {:tag <:g|:rect|..>
    :class <class name as keyword>
+   :style {:key <value | keyword | [key seq ..] | (fn [data i idv])>}
    :attrs {:key <value | keyword | [key seq ..] | (fn [data i idv])>}
    :text <value | keyword | [key seq ..] | (fn [data i idv])>
    :on-off-classes <{:on \"on classes ..\", :off \"off classes ..\"} | (fn [data i idv])>
@@ -70,6 +72,9 @@
           (get-value (:on-off-classes node) data index idv)]
       (if on (i/ocall sel-node :classed on true))
       (if off (i/ocall sel-node :classed off false))))
+  (if (contains? node :style)
+    (doseq [[k vf] (:style node)]
+      (i/ocall sel-node :style (name k) (get-value vf data index idv))))
   (if (contains? node :attrs)
     (doseq [[k vf] (:attrs node)]
       (i/ocall sel-node :attr (name k) (get-value vf data index idv)))))
@@ -139,15 +144,17 @@
   sel-node)
 
 (defn d3-svg
-  "**props**: map with width, height, view-box, style, class
-  and node, data"
+  "**props**: map with width, height, view-box, preserve-aspect-ratio
+  style, class, node, data"
   [props]
   (let [state (atom {})]
     (r/create-class
      {:reagent-render
-      (fn [{:keys [width height view-box style class]
-           :or {:width "100%", :height "100%"}}]
+      (fn [{:keys [width height view-box preserve-aspect-ratio style class]
+           :or {width "100%", height "100%"
+                preserve-aspect-ratio "xMidYMid meet"}}]
         [:svg {:view-box view-box
+               :preserve-aspect-ratio preserve-aspect-ratio
                :style style, :class class
                :width width, :height height}])
 
@@ -169,3 +176,35 @@
               {:keys [data]} (r/props this)]
           (swap! state assoc :data data)
           (update-node root node data nil [(:class node)] state)))})))
+
+(defn d3-svg-2-string
+  "**props**: map with width, height, view-box, preserveAspectRatio,
+  style, class, node, data"
+  [props]
+  (let [{:keys [width height view-box preserve-aspect-ratio
+                style class node data]
+         :or {preserve-aspect-ratio "xMidYmid meet"}} props
+        idv [(:class node)]
+        state (atom {})
+        div (-> js/d3
+                (i/ocall :select "body")
+                (i/ocall :append "div")
+                (i/ocall :attr "class" "svg-export-container")
+                (i/ocall :attr "style" "display:none;"))
+        svg (-> div
+                (i/ocall :append "svg")
+                (i/ocall :attr "width" width)
+                (i/ocall :attr "height" height)
+                (i/ocall :attr "viewBox" view-box)
+                (i/ocall :attr "preserveAspectRatio" preserve-aspect-ratio)
+                (i/ocall :attr "class" class))]
+    (doseq [[k v] style]
+      (i/ocall svg :style (name k) v))
+    (append-node svg node nil idv)
+    (update-node svg node data nil idv state)
+
+    ;; svg node ready.. now export
+    (let [svg-string (js/getSVGString (i/ocall svg :node))]
+      (i/ocall div :remove) ;; clean up
+      ;; return the svg string
+      svg-string)))
