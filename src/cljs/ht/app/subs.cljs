@@ -46,6 +46,10 @@
  ::service-failure
  (fn [db _] (:service-failure db)))
 
+(rf/reg-sub
+ ::message-box
+ (fn [db _] (:message-box db)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Derived signals/subscriptions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

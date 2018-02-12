@@ -46,7 +46,7 @@
 (rf/reg-event-fx
  ::check-agreement
  (fn [{:keys [db]} _]
-   {:dispatch (if (get-in db [:user :agreed?])
+   {:dispatch (if ((some-fn :topsoe? :agreed?) (:user db))
                 [::load-client]
                 [:tta.dialog.user-agreement.event/open
                  {:then {:on-accept [::load-client]
@@ -91,7 +91,10 @@
  ::load-plant
  (fn [{:keys [db]} _]
    (let [plant-id (get-in db [:user :plant-id])
-         client-id (get-in db [:client :id])]
+         client-id (get-in db [:client :id])
+         plants (get-in db [:client :plants])
+         plant-id (or plant-id (if (= 1 (count plants))
+                                 (:id (first plants))))]
      {:dispatch (if plant-id
                   [::fetch-plant client-id plant-id]
                   [:tta.dialog.choose-plant.event/open])})))

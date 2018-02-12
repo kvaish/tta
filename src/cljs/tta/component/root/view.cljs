@@ -7,6 +7,9 @@
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.util.auth :as auth]
+            [tta.app.icon :as ic]
+            [tta.app.comp :as app-comp]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -18,7 +21,6 @@
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
             [tta.dialog.choose-plant.view :refer [choose-plant]]
-            [tta.util.auth :as auth]
             [tta.component.settings.view :refer [settings]]
             [tta.component.settings.event :as setting-event]
             [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
@@ -30,7 +32,7 @@
   (let [anchor-el (:language @(:anchors props))
         options @(rf/subscribe [::ht-subs/language-options])
         active @(rf/subscribe [::ht-subs/active-language])]
-    [ui/popover
+    [app-comp/popover
      {:open @(rf/subscribe [::subs/menu-open? :language])
       ;; this is a workaround to hide the initial flashing
       ;; :style {:position "fixed", :top 100000}
@@ -56,25 +58,24 @@
   (r/as-element
    [ui/font-icon {:class-name class}]))
 
-(defn svg-icon [src]
-  (r/as-element
-   [:img {:src src}]))
+(defn as-left-icon [icon]
+  (r/as-element [:span [icon {:style {:position "absolute"}}]]))
 
 (def settings-menu-data
   {:top [{:id :choose-plant
           :disabled? false
           :hidden? false
-          :icon (fa-icon "fa fa-industry")
+          :icon (as-left-icon ic/plant)
           :label "Choose plant"
           :label-key :choose-plant
           :event-id :tta.dialog.choose-plant.event/open}
          {:id :my-apps
-          :icon (fa-icon "fa fa-star")
+          :icon (as-left-icon ic/my-apps)
           :label "My apps"
           :label-key :my-apps
           :event-id ::ht-event/exit}]
    :bottom [{:id :logout
-             :icon (fa-icon "fa fa-sign-out")
+             :icon (as-left-icon ic/logout)
              :label "Logout"
              :label-key :logout
              :event-id ::ht-event/logout}]
@@ -111,7 +112,7 @@
         allow-content? @(rf/subscribe [::subs/content-allowed? content-id])
         context-menu (not-empty (if allow-content?
                                   (get-in settings-menu-data [:middle content-id])))]
-    [ui/popover
+    [app-comp/popover
      {:open @(rf/subscribe [::subs/menu-open? :settings])
       :desktop true
       ;; this is a workaround to hide the inital flashing

@@ -21,40 +21,36 @@
 (defn card [props]
   (let [{:keys [id primary? access on-select title buttons icon desc]} props
         card-style (if primary? style/card-primary style/card-secondary)]
+    [ui/paper (merge (use-style
+                      (if (= access :enabled)
+                        (if buttons card-style
+                            (style/set-clickable card-style))
+                        (style/disable-card card-style)))
+                     (if (and (= access :enabled) (not buttons))
+                       {:on-click #(on-select id)}))
+     [:div (use-sub-style card-style :title) title]
+     [:hr (use-sub-style card-style :hr)]
+     [:p (use-sub-style card-style :desc) desc]
+     [:img (merge (use-sub-style card-style :icon) {:src icon})]]))
+
+(defn card-with-buttons [props]
+  (let [{:keys [access buttons]} props]
     (case access
       (:enabled :disabled)
-      [ui/paper (merge (use-style
-                        (if (= access :enabled)
-                          (style/set-clickable card-style true #_(not buttons))
-                          (style/disable-card card-style)))
-                       (if (and (= access :enabled)
-                                true #_(not buttons))
-                         {:on-click #(on-select id)}))
-       [:div (use-sub-style card-style :title)
-        title]
-       [:hr (use-sub-style card-style :hr)]
-       [:br]
-       [:div (use-sub-style card-style :button-container)
+      (->
+       [:div (use-style style/card-with-buttons)
+        (card props)]
+       (into
         (if buttons
-          (doall
-           (map (fn [{:keys [id label action] btn-access :access}]
-                  (let [disabled? (not (= :enabled access btn-access))
-                        label-style (:label style/card-button)]
-                    ^{:key id}
-                    [ui/flat-button
-                     {:label label
-                      :disabled disabled?
-                      :on-click action
-                      :label-style (if disabled?
-                                     (style/disable-button label-style)
-                                     label-style)
-                      :icon (r/as-element
-                             [ui/font-icon {:class-name "fa fa-caret-right"}])
-                      :style (:root style/card-button)}]))
-                buttons)))]
-       [:p (use-sub-style card-style :desc)
-        desc]
-       [:img (merge (use-sub-style card-style :icon) {:src icon})]]
+          (map (fn [{:keys [label action] btn-access :access}]
+                 (let [enabled? (= :enabled access btn-access)]
+                   [ui/paper
+                    (merge (use-style (if enabled?
+                                        (style/set-clickable style/card-button)
+                                        (style/disable-card style/card-button)))
+                           (if enabled? {:on-click action}))
+                    [:span (use-sub-style style/card-button :title) label]]))
+               buttons))))
       :hidden nil)))
 
 (defn home [props]
@@ -103,7 +99,7 @@
             (map #(assoc % :access (get-in access-rule [:card (:id %)])
                          :on-select on-select))
             (map (fn [props]
-                   ^{:key (:id props)} [card props]))))]
+                   ^{:key (:id props)} [card-with-buttons props]))))]
      [:div (use-sub-style style/home :secondary-row)
       (doall
        (->>

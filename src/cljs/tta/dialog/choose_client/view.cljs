@@ -7,6 +7,7 @@
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [ht.app.comp :as ht-comp]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -53,7 +54,7 @@
      {:modal (not optional?)
       :open @(rf/subscribe [::subs/open?])
       :on-request-close on-close
-      :title (if optional? (r/as-element (app-view/optional-dialog-head
+      :title (if optional? (r/as-element (ht-comp/optional-dialog-head
                                           {:title title
                                            :on-close on-close
                                            :close-tooltip close-tooltip}))
