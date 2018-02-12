@@ -7,7 +7,9 @@
 (rf/reg-event-db
   ::activate-content
   (fn [db [_ id]]
+    (js/console.log id)
     (assoc-in db [:component :root :content :active] id)))
+
 
 (rf/reg-event-db
   ::set-menu-open?

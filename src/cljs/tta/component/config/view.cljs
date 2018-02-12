@@ -13,19 +13,14 @@
             [tta.component.config.style :as style]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
-            [tta.component.reformer-layout.view :refer [reformer-layout reformer-data]]
-            [tta.component.reformer-layout-tf.view :refer [reformer-layout-tf reformer-data-tf]]))
+    ;[tta.component.reformer-layout.view :refer [reformer-layout reformer-data]]
+    ;       [tta.component.reformer-layout-tf.view :refer [reformer-layout-tf reformer-data-tf]]
+            ))
 
 (defn sketch []
   (case "side"
-    "side" [reformer-layout {:reformer-data @reformer-data}]
-    "top" [reformer-layout-tf
-           (let [width (+ 50 (* 100 (get-in @reformer-data-tf [:configuration :tf-config :tube-row-count])))]
-             {:reformer-data @reformer-data-tf
-              :view-box      (str "0 0 " width " 500")
-              :svg-width     width
-              :height        500
-              })]))
+    "side" [:div]
+    "top" [:div]))
 
 (defonce rf-type
          {:side "Side Fired"

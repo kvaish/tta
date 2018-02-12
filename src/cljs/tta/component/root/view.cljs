@@ -21,7 +21,11 @@
             [tta.dialog.choose-plant.view :refer [choose-plant]]
             [tta.util.auth :as auth]
             [tta.app.icon :as ic]
-            [tta.app.comp :as app-comp]))
+            [tta.app.comp :as app-comp]
+            [tta.component.settings.view :refer [settings]]
+            [tta.component.settings.event :as setting-event]
+            [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
+            [tta.dialog.custom-emissivity.view :refer [custom-emissivity]]))
 
 ;;; language-menu ;;;
 
@@ -55,14 +59,12 @@
   (r/as-element
     [ui/font-icon {:class-name class}]))
 
-<<<<<<< HEAD
 (defn svg-icon [src]
   (r/as-element
     [:img {:src src}]))
-=======
+
 (defn as-left-icon [icon]
   (r/as-element [:span [icon {:style {:position "absolute"}}]]))
->>>>>>> develop
 
 (def settings-menu-data
   {:top [{:id :choose-plant
@@ -151,30 +153,31 @@
        [:div (use-sub-style style/header :middle)]
        [:div (use-sub-style style/header :right)
         (doall
-          (map
-            (fn [[id icon label action]]
-              ^{:key id}
-              [:a (merge (use-sub-style style/header :link)
-                         {:href "#" :on-click action})
-               (if icon
-                 [:i (use-sub-style style/header
-                                    (if (= id :language) :icon-only :link-icon)
-                                    {::stylefy/with-classes [icon]})])
-               label])
-            [[:language
-              "fa fa-language"
-              nil
-              #(do
-                 (i/ocall % :preventDefault)
-                 (swap! anchors assoc :language (i/oget % :target))
-                 (rf/dispatch [::event/set-menu-open? :language true]))]
-             [:settings
-              "fa fa-caret-right"
-              (translate [:header-link :settings :label] "Settings")
-              #(do
-                 (i/ocall % :preventDefault)
-                 (swap! anchors assoc :settings (i/oget % :currentTarget))
-                 (rf/dispatch [::event/set-menu-open? :settings true]))]]))
+         (map
+          (fn [[id icon label action]]
+            ^{:key id}
+            [:a (merge (use-sub-style style/header :link)
+                       {:href "#" :on-click action})
+             (if icon
+               [:i (use-sub-style style/header
+                                  (if (= id :language) :icon-only :link-icon)
+                                  {::stylefy/with-classes [icon]})])
+             label])
+          [[:language
+            "fa fa-language"
+            nil
+            #(do
+               (i/ocall % :preventDefault)
+               (swap! anchors assoc :language (i/oget % :currentTarget))
+               (rf/dispatch [::event/set-menu-open? :language true]))]
+           [:settings
+            "fa fa-caret-right"
+            (translate [:header-link :settings :label] "Settings")
+            #(do
+               (i/ocall % :preventDefault)
+
+               (swap! anchors assoc :settings (i/oget % :currentTarget))
+               (rf/dispatch [::event/set-menu-open? :settings true]))]]))
         [language-menu {:anchors anchors}]
         [settings-menu {:anchors anchors}]]])))
 
@@ -271,7 +274,7 @@
          :trendline         [:div "trendline"]
          ;; secondary
          :config            [config]
-         :settings          [:div "settings"]
+         :settings          [settings]
          :goldcup           [:div "goldcup"]
          :config-history    [:div "config-history"]
          :logs              [:div "logs"])
@@ -292,10 +295,15 @@
          (list ^{:key :sub-header} [sub-header {:key "sub-header"}]
                ^{:key :content} [content {:key "content"}]))
        [no-access])
+
      ;;dialogs
      (if @(rf/subscribe [:tta.dialog.user-agreement.subs/open?])
        [user-agreement])
      (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?])
        [choose-client])
      (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?])
-       [choose-plant])]))
+       [choose-plant])
+     (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
+       [edit-pyrometer])
+     (if @(rf/subscribe [:tta.dialog.custom-emissivity.subs/open?])
+       [custom-emissivity])]))

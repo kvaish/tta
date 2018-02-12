@@ -9,15 +9,16 @@
 
 (defn init []
   (add-to-api-map
-    {:root (:service-uri @config)
-     :api {:fetch-user "/api/user/:user-id"
-           :create-user "/api/user"
-           :update-user "/api/user/:user-id"
-           :fetch-client-search-options "/api/client/search-options"
-           :fetch-client "/api/client/:client-id"
-           :search-clients "/api/client"
-           :fetch-plant "/api/client/:client-id/plant/:plant-id"
-           :fetch-client-plants "/api/client/:client-id/plant"}}))
+   {:root (:service-uri @config)
+    :api {:fetch-user "/api/user/:user-id"
+          :create-user "/api/user"
+          :update-user "/api/user/:user-id"
+          :fetch-client-search-options "/api/client/search-options"
+          :fetch-client "/api/client/:client-id"
+          :search-clients "/api/client"
+          :fetch-plant "/api/client/:client-id/plant/:plant-id"
+          :fetch-client-plants "/api/client/:client-id/plant"
+          :fetch-client-settings "/"}}))
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -79,3 +80,5 @@
         :api-params {:client-id client-id}
         :on-success (dispatch-many evt-success :sap-plant)
         :evt-failure evt-failure}))
+
+
