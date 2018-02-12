@@ -19,8 +19,10 @@
             [tta.dialog.choose-client.view :refer [choose-client]]
             [tta.dialog.choose-plant.view :refer [choose-plant]]
             [tta.util.auth :as auth]
-            [tta.component.setting.view :refer [setting]]
-            [tta.component.setting.event :as setting-event]))
+            [tta.component.settings.view :refer [settings]]
+            [tta.component.settings.event :as setting-event]
+            [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
+            [tta.dialog.custom-emissivity.view :refer [custom-emissivity]]))
 
 ;;; language-menu ;;;
 
@@ -160,13 +162,14 @@
             nil
             #(do
                (i/ocall % :preventDefault)
-               (swap! anchors assoc :language (i/oget % :target))
+               (swap! anchors assoc :language (i/oget % :currentTarget))
                (rf/dispatch [::event/set-menu-open? :language true]))]
            [:settings
             "fa fa-caret-right"
             (translate [:header-link :settings :label] "Settings")
             #(do
                (i/ocall % :preventDefault)
+
                (swap! anchors assoc :settings (i/oget % :currentTarget))
                (rf/dispatch [::event/set-menu-open? :settings true]))]]))
         [language-menu {:anchors anchors}]
@@ -265,8 +268,7 @@
          :trendline         [:div "trendline"]
          ;; secondary
          :config            [:div "config"]
-         :settings          [setting {:on-select
-                                      #(rf/dispatch [::event/activate-content %])}]
+         :settings          [settings]
          :goldcup           [:div "goldcup"]
          :config-history    [:div "config-history"]
          :logs              [:div "logs"])
@@ -287,10 +289,15 @@
          (list ^{:key :sub-header} [sub-header {:key "sub-header"}]
                ^{:key :content} [content {:key "content"}]))
        [no-access])
+
      ;;dialogs
      (if @(rf/subscribe [:tta.dialog.user-agreement.subs/open?])
        [user-agreement])
      (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?])
        [choose-client])
      (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?])
-       [choose-plant])]))
+       [choose-plant])
+     (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
+       [edit-pyrometer])
+     (if @(rf/subscribe [:tta.dialog.custom-emissivity.subs/open?])
+       [custom-emissivity])]))

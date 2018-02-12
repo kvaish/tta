@@ -1,5 +1,5 @@
 ;; styles for component setting
-(ns tta.component.setting.style
+(ns tta.component.settings.style
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
@@ -14,8 +14,7 @@
    :background-color (color-rgba :white)})
 
 (def content-toolbar
-  {:height "20%"
-   :margin-top "5px"})
+  {:background-color (color-rgba :alumina-grey 65)})
 
 (def toolbar-title
   {:font-size "18px"})
@@ -33,11 +32,10 @@
 (def reformer-design-container
   {:height "100%"
    :flex 1
-   :border "1px solid red"
    :padding "20px"})
 
 (def setting-form-container
   {:height "100%"
    :flex 1 
-   :border "1px solid red"
    :padding "20px"})
+

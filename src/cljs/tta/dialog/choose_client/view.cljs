@@ -19,7 +19,7 @@
   [ui/text-field
    {:on-change #(rf/dispatch [::event/update-query id %2])
     :default-value (:value @(rf/subscribe [::subs/field id]))
-    :hint-text (translate [:choose-client :field :hint] "start typing..")
+    :hint-text (translate [:choose-client :field :hint] "Start typing..")
     :floating-label-text label
     :name (name id)}])
 

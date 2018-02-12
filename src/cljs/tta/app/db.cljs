@@ -37,6 +37,8 @@
      :choose-client
      {:open? false}
      :choose-plant
+     {:open? false}
+     :edit-pyrometer
      {:open? false}}}))
 
 (defn init []
