@@ -22,6 +22,7 @@
 
 (def widget-bg-d (color-hex :alumina-grey 30))
 (def widget-bg-e (color-hex :sky-blue))
+(def widget-bg-h (color-hex :sky-blue 20))
 (def widget-fg (color-hex :white))
 
 ;; 72x48
@@ -61,6 +62,27 @@
   {:border-radius "50%"
    :background (if disabled? widget-bg-d widget-bg-e)
    :color widget-fg})
+
+;; *x48, icon: 24x24
+(defn button [disabled?]
+  {:bg (if disabled? widget-bg-d widget-bg-e)
+   :fg widget-fg
+   :hc widget-bg-h
+   :btn {:border-radius "16px"
+         :height "32px"
+         :margin "8px 12px"
+         :color widget-fg}
+   :div {:height "24px"
+         :padding "4px 24px"
+         :color widget-fg}
+   :icon {:color widget-fg}
+   :span {:display "inline-block"
+          :vertical-align "top"
+          :height "24px"
+          :line-height "24px"
+          :font-size "12px"
+          :margin-left "12px"
+          :color widget-fg}})
 
 (defn selector [disabled?]
   (let [widget-bg (if disabled? widget-bg-d widget-bg-e)
