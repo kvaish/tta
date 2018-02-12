@@ -15,6 +15,7 @@
             [tta.component.root.subs :as subs]
             [tta.component.root.event :as event]
             [tta.component.home.view :refer [home]]
+            [tta.component.config.view :refer [config]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
             [tta.dialog.choose-plant.view :refer [choose-plant]]
@@ -262,7 +263,7 @@
          :dataset-analyzer  [:div "dataset-analyzer"]
          :trendline         [:div "trendline"]
          ;; secondary
-         :config            [:div "config"]
+         :config            [config]
          :settings          [:div "settings"]
          :goldcup           [:div "goldcup"]
          :config-history    [:div "config-history"]

@@ -360,7 +360,7 @@
                            [:svg
                             {:width  width
                              :height height
-                             :view-box "0 0 600 500"
+                             :view-box "0 0 600 600"
                              :style {:background-color "lightgray"}}]))
        :component-did-mount  (fn [this]
                                (on-mount this state))
