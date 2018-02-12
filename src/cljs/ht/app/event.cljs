@@ -45,6 +45,20 @@
  (fn [db [_ fatal? res]]
    (assoc db :busy? false, :service-failure (assoc res :fatal? fatal?))))
 
+(rf/reg-event-db
+ ::show-message-box
+ (fn [db [_ message-box]]
+   ;; message-box - a map with following keys
+   ;; message title level
+   ;; label-ok event-ok-id
+   ;; label-cancel event-cancel-id
+   (assoc db :message-box (assoc message-box :open? true))))
+
+(rf/reg-event-db
+ ::close-message-box
+ (fn [db _]
+   (dissoc db :message-box)))
+
 (rf/reg-event-fx
  ::fetch-auth
  (fn [_ [_ with-busy?]]

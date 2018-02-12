@@ -7,6 +7,7 @@
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [ht.app.comp :as ht-comp]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -36,16 +37,20 @@
   (let [title (translate [:choose-plant :title :text] "Choose plant")
         on-close #(rf/dispatch [::event/close])
         close-tooltip (translate [:choose-plant :close :hint] "Close")
-        optional? (some? @(rf/subscribe [::app-subs/plant]))]
+        optional? (some? @(rf/subscribe [::app-subs/plant]))
+        plants @(rf/subscribe [::subs/plants])
+        busy? (not plants) ;; it would be nil while fetching
+        no-plants? (= plants [])]
     [ui/dialog
      {:modal (not optional?)
       :open @(rf/subscribe [::subs/open?])
       :on-request-close on-close
-      :title (if optional? (r/as-element (app-view/optional-dialog-head
+      :title (if optional? (r/as-element (ht-comp/optional-dialog-head
                                           {:title title
                                            :on-close on-close
                                            :close-tooltip close-tooltip}))
                  title)}
+     [(if busy? ui/linear-progress :div) (use-style style/progress-bar)]
 
      ;; left pane - client info
      [:div (use-style style/container)
@@ -70,15 +75,12 @@
 
       ;; right pane - plant selection
       [:div (use-sub-style style/container :right)
-       (let [plants @(rf/subscribe [::subs/plants])
-             list-style (use-style (style/plant-selector
+       (let [list-style (use-style (style/plant-selector
                                     @(rf/subscribe [::ht-subs/view-size])))]
          (-> [ui/list list-style
-              (if-not plants
-                [ui/linear-progress (use-style style/progress-bar)]
-                (if (empty? plants)
-                  [ui/list-item
-                   {:disabled true
-                    :secondary-text (translate [:choose-plant :no-plants :text]
-                                               "No plants found!")}]))]
+              (if no-plants?
+                [ui/list-item
+                 {:disabled true
+                  :secondary-text (translate [:choose-plant :no-plants :text]
+                                             "No plants found!")}])]
              (into (map plant-comp plants))))]]]))

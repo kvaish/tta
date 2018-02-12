@@ -1,5 +1,5 @@
-;; events for component reformer-layout
-(ns tta.component.reformer-layout.event
+;; events for component reformer-dwg
+(ns tta.component.reformer-dwg.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
             [ht.app.event :as ht-event]

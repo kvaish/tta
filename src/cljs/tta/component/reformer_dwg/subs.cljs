@@ -1,5 +1,5 @@
-;; subscriptions for component reformer-layout-tf
-(ns tta.component.reformer-layout-tf.subs
+;; subscriptions for component reformer-dwg
+(ns tta.component.reformer-dwg.subs
   (:require [re-frame.core :as rf]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
@@ -7,8 +7,14 @@
 
 ;; primary signals
 (rf/reg-sub
- ::reformer-layout-tf
+ ::reformer-dwg
  (fn [db _]
-   (get-in db [:component :reformer-layout-tf])))
+   (get-in db [:component :reformer-dwg])))
 
 ;; derived signals/subscriptions
+
+(rf/reg-sub
+ ::config
+ :<- [::app-subs/plant]
+ (fn [plant _]
+   (:config plant)))

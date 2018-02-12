@@ -10,7 +10,8 @@
  :app/exit
  (fn [_]
    (i/oset js/htAppEnv :leaveSilently true)
-   (i/oset js/window.location :href "/")))
+   (i/oset js/window.location :href
+           (or (not-empty (:portal-uri @config)) "/"))))
 
 ;;;;;;;;;;;;;
 ;; storage ;;

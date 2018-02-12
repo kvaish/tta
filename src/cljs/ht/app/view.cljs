@@ -5,6 +5,7 @@
             [cljs-react-material-ui.core :refer [get-mui-theme]]
             [cljs-react-material-ui.reagent :as ui]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
+            [ht.work.view] ;; dev purpose only!
             [ht.app.style :as style]
             [ht.app.subs :as subs :refer [translate]]
             [ht.app.event :as event]))
@@ -52,6 +53,42 @@
                   :label (translate [:action :portal :label] "Portal")
                   :message (str status " - " error " - " message)}))))
 
+(defn message-box []
+  (let [{:keys [open? message title level
+                label-ok event-ok-id
+                label-cancel event-cancel-id]} @(rf/subscribe [::subs/message-box])]
+    (if open?
+      [ui/dialog
+       {:open open?
+        :modal true
+        :title (case level
+                 (:error :warning)
+                 (r/as-element
+                  [:p
+                   [ui/font-icon {:style (:icon (style/message-box level))
+                                  :class-name (case level
+                                                :error "fa fa-exclamation-circle"
+                                                :warning "fa fa-exclamation-triangle")}]
+                   title])
+                 ;; default
+                 title)
+        :actions [(r/as-element
+                   [ui/flat-button
+                    {:label (or label-ok
+                                (translate [:root :message-box :ok] "Ok"))
+                     :on-click #(do
+                                  (rf/dispatch [::event/close-message-box])
+                                  (rf/dispatch [event-ok-id]))}])
+                  (if label-cancel
+                    (r/as-element
+                     [ui/flat-button
+                      {:label label-cancel
+                       :on-click #(do
+                                    (rf/dispatch [::event/close-message-box])
+                                    (if event-cancel-id
+                                      (rf/dispatch [event-cancel-id])))}]))]}
+       message])))
+
 (defn create-app [root]
   (fn []
     [ui/mui-theme-provider
@@ -61,5 +98,7 @@
         (cond
           claims        [root]
           (false? claims) [no-claims]))
+      [ht.work.view/work] ;; has no effect in prod build. only for dev!
+      [message-box]
       [busy-screen]
       [service-failure]]]))

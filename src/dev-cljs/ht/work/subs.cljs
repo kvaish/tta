@@ -1,13 +1,12 @@
-;; subscriptions for dialog test-design
-(ns tta.dialog.test-design.subs
+;; subscriptions for dialog work
+(ns ht.work.subs
   (:require [re-frame.core :as rf]
-            [ht.app.subs :as ht-subs :refer [translate]]
-            [tta.app.subs :as app-subs]))
+            [ht.app.subs :as ht-subs :refer [translate]]))
 
 ;; primary signals
 (rf/reg-sub
  ::dialog
- (fn [db _] (get-in db [:dialog :test-design])))
+ (fn [db _] (get-in db [:dialog :work])))
 
 
 ;;derived signals/subscriptions
