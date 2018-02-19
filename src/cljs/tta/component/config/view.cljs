@@ -13,49 +13,47 @@
             [tta.component.config.style :as style]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
-    ;[tta.component.reformer-layout.view :refer [reformer-layout reformer-data]]
-    ;       [tta.component.reformer-layout-tf.view :refer [reformer-layout-tf reformer-data-tf]]
-            ))
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
-(defn sketch []
-  (case "side"
-    "side" [:div]
-    "top" [:div]))
-
-(defonce rf-type
-         {:side "Side Fired"
-          :top "Top Fired"})
-
-(defn text-field [id label]
-  [ui/text-field
-   {:value               @(rf/subscribe [::subs/get-field [:component :config :data id]])
-    :on-change           #(rf/dispatch [::event/set-field id %2])
-    :floating-label-text label
-    :name                (:name id)}])
-
-(defn select-field [id label options]
-  (into
-    [ui/select-field
-     {:value               @(rf/subscribe [::subs/get-field [:component :config :data id]])
-      :on-change           #(rf/dispatch [::event/set-field id %3])
+(defn- text-field [id label type validations]
+  (let [field-path (conj [] (keyword id))
+        sub @(rf/subscribe [::subs/get-field field-path])]
+    [ui/text-field
+     {:on-change #(rf/dispatch [::event/set-field field-path %2 validations])
+      :default-value (:value sub)
+      :hint-text label
+      :error-text (:error sub)
       :floating-label-text label
-      :name                (name id)}
-     [ui/menu-item {:key "_", :value ""}]]
-    (map (fn [o]
-           [ui/menu-item {:value o, :primary-text (rf-type (keyword o))}])
-         options)))
+      :name id
+      :type type
+      :label label}]))
+
+(defn- select-field [id label options]
+  (let [field-path (conj [] (keyword id))]
+    (into
+      [ui/select-field
+       {:value (:value @(rf/subscribe [::subs/get-field field-path]))
+        :on-change #(rf/dispatch [::event/set-field field-path %3])
+        :floating-label-text label
+        :name id
+        :label label}
+       (map (fn [{:keys [id name]}]
+              [ui/menu-item {:key id
+                             :value id
+                             :primary-text name}])
+            options)])))
 
 (defn checkbox-field [id label]
   [ui/checkbox
-   {:on-check #(rf/dispatch [::event/set-field id %2])
-    :value @(rf/subscribe [::subs/get-field [:component :config :data id]])
-    :label label
-    :name (name id)
+   {:on-check #(rf/dispatch [::event/set-field [id] %2])
+    :value    (:value @(rf/subscribe [::subs/get-field [id]]))
+    :label    label
+    :name     (name id)
     }])
 
 (defn pd-per-section []
-  (let [pd-count @(rf/subscribe [::subs/get-field [:component :config :data :peep-door-count]])
-        section-count @(rf/subscribe [::subs/get-field [:component :config :data :section-count]])
+  (let [pd-count @(rf/subscribe [::subs/get-field [:peep-door-count]])
+        section-count @(rf/subscribe [::subs/get-field [:section-count]])
         npd (/ pd-count section-count)]
     ;(js/console.log)
     (into (map (fn [n]
@@ -63,30 +61,68 @@
     [:p]))
 
 (defn chamber []
-  )
+  (let [ch (:value @(rf/subscribe [::subs/get-field [:sf-config :chambers]]))]
+    (js/console.log ch)
+    [:div]
+    #_(map (fn [c]
+           [:div
+            [:label "Chamber"]
+            [:label "Name"] [text-field :name "Name"]
+            [select-field :tube-numbering "Tubes"
+             [{}]]]) ch)))
 
 (defn form-sf []
   [:div
    [text-field :name "Reformer Name"]
    [checkbox-field :dual-chamber? "Dual Chamber"]
    [checkbox-field :dual-nozzle? "Dual fuel nozzle"]
-   [text-field :tube-count "No of tubes"]
-   [text-field :burner-row-count "No of Burner rows"]
-   [text-field :burner-count-per-row "No of burners per row"]
-   [text-field :peep-door-count "No of peep doors"]
-   [text-field :section-count "No of sections"]
+   [text-field :tube-count "No of tubes"
+    "number"
+    {:required? true
+     :number {:decimal? false}}]
+   [text-field :burner-row-count "No of Burner rows"
+    "number"
+    {:required? true
+     :number {:decimal? false}}]
+   [text-field :burner-count-per-row "No of burners per row"
+    "number"
+    {:required? true
+     :number {:decimal? false}}]
+   [text-field :peep-door-count "No of peep doors"
+    "number"
+    {:required? true
+     :number {:decimal? false}}]
+   [text-field :section-count "No of sections"
+    "number"
+    {:required? true
+     :number {:decimal? false}}]
    [pd-per-section]
-   [chamber]]
-  )
+   [chamber]])
 
 (defn form-tf []
   [:div
    [:label "Burners located between outer tube rows and furnace walls"]
    [checkbox-field :burner-first? ""] [:br]
-   [:label "Number of tube rows"] [text-field :tube-row-count ""] [:br]
-   [:label "Number of tubes per tube row"] [text-field :tube-count ""] [:br]
-   [:label "Number of burners in each individual row"] [text-field :burner-row-count ""] [:br]
-   [:label "Number of sections per tube row"] [text-field :section-count ""] [:br]
+   [:label "Number of tube rows"]
+   [text-field :tube-row-count ""
+    "number"
+    {:required? true
+     :number {:decimal? false}}] [:br]
+   [:label "Number of tubes per tube row"]
+   [text-field :tube-count ""
+    "number"
+    {:required? true
+     :number {:decimal? false}}] [:br]
+   [:label "Number of burners in each individual row"]
+   [text-field :burner-row-count ""
+    "number"
+    {:required? true
+     :number {:decimal? false}}] [:br]
+   [:label "Number of sections per tube row"]
+   [text-field :section-count ""
+    "number"
+    {:required? true
+     :number {:decimal? false}}] [:br]
    ;;[tubes-per-section]
    ;[burners-per-section]
    [:label "Specify peephole levels:"]
@@ -96,12 +132,13 @@
 
 (defn form []
   [ui/card
-   [select-field :type                                      ;(translate [:configuration :type :label])
+   [select-field :firing ;(translate [:configuration :type :label])
     "Reformer Type"
-    ["side" "top"]]
+    [{:id "side" :name "Side Fired" }
+     {:id "top" :name "Top Fired"}]]
    [ui/divider]
-   (let [type @(rf/subscribe [::subs/get-field [:component :config :data :type]])]
-     (if type (case type
+   (let [type @(rf/subscribe [::subs/get-field [:firing]])]
+     (if type (case (:value type)
                 "side" [form-sf]
                 "top" [form-tf])))])
 
@@ -116,6 +153,6 @@
                        :style    {:margin-right "10px"}} "CANCEL"]]
    [:div (use-style style/container)
     [:div (use-style style/form)
-     [form]]
+     #_[form]]
     [:div (use-style style/sketch)
-     [sketch]]]])
+     [reformer-dwg]]]])

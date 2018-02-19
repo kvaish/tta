@@ -7,25 +7,89 @@
             [tta.util.auth :as auth]))
 
 ;; primary signals
+
 (rf/reg-sub
   ::config
   (fn [db _]
-    (:config db)))
+    (get-in db [:plant :config])))
 
 (rf/reg-sub
  ::component
  (fn [db _]
-   (get-in db [:component :config])))
-
-(rf/reg-sub
-  ::get-field
-  (fn [db [_ path]]
-    (get-in db path)))
-
-(rf/reg-sub
-  ::set-field
-  (fn [db [_ path value]]
-    (js/console.log "called")
-    (assoc-in db path value)))
+   (or (get-in db [:component :config])
+       (get-in db [:plant :config]))))
 
 ;; derived signals/subscriptions
+
+(rf/reg-sub
+  ::data
+  :<- [::config]
+  :<- [::component]
+  (fn [[config component] _]
+    (or (:data component)
+        config)))
+
+(rf/reg-sub
+  ::field
+  :<- [::data]
+  :<- [::component]
+  (fn [[data component] [_ path]]
+    (let [init-field (get-in data path)
+          form-field (get-in (:form component) path)]
+      (or (:value form-field)
+          init-field))))
+
+(rf/reg-sub
+  ::firing
+  :<- [::data]
+  (fn [data _]
+    (:firing data)))
+
+(rf/reg-sub
+  ::config-data
+  :<- [::data]
+  (fn [data [_ path]]
+    (case (:firing data)
+      "side" (get-in data (into [] (concat [:sf-config] path)))
+      "top"  (get-in data (into [] (concat [:tf-config] path))))))
+
+(rf/reg-sub
+  ::chambers
+  :<- [::config-data]
+  (fn [config-data [_ path]]
+    (get-in config-data (into [] (concat [:chambers] path)))))
+
+(rf/reg-sub
+  ::ch-count
+  :<- [::chambers]
+  :<- [::component]
+  (fn [[chambers component] _]
+    (or (count chambers)
+        (case (get-in component [:form :dual-chamber? :value])
+          true 2
+          false 1))))
+
+(rf/reg-sub
+  ::pdt-count
+  :<- [::chambers]
+  :<- [::component]
+  (fn [[chambers component] _]
+    (let [ptc (get-in chambers [0 :peep-door-tube-count])
+          pc (count ptc)
+          sc (get-in chambers [0 :section-count])
+          psc (/ pc sc)]
+      (vec (take psc ptc))
+      #_(or (:value form-field)
+          data))))
+
+(rf/reg-sub
+  ::start-end-options
+  :<- [::config-data]
+  :<- [::firing]
+  (fn [config-data firing [_ path key]]
+    (let [c (get-in config-data path)
+          r (case firing
+              "side" (case (count (:chambers config-data))
+                       1 []
+                       2 [])
+              "top" )])))
