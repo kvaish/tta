@@ -109,10 +109,10 @@
           :desc (translate [:home-card :settings :description]
                            "Manage pyrometer, custom emissivity")
           :icon "images/plant-settings.svg"}
-         {:id :goldcup
-          :title (translate [:home-card :goldcup :title]
+         {:id :gold-cup
+          :title (translate [:home-card :gold-cup :title]
                             "GoldCup")
-          :desc (translate [:home-card :goldcup :description] "")
+          :desc (translate [:home-card :gold-cup :description] "")
           :icon "images/goldcup.svg"}
          {:id :config
           :title (translate [:home-card :config :title]

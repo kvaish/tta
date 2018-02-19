@@ -27,7 +27,7 @@
      ;; secondary
      :settings {}
      :config-history {}
-     :goldcup {}
+     :gold-cup {}
      :config {}
      :logs {}}
 

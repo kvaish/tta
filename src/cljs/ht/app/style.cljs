@@ -86,7 +86,8 @@
   (stylefy/tag "body"
                {:margin 0
                 :padding 0
-                :font-family "open_sans"})
+                :font-family "open_sans"
+                :overflow "hidden"})
 
   :done)
 

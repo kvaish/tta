@@ -5,12 +5,15 @@ var htAppEnv = {
     leaveSilently : false
 };
 
-window.onbeforeunload = function() {
+window.addEventListener("beforeunload", function(e) {
     if(!htAppEnv.leaveSilently) {
-        return "Do you really want to leave this page?\n\nPress OK to continue or Cancel to stay on the current page.";
+        var dialogText = "Do you really want to leave this page?\n\nPress OK to continue or Cancel to stay on the current page.";
+        e.returnValue = dialogText;
+        return dialogText;
     }
-    return null;
-};
+    e.returnValue = undefined;
+    return undefined;
+});
 
 document.onreadystatechange = function() {
     if(document.readyState === "interactive") {

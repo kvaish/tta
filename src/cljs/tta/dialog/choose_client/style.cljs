@@ -17,9 +17,7 @@
 
 (def toggle-field {:margin-top "20px !important"})
 
-(def progress-bar
-  {:height "10px !important"
-   :margin-bottom "10px !important"})
+(def progress-bar {:margin-bottom "10px !important"})
 
 (def container
   (-> flex-row

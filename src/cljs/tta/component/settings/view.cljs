@@ -1,4 +1,3 @@
-
 ;; view elements component setting
 (ns tta.component.settings.view
   (:require [reagent.core :as r]
@@ -8,158 +7,132 @@
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.util.common :as au]
+            [tta.app.icon :as ic]
+            [tta.app.comp :as app-comp]
+            [tta.app.view :as app-view]
+            [tta.app.scroll :refer [scroll-box]]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
+            [tta.component.root.event :as root-event]
             [tta.component.settings.style :as style]
             [tta.component.settings.subs :as subs]
-            [tta.component.settings.event :as event]))
+            [tta.component.settings.event :as event]
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
-(defn- text-field [id label type validations]
-  (let [field-path (conj [] (keyword id))
-        sub @(rf/subscribe [::subs/get-field field-path])]
-    [ui/text-field
-     {:on-change #(rf/dispatch [::event/set-field field-path %2 validations])
-      :default-value (:value sub)
-      :hint-text label
-      :error-text (:error sub)
-      :floating-label-text label
-      :name id
-      :type type
-      :label label}]))
+(defn form-cell [style error label widget]
+  [:div (use-sub-style style :form-cell)
+   [:span (use-sub-style style :form-label) label]
+   widget
+   [:span (use-sub-style style :form-error) error]])
 
+(defn form-cell-2 [style error label widget]
+  [:div (use-sub-style style :form-cell-2)
+   [:span (use-sub-style style :form-label) label]
+   widget
+   [:span (use-sub-style style :form-error) error]])
 
-(defn- select-field [id label options]
-  (let [field-path (conj [] (keyword id))]
-    (into
-     [ui/select-field
-      {:value (:value @(rf/subscribe [::subs/get-field field-path]))
-       :on-change #(rf/dispatch [::event/set-field field-path %3])
-       :floating-label-text label
-       :name id
-       :label label}
-      (map (fn [{:keys [id name]}]
-             [ui/menu-item {:key id
-                            :value id
-                            :primary-text name}])
-           options)])))
+(defn temp-unit [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:temp-unit]])]
+    [form-cell-2 style error
+     (translate [:settings :temp-unit :label] "Temperature unit")
+     [app-comp/dropdown-selector
+      {:valid? valid?
+       :on-select #(rf/dispatch [::event/set-temp-unit %])
+       :selected value, :items [au/deg-C au/deg-F]}]]))
 
-(defn settings [props]
-  [:div (use-style style/setting)
-   [:div {:class "sub-header"}
-    [ui/toolbar
-     (merge 
-      {:style style/content-toolbar
-       :class-name "setting-toolbar"})
-     [ui/toolbar-title
-      (merge
-       {:style style/toolbar-title
-        :text (translate [:settings :toolbar :title] "Reformer")})]
+(defn target-temp [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:target-temp]])]
+    [form-cell-2 style error
+     (translate [:settings :target-temp :label] "Target temperature")
+     [app-comp/text-input
+      {:on-change #(rf/dispatch [::event/set-temp [:target-temp] %])
+       :value value, :valid? valid?}]]))
 
-     [ui/toolbar-group
-      {:last-child true}
-      [ui/icon-button
-       {:tooltip (translate [:settings :toolbar :save :label] "Save")
-        :icon-class-name "fa fa-save"
-        :tooltip-position "top-left"
-        :icon-style style/toolbar-icon
-        :class-name "save"}]
-      [ui/icon-button
-       {:tooltip (translate
-                  [:settings :toolbar :tooltip :close]
-                  "Discard Changes and exit.")
-        :icon-class-name "fa fa-close"
-        :icon-style style/toolbar-icon
-        :tooltip-position "top-left"
-        :class-name "save"}]]]]
+(defn design-temp [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:design-temp]])]
+    [form-cell-2 style error
+     (translate [:settings :design-temp :label] "Design temperature")
+     [app-comp/text-input
+      {:on-change #(rf/dispatch [::event/set-temp [:design-temp] % true])
+       :value value, :valid? valid?}]]))
 
-   [:div (use-style style/setting-container)
-    [:div (use-style style/reformer-design-container)
-     "Reformer design"]
-    [:div (use-style style/setting-form-container)
-     "Reformer settings"
-     [:div {:class "row"}
-      (let [temp-unit @(rf/subscribe [::subs/get-field [:temp-unit]])]
-        (select-field "temp-unit"
-                      (translate [:settings :temp-unit :label]
-                                 "Temperature Unit")
-                      [{:id "°C" :name "°C" }
-                       {:id "°F" :name "°F"}] ))]
-     [:div {:class "row"
-            :style {:display "flex"}}
-      [:div {:class "col"
-             :style {:flex 1}}
-       (text-field "design-temp" (translate
-                                  [:setting :design-temp :label]
-                                  "Design Temperature")
-                   "number"
-                   {:required? true
-                    :number {:decimal false}})]
-      [:div {:style {:flex 1}}
+(defn default-pyrometer [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:pyrometer-id]])
+        pyrometers @(rf/subscribe [::subs/pyrometers])
+        selected (some #(if (= (:id %) value) %) pyrometers)]
+    [form-cell-2 style error
+     (translate [:settings :default-pyrometer :label] "Default IR pyrometer")
+     [app-comp/dropdown-selector
+      {:valid? valid?
+       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+       :on-select #(rf/dispatch [::event/set-field [:pyrometer-id] (:id %) true])
+       :selected selected, :items pyrometers
+       :value-fn :id, :label-fn :name
+       :left-icon ic/pyrometer+
+       :left-action #(js/console.log "manage pyrometers")}]]))
 
-       (text-field "target-temp" (translate
-                                  [:setting :target-temp :label]
-                                  "Target Temperature") "number"
-                   {:required? true
-                    :number {:decimal? false}})]]
-     
-     [:div {:class "row"
-            :style {:display "flex"}}
+(defn tube-emissivity [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:emissivity-type]])
+        options @(rf/subscribe [::subs/emissivity-types])
+        selected (some #(if (= (:id %) value) %) options)]
+    [form-cell-2 style error
+     (translate [:settings :tube-emissivity :label] "Tube emissivity")
+     [app-comp/dropdown-selector
+      {:valid? valid?
+       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+       :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
+       :selected selected, :items options
+       :value-fn :id, :label-fn :name, :disabled?-fn :disabled?
+       :left-icon ic/emissivity+
+       :left-action #(js/console.log "custom emissivity")}]]))
 
-      [:div {:style {:flex 1}}
-       (select-field "pyrometer-id"
-                     (translate
-                      [:setting :pyrometer-id :label]
-                      "Default IR Pyrometer")
-                     (:value @(rf/subscribe [::subs/get-field [:pyrometers]])))]
-      [:div {:style {:flex 1}}
-       (select-field "emissivity-type"
-                     (translate
-                      [:setting :tube-emissivity :label]
-                      "Tube Emissivity")
-                     [{:id "common" :name "Common for all tube"}
-                      {:id "goldcup" :name "Gold Cup"}
-                      {:id "custom" :name "Custom for each tube"}])]]
+(defn min-tubes% [style]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:min-tubes%]])]
+    [form-cell-2 style error
+     (translate [:settings :min-tubes% :label] "Minimum % of tubes to measure")
+     [app-comp/text-input
+      {:on-change #(rf/dispatch [::event/set-number [:min-tubes%] %
+                                 true {:max 100, :min 20}])
+       :value value, :valid? valid?}]]))
 
-     [:div {:class "row"
-            :style {:display "flex"}}
-      [:div {:style {:flex 1}}
-       [ui/raised-button
-        {:label (translate [:setting :edit-pyrometer :label]
-                           "Manage IR pyrometer")
-         :label-position "after"
-         :id "manage-pyrometer"
-         :icon ""
-         :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}]]
+(defn tube-pref [style]
+  [form-cell-2 style nil
+   (translate [:settings :tube-preference :label] "Tube preference")
+   [app-comp/button {:icon ic/mark-tube
+                     :label (translate [:action :edit :label] "Edit")
+                     :on-click #(js/console.log "todo: edit tube pref")}]]) ;;TODO:
 
-      
-      (let [emissivity-type (:value @(rf/subscribe [::subs/get-field [:emissivity-type]]))] 
-     
-        (case emissivity-type
-          "custom" [:div {:style {:flex 1}}
-                    [ui/raised-button
-                     {:label (translate [:setting :tube-emissivity :label]
-                                        "Tube Emissivity")
-                      :label-position "after"
-                      :id "tube-emissivity"
-                      :icon ""
-                      :on-click #(rf/dispatch
-                                  [:tta.dialog.custom-emissivity.event/open])}]]
+(defn form [style]
+  [:div (use-sub-style style :form)
+   [temp-unit style]
+   [target-temp style]
+   [design-temp style]
+   [default-pyrometer style]
+   [tube-emissivity style]
+   [min-tubes% style]
+   [tube-pref style]])
 
-          "common" [:div {:style {:flex 1}}
-                    (text-field "emissivity"
-                                (translate [:setting :common-emissivity :label]
-                                           "Emissivity")
-                                "number"
-                                {:required? true
-                                 :number {:decimal false}})]
-          nil))]
-     [:div {:class "row"
-            :style {:display "flex"}}
-      [:div {:style {:flex 1}}
-       (text-field "min-tubes%" (translate
-                                [:setting :min-tubes%:label]
-                                "Minimum TWT data needed to Publish data, %") "number"
-                   {:number {:decimal? false
-                             :min 20
-                             :max 100}})]]]]])
+(defn body [{:keys [width height]}]
+  (let [w (* (- width 85) 0.6)
+        h (- height 40)
+        style (style/body width height)]
+    [:div (use-style style)
+     [reformer-dwg {:width w :height h}]
+     [app-view/vertical-line {:height h}]
+     [scroll-box (use-sub-style style :form-scroll)
+      [form style]]]))
+
+(defn settings []
+  [app-view/layout-main
+   (translate [:settings :title :text] "Settings")
+   (translate [:settings :title :sub-text] "Reformer preferences")
+   [[app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+                      :icon ic/upload
+                      :label (translate [:action :upload :label] "Upload")
+                      :on-click #(rf/dispatch [::event/upload])}]
+    [app-comp/button {:icon ic/cancel
+                      :label (translate [:action :cancel :label] "Cancel")
+                      :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
+   body])

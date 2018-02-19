@@ -7,6 +7,9 @@
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.util.auth :as auth]
+            [tta.app.icon :as ic]
+            [tta.app.comp :as app-comp]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -22,10 +25,7 @@
             [tta.util.auth :as auth]
             [tta.app.icon :as ic]
             [tta.app.comp :as app-comp]
-            [tta.component.settings.view :refer [settings]]
-            [tta.component.settings.event :as setting-event]
-            [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
-            [tta.dialog.custom-emissivity.view :refer [custom-emissivity]]))
+            [tta.component.settings.view :refer [settings]]))
 
 ;;; language-menu ;;;
 
@@ -71,45 +71,42 @@
           :disabled? false
           :hidden? false
           :icon (as-left-icon ic/plant)
-          :label "Choose plant"
-          :label-key :choose-plant
-          :event-id :tta.dialog.choose-plant.event/open}
+          :label-fn #(translate [:root :menu :choose-plant] "Choose plant")
+          :event-id ::event/choose-plant}
          {:id :my-apps
           :icon (as-left-icon ic/my-apps)
-          :label "My apps"
-          :label-key :my-apps
-          :event-id ::ht-event/exit}]
+          :label-fn #(translate [:root :menu :my-apps] "My apps")
+          :event-id ::event/my-apps}]
    :bottom [{:id :logout
              :icon (as-left-icon ic/logout)
-             :label "Logout"
-             :label-key :logout
-             :event-id ::ht-event/logout}]
+             :label-fn #(translate [:root :menu :logout] "Logout")
+             :event-id ::event/logout}]
    :middle {:home tta.component.home.view/context-menu
             :dataset-creator []
             :dataset-analyzer []
             :trendline []
             :config []
             :settings []
-            :goldcup []
+            :gold-cup []
             :config-history []
             :logs []}})
 
 (defn settings-sub-menu [props]
   (let [{:keys [menu-items]} props]
     (doall
-      (map (fn [{:keys [id event-id
-                        disabled? hidden?
-                        icon label label-key]}]
-             (if-not hidden?
-               [ui/menu-item
-                {:key id
-                 :disabled disabled?
-                 :left-icon icon
-                 :primary-text (translate [:root :menu label-key] label)
-                 :on-click #(do
-                              (rf/dispatch [::event/set-menu-open? :settings false])
-                              (rf/dispatch [event-id]))}]))
-           menu-items))))
+     (map (fn [{:keys [id event-id
+                      disabled? hidden?
+                      icon label-fn]}]
+            (if-not hidden?
+              [ui/menu-item
+               {:key id
+                :disabled disabled?
+                :left-icon icon
+                :primary-text (label-fn)
+                :on-click #(do
+                             (rf/dispatch [::event/set-menu-open? :settings false])
+                             (rf/dispatch [event-id]))}]))
+          menu-items))))
 
 (defn settings-menu [props]
   (let [anchor-el (:settings @(:anchors props))
@@ -175,7 +172,6 @@
             (translate [:header-link :settings :label] "Settings")
             #(do
                (i/ocall % :preventDefault)
-
                (swap! anchors assoc :settings (i/oget % :currentTarget))
                (rf/dispatch [::event/set-menu-open? :settings true]))]]))
         [language-menu {:anchors anchors}]
@@ -260,18 +256,18 @@
     (translate [:root :no-access :message] "Insufficient rights!")]])
 
 (defn content []
-  (let [view-size @(rf/subscribe [::ht-subs/view-size])
-        active-content @(rf/subscribe [::subs/active-content])
+  (let [view-size        @(rf/subscribe [::ht-subs/view-size])
+        active-content   @(rf/subscribe [::subs/active-content])
         content-allowed? @(rf/subscribe [::subs/content-allowed?])]
     [:div (update (use-style style/content) :style
-                  assoc :height (style/content-height view-size))
+                  assoc :height (app-style/content-height view-size))
      (if content-allowed?
        (case active-content
-         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         :home             [home {:on-select #(rf/dispatch [::event/activate-content %])}]
          ;; primary
-         :dataset-creator   [:div "dataset-creator"]
-         :dataset-analyzer  [:div "dataset-analyzer"]
-         :trendline         [:div "trendline"]
+         :dataset-creator  [:div "dataset-creator"]
+         :dataset-analyzer [:div "dataset-analyzer"]
+         :trendline        [:div "trendline"]
          ;; secondary
          :config            [config]
          :settings          [settings]
@@ -302,8 +298,4 @@
      (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?])
        [choose-client])
      (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?])
-       [choose-plant])
-     (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
-       [edit-pyrometer])
-     (if @(rf/subscribe [:tta.dialog.custom-emissivity.subs/open?])
-       [custom-emissivity])]))
+       [choose-plant])]))

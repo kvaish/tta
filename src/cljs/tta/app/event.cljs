@@ -46,7 +46,8 @@
 (rf/reg-event-fx
  ::check-agreement
  (fn [{:keys [db]} _]
-   {:dispatch (if ((some-fn :topsoe? :agreed?) (:user db))
+   {:dispatch (if (or (:agreed? (:user db))
+                      (:topsoe? @(rf/subscribe [:ht.app.subs/auth-claims])))
                 [::load-client]
                 [:tta.dialog.user-agreement.event/open
                  {:then {:on-accept [::load-client]

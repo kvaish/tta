@@ -36,7 +36,9 @@
 (rf/reg-sub
  ::agreed?
  :<- [::app-subs/user]
- (fn [user _] (:agreed? user)))
+ :<- [::ht-subs/topsoe?]
+ (fn [[user topsoe?] _]
+   (or topsoe? (:agreed? user))))
 
 (rf/reg-sub
  ::menu-open?

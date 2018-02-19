@@ -200,7 +200,8 @@
            :stroke "grey"
            :stroke-width "1px"
            :font-size "14px"
-           :font-family "open_sans"}
+           :font-family "open_sans"
+           :vertical-align "top"}
    :node {:tag :g, :class :reformer
           :nodes [{:tag :rect, :class :back
                    :attr {:x 0, :y 0

@@ -7,28 +7,36 @@
             [ht.app.style :as ht-style]
             [ht.app.icon :as ht-ic]
             [tta.app.style :as app-style]
-            [tta.app.icon :as ic]))
+            [tta.app.icon :as ic]
+            [ht.util.interop :as i]
+            [reagent.dom :as dom]))
 
-(rf/reg-sub
- ::value
- (fn [db [_ path]]
-   (get-in db path)))
-
-(rf/reg-event-db
- ::set-value
- (fn [db [_ path value]]
-   (assoc-in db path value)))
+(defn popover [props & children]
+  [ui/popover (assoc props :style {:background "none"
+                                   :border "none"
+                                   :box-shadow "none"})
+   [:div {:style {:height 0, :width 0
+                  :position "absolute"
+                  :top -8, :right 25
+                  :border "8px solid rgba(0,0,0,0)"
+                  :border-bottom-color "white"}}]
+   [:div {:style {:height 5, :width 0}}]
+   (into [:div {:style {:background "white"
+                        :box-shadow "rgba(0,0,0,0.12) 2px 2px 16px 2px,
+rgba(0,0,0,0.12) 2px 2px 8px 2px"
+                        :border-radius "5px"
+                        :margin "3px 15px 15px 15px"}}]
+         children)])
 
 ;; 72x48
-(defn toggle [{:keys [disabled? path]}]
-  (let [on? (:value @(rf/subscribe [::value path]))
+(defn toggle [{:keys [disabled? value on-toggle]}]
+  (let [on? value
         style (app-style/toggle on? disabled?)]
-    [:span (-> (use-sub-style style :container)
+    [:span (-> (use-style style)
                (assoc :on-click
                       (if-not disabled?
-                        #(rf/dispatch [::set-value path {:value (not on?)
-                                                         :valid? true}]))))
-     [:div (use-style style)
+                        #(on-toggle (not on?)))))
+     [:div (use-sub-style style :main)
       [:span (use-sub-style style :label)
        (if on?
          (translate [:ht-comp :toggle :on] "on")
@@ -48,61 +56,127 @@
    [icon (-> (use-style (assoc (app-style/icon-button disabled?)
                                :width "22px" :height "22px"
                                :margin "1px"))
-             (assoc :view-box "1 1 23 23"))]])
+             (assoc :view-box "1 1 22 22"))]])
 
 ;; *x48
 (defn button [{:keys [disabled? label icon on-click]}]
   (let [style (app-style/button disabled?)]
-    [ui/flat-button {:style (:btn style)
-                     :disabled disabled?
-                     :on-click on-click
-                     :hover-color (:hc style)
-                     :background-color (:bg style)}
-     [:div {:style (:div style)}
-      [icon {:style (:icon style)}]
-      [:span {:style (:span style)} label]]]))
+    [:span (use-style (:container style))
+     [ui/flat-button {:style (:btn style)
+                      :disabled disabled?
+                      :on-click on-click
+                      :hover-color (:hc style)
+                      :background-color (:bg style)}
+      [:div (use-style (:div style))
+       [icon (use-style (:icon style))]
+       [:span (use-style (:span style)) label]]]]))
 
 ;; *x48
-(defn selector [{:keys [disabled? path options item-width]}]
-  (let [{:keys [index] :or {value (first options) index 0}}
-        @(rf/subscribe [::value path])
-        style (app-style/selector disabled?)]
-    [:span (use-sub-style style :container)
+(defn selector [{:keys [disabled? valid? item-width selected options on-select]
+                 :or [valid? true]}]
+  (let [index (some #(if (= selected (first %)) (second %))
+                    (map list options (range)))
+        style (app-style/selector disabled? valid?)]
+    [:span (use-style style)
      (into
-      [:div (update (use-style style) :style assoc
-                    :width (+ 7 (* item-width (count options))))
-       [:div (update (use-sub-style style :marker) :style assoc
-                     :width item-width
-                     :left (+ 3 (* index item-width)))]]
+      [:div (update (use-sub-style style :main) :style assoc
+                    :width (+ 10 (* item-width (count options))))
+       (if index
+         [:div (update (use-sub-style style :marker) :style assoc
+                       :width item-width
+                       :left (+ 4 (* index item-width)))])]
       (map (fn [o i]
              [:span (-> (use-sub-style style
                                        (if (= i index) :active-label
                                            :label))
                         (update :style assoc
-                                :left (+ 3 (* i item-width))
+                                :left (+ 4 (* i item-width))
                                 :width item-width)
-                        (assoc :on-click
-                               (if-not disabled?
-                                 #(rf/dispatch [::set-value path
-                                                {:value o
-                                                 :index i
-                                                 :valid? true}]))))
+                        (assoc :on-click (if-not disabled? #(on-select o i))))
               o])
            options (range)))]))
 
-(defn popover [props & children]
-  [ui/popover (assoc props :style {:background "none"
-                                   :border "none"
-                                   :box-shadow "none"})
-   [:div {:style {:height 0, :width 0
-                  :position "absolute"
-                  :top -8, :right 25
-                  :border "8px solid rgba(0,0,0,0)"
-                  :border-bottom-color "white"}}]
-   [:div {:style {:height 5, :width 0}}]
-   (into [:div {:style {:background "white"
-                        :box-shadow "rgba(0,0,0,0.12) 2px 2px 16px 2px,
-rgba(0,0,0,0.12) 2px 2px 8px 2px"
-                        :border-radius "5px"
-                        :margin "3px 15px 15px 15px"}}]
-         children)])
+(defn text-input [{:keys [read-only? valid? align width value on-change]
+                   :or {valid? true, width 96, align "left"}}]
+  (let [style (app-style/text-input read-only? valid?)]
+    [:span (use-style style)
+     [:input (-> (use-sub-style style :main)
+                 (update :style assoc
+                         :width width
+                         :text-align align)
+                 (merge {:type "text"
+                         :value value
+                         :on-change #(on-change (i/oget-in % [:target :value]))
+                         :read-only read-only?}))]]))
+
+(defn action-input-box [{:keys [disabled? valid? width label action
+                                left-icon left-action left-disabled?
+                                right-icon right-action right-disabled?]
+                         :or {valid? true}}]
+  (let [style (app-style/action-input-box disabled? valid? (some? action)
+                                          left-disabled? right-disabled?)
+        align (if (and left-icon right-icon) "center" "left")]
+    [:span (use-style style)
+     [:div (use-sub-style style :main)
+      (if left-icon
+        [left-icon (merge (use-sub-style style :left)
+                          {:on-click left-action})])
+      [:span (-> (use-sub-style style :span)
+                 (update :style assoc
+                         :width width
+                         :text-align align)
+                 (merge {:on-click action}))
+       label]
+      (if right-icon
+        [right-icon (merge (use-sub-style style :right)
+                           {:on-click right-action})])]]))
+
+;; *x48
+(defn dropdown-selector [props]
+  (let [state (r/atom {})]
+    (r/create-class
+     {:component-did-mount (fn [this]
+                             (swap! state assoc :anchor (dom/dom-node this)))
+      :reagent-render
+      (fn [{:keys [disabled? valid? width on-select
+                  left-icon left-action left-disabled?
+                  selected items value-fn label-fn disabled?-fn]
+           :or {valid? true, disabled?-fn (constantly false)
+                value-fn identity, label-fn identity}}]
+        (let [{:keys [open? anchor]} @state
+              action #(do
+                        (i/ocall % :preventDefault)
+                        (swap! state assoc :open? true))]
+          [:span {:style {:display "inline-block"
+                          :padding "0"
+                          :vertical-align "top"}}
+           [action-input-box
+            (cond-> {:disabled? disabled?
+                     :valid? valid?
+                     :label (label-fn selected)
+                     :width width
+                     :action action
+                     :right-icon ic/dropdown
+                     :right-action action}
+              left-icon (assoc :left-icon left-icon
+                               :left-action left-action
+                               :left-disabled? left-disabled?))]
+           (if open?
+             [popover {:open true
+                       :on-request-close #(swap! state assoc :open? false)
+                       :anchor-el anchor
+                       :anchor-origin {:horizontal "right", :vertical "bottom"}
+                       :target-origin {:horizontal "right", :vertical "top"}}
+              (into [ui/menu {:value (value-fn selected)
+                              :menu-item-style {:font-size "12px"
+                                                :line-height "24px"
+                                                :min-height "24px"}}]
+                    (map (fn [item i]
+                           [ui/menu-item
+                            {:primary-text (label-fn item)
+                             :on-click #(do
+                                          (swap! state assoc :open? false)
+                                          (on-select item i))
+                             :disabled (disabled?-fn item)
+                             :value (value-fn item)}])
+                         items (range)))])]))})))

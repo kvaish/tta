@@ -55,8 +55,8 @@
 
 (defn message-box []
   (let [{:keys [open? message title level
-                label-ok event-ok-id
-                label-cancel event-cancel-id]} @(rf/subscribe [::subs/message-box])]
+                label-ok event-ok
+                label-cancel event-cancel]} @(rf/subscribe [::subs/message-box])]
     (if open?
       [ui/dialog
        {:open open?
@@ -78,15 +78,15 @@
                                 (translate [:root :message-box :ok] "Ok"))
                      :on-click #(do
                                   (rf/dispatch [::event/close-message-box])
-                                  (rf/dispatch [event-ok-id]))}])
+                                  (rf/dispatch event-ok))}])
                   (if label-cancel
                     (r/as-element
                      [ui/flat-button
                       {:label label-cancel
                        :on-click #(do
                                     (rf/dispatch [::event/close-message-box])
-                                    (if event-cancel-id
-                                      (rf/dispatch [event-cancel-id])))}]))]}
+                                    (if event-cancel
+                                      (rf/dispatch event-cancel)))}]))]}
        message])))
 
 (defn create-app [root]

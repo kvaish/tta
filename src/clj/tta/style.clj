@@ -24,5 +24,13 @@
                   :background-repeat "no-repeat"
                   :background-size "contain"}]]
 
+  ;; remove outline from focus
+  [:*:focus {:outline "none"}]
+
+  ;; enforce border-box all
+  [:* :*:before :*:after {:-webkit-box-sizing "border-box"
+                          :-moz-box-sizing "border-box"
+                          :box-sizing "border-box"}]
+
   [:div.my-custom-class
    {:color "red"}])
