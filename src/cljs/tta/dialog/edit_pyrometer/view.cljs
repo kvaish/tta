@@ -6,19 +6,18 @@
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
             [cljs-react-material-ui.core :as ui-core]
+            [cljs-time.core :as clj-date]
+            [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
-            [ht.util.schema :as ht-schema]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.app.view :as app-view]
             [tta.dialog.edit-pyrometer.style :as style]
             [tta.dialog.edit-pyrometer.subs :as subs]
-            [tta.dialog.edit-pyrometer.event :as event]
-            [cljs-time.core :as clj-date]))
-
+            [tta.dialog.edit-pyrometer.event :as event]))
 
 
 (defn- text-field [id label type pyrometer-id validations]
@@ -113,7 +112,7 @@
         [ui/dialog
          {:open open?
           :modal false
-          :title (r/as-element (app-view/optional-dialog-head
+          :title (r/as-element (ht-comp/optional-dialog-head
                                 {:title title
                                  :on-close on-close
                                  :close-tooltip close-tooltip}))

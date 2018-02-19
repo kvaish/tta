@@ -50,8 +50,8 @@
  (fn [db [_ message-box]]
    ;; message-box - a map with following keys
    ;; message title level
-   ;; label-ok event-ok-id
-   ;; label-cancel event-cancel-id
+   ;; label-ok event-ok
+   ;; label-cancel event-cancel
    (assoc db :message-box (assoc message-box :open? true))))
 
 (rf/reg-event-db

@@ -7,12 +7,6 @@
              :refer [color color-hex color-rgba vendors]]
             [tta.app.style :as app-style]))
 
-(defn content-height [view-size]
-  (let [{:keys [head-row-height sub-head-row-height]} ht/root-layout]
-    (- (:height view-size)
-       head-row-height
-       sub-head-row-height)))
-
 (def header
   (let [{h :head-row-height} ht/root-layout
         logo-h 18
@@ -58,7 +52,7 @@
             {:left (assoc col :flex 3)
              :right (assoc col :flex 1
                            :background-color (color :alumina-grey 30))
-             :logo {:height "26px"
+             :logo {:height (px h)
                     :padding (px (/ (- h 26) 2))
                     :padding-left "20px"
                     :color (color :royal-blue)}
@@ -70,7 +64,7 @@
               :margin-left "20px"
               :font-size "12px"
               :color (color :royal-blue)}]
-    {:height (px (- h 18))
+    {:height (px h)
      :padding "9px 0 9px 10px"
      ;; children styles
      ::stylefy/sub-styles
@@ -81,7 +75,7 @@
 
 (def info
   (let [{h :sub-head-row-height} ht/root-layout]
-    {:height (px (- h 18))
+    {:height (px h)
      :padding "8px 0px 10px 30px"
      :overflow "hidden"
      :color (color :slate-grey)

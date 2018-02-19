@@ -1,11 +1,10 @@
-
-
 ;; view elements dialog custom-emissivity
 (ns tta.dialog.custom-emissivity.view
   (:require [reagent.core :as r]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -47,7 +46,7 @@
      {:open open?
       :modal true
       :auto-scroll-body-content false
-      :title (r/as-element (app-view/optional-dialog-head
+      :title (r/as-element (ht-comp/optional-dialog-head
                             {:title title
                              :on-close on-close
                              :close-tooltip close-tooltip}))

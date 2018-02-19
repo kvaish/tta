@@ -16,7 +16,7 @@
     :dataset-analyzer true
     :trendline        true
     :settings         true
-    :goldcup          true
+    :gold-cup         true
     :config-history   true
     :config           true
     :logs             true

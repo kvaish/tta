@@ -37,15 +37,15 @@
   ([] (camera nil))
   ([props]
    [icon props
-    [:path {:d "M4,7 l1,-1 h14 l1,1 v10 l-1,1 h-14 l-1,-1 z"}]
-    [:circle {:cx "12" :cy "12" :r "3.5"}]
-    [:path {:d "M6,5 l2,-1 h2 l2,1"}]]))
+    [:path {:d "M4,9 l1,-1 h14 l1,1 v8 l-1,1 h-14 l-1,-1 z"}]
+    [:circle {:cx "12" :cy "13" :r "3"}]
+    [:path {:d "M6,6 l2,-1 h2 l2,1"}]]))
 
 (defn plus
   ([] (plus nil))
   ([props]
    [icon props
-    [:path {:d "M12,5 v14"            }]
+    [:path {:d "M12,5 v14"}]
     [:path {:d "M5,12 h14"}]]))
 
 (defn minus
@@ -53,3 +53,71 @@
   ([props]
    [icon props
     [:path {:d "M5,12 h14"}]]))
+
+(defn dropdown
+  ([] (dropdown nil))
+  ([props]
+   [icon props
+    [:path {:d "M6,10 l6,6 l6,-6"}]]))
+
+(defn nav-right
+  ([] (nav-right nil))
+  ([props]
+   [icon props
+    [:path {:d "M10,6 l6,6 l-6,6"}]]))
+
+(defn nav-left
+  ([] (nav-left nil))
+  ([props]
+   [icon props
+    [:path {:d "M14,6 l-6,6 l6,6"}]]))
+
+(defn gear
+  ([] (gear nil))
+  ([props]
+   [icon props
+    [:circle {:cx "12", :cy "12", :r "3.5"}]
+    [:path {:d "M4,4 l"}]]))
+
+(defn pyrometer+
+  ([] (pyrometer+ nil))
+  ([props]
+   [icon props
+    [:path {:d "M4,6 h16 v4 l-14,3 z"}]
+    [:path {:d "M9,13 l-2,6 m-1,0 h6 m-1,0 l2,-6"}]
+    [:path {:d "M18,13 v6 m-3,-3 h6"}]]))
+
+(defn emissivity+
+  ([] (emissivity+ nil))
+  ([props]
+   [icon props
+    [:path {:d "M12,9 c-3,-2 -5,-2 -6,1 c0,3 5,3 5,3 m0,0 c0,0 -5,0 -5,3 c0,3 4,3 7,0"}]
+    [:path {:d "M18,10 v6 m-3,-3 h6"}]]))
+
+(defn mark-tube
+  ([] (mark-tube nil))
+  ([props]
+   [icon props
+    [:path {:d "M2,6 c 2,-4 2,-2 7,0 c -3,3 -5,4 -7,0 v18 m7,-18 v5
+m0,13 v-10 c 3,-3 3,-3 7,0 c-3,4 -3,4 -7,0 m7,0 v10
+m6,0 v-22 c -2,8 -5,3 -8,0 c 3,-3 3,-3 8,0 m-8,0 v8"}]]))
+
+(defn save
+  ([] (save nil))
+  ([props]
+   [icon props
+    [:path {:d "M12,6 v8 l-3,-3 M12,14 l3,-3"}]
+    [:path {:d "M5,12 v6 h14 v-6"}]]))
+
+(defn upload
+  ([] (upload nil))
+  ([props]
+   [icon props
+    [:path {:d "M12,6 v8 M12,6 l-3,3 M12,6 l3,3"}]
+    [:path {:d "M5,12 v6 h14 v-6"}]]))
+
+(defn cancel
+  ([] (cancel nil))
+  ([props]
+   [icon props
+    [:path {:d "M6,6 l12,12 m0,-12 l-12,12"}]]))
