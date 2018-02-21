@@ -121,3 +121,9 @@ m6,0 v-22 c -2,8 -5,3 -8,0 c 3,-3 3,-3 8,0 m-8,0 v8"}]]))
   ([props]
    [icon props
     [:path {:d "M6,6 l12,12 m0,-12 l-12,12"}]]))
+
+(defn accept
+  ([] (accept nil))
+  ([props]
+   [icon props
+    [:path {:d "M3,12 l6,6 l12-12"}]]))

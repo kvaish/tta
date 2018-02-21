@@ -12,21 +12,8 @@
             [reagent.dom :as dom]))
 
 (defn popover [props & children]
-  [ui/popover (assoc props :style {:background "none"
-                                   :border "none"
-                                   :box-shadow "none"})
-   [:div {:style {:height 0, :width 0
-                  :position "absolute"
-                  :top -8, :right 25
-                  :border "8px solid rgba(0,0,0,0)"
-                  :border-bottom-color "white"}}]
-   [:div {:style {:height 5, :width 0}}]
-   (into [:div {:style {:background "white"
-                        :box-shadow "rgba(0,0,0,0.12) 2px 2px 16px 2px,
-rgba(0,0,0,0.12) 2px 2px 8px 2px"
-                        :border-radius "5px"
-                        :margin "3px 15px 15px 15px"}}]
-         children)])
+  (into [ui/popover (merge props (use-style app-style/popover))]
+        children))
 
 ;; 72x48
 (defn toggle [{:keys [disabled? value on-toggle]}]
@@ -43,16 +30,26 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
          (translate [:ht-comp :toggle :off] "off"))]
       [:div (use-sub-style style :circle)]]]))
 
+;; 48x48, icon: 24x24, back: 32x32
+(defn icon-button-l [{:keys [disabled? icon on-click]}]
+  [ui/icon-button {:disabled disabled?
+                   :on-click on-click
+                   :style {:vertical-align "top"}}
+   [icon (-> (use-style (app-style/icon-button disabled?))
+             (update :style assoc :padding "4px"
+                     :width "32px", :height "32px"
+                     :margin "-4px"))]])
+
 ;; 48x48, icon: 24x24
 (defn icon-button [{:keys [disabled? icon on-click]}]
   [ui/icon-button {:disabled disabled?
-                   :on-click (or on-click (fn []))}
+                   :on-click on-click}
    [icon (use-style (app-style/icon-button disabled?))]])
 
 ;; 48x48, icon: 22x22
 (defn icon-button-s [{:keys [disabled? icon on-click]}]
   [ui/icon-button {:disabled disabled?
-                   :on-click (or on-click (fn []))}
+                   :on-click on-click}
    [icon (-> (use-style (assoc (app-style/icon-button disabled?)
                                :width "22px" :height "22px"
                                :margin "1px"))
@@ -173,7 +170,8 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
                                                 :min-height "24px"}}]
                     (map (fn [item i]
                            [ui/menu-item
-                            {:primary-text (label-fn item)
+                            {:key i
+                             :primary-text (label-fn item)
                              :on-click #(do
                                           (swap! state assoc :open? false)
                                           (on-select item i))

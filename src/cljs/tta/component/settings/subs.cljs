@@ -82,7 +82,10 @@
  ::warn-on-close?
  :<- [::dirty?]
  :<- [::valid?]
- (fn [[dirty? valid?] _] (or dirty? (not valid?))))
+ :<- [:tta.dialog.edit-pyrometer.subs/warn-on-close?]
+ (fn [[dirty? valid? pyro-warn?] _]
+   (or dirty? (not valid?)
+       pyro-warn?)))
 
 (rf/reg-sub
  ::has-gold-cup-emissivity?

@@ -19,6 +19,7 @@
             [tta.component.settings.style :as style]
             [tta.component.settings.subs :as subs]
             [tta.component.settings.event :as event]
+            [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
 (defn form-cell [style error label widget]
@@ -64,14 +65,18 @@
         selected (some #(if (= (:id %) value) %) pyrometers)]
     [form-cell-2 style error
      (translate [:settings :default-pyrometer :label] "Default IR pyrometer")
-     [app-comp/dropdown-selector
-      {:valid? valid?
-       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-       :on-select #(rf/dispatch [::event/set-field [:pyrometer-id] (:id %) true])
-       :selected selected, :items pyrometers
-       :value-fn :id, :label-fn :name
-       :left-icon ic/pyrometer+
-       :left-action #(js/console.log "manage pyrometers")}]]))
+     (list
+      [app-comp/dropdown-selector
+       {:key :selector
+        :valid? valid?
+        :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+        :on-select #(rf/dispatch [::event/set-field [:pyrometer-id] (:id %) true])
+        :selected selected, :items pyrometers
+        :value-fn :id, :label-fn :name}]
+      [app-comp/button {:key :edit
+                        :icon ic/pyrometer+
+                        :label (translate [:action :edit :label] "Edit")
+                        :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}])]))
 
 (defn tube-emissivity [style]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:emissivity-type]])
@@ -79,14 +84,19 @@
         selected (some #(if (= (:id %) value) %) options)]
     [form-cell-2 style error
      (translate [:settings :tube-emissivity :label] "Tube emissivity")
-     [app-comp/dropdown-selector
-      {:valid? valid?
-       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-       :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
-       :selected selected, :items options
-       :value-fn :id, :label-fn :name, :disabled?-fn :disabled?
-       :left-icon ic/emissivity+
-       :left-action #(js/console.log "custom emissivity")}]]))
+     (list
+      [app-comp/dropdown-selector
+       {:key :selector
+        :valid? valid?
+        :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+        :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
+        :selected selected, :items options
+        :value-fn :id, :label-fn :name, :disabled?-fn :disabled?}]
+      (if (= value "custom")
+        [app-comp/button {:key :edit
+                          :icon ic/emissivity+
+                          :label (translate [:action :edit :label] "Edit")
+                          :on-click #(js/console.log "custom emissivity")}]))]))
 
 (defn min-tubes% [style]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:min-tubes%]])]
@@ -122,7 +132,10 @@
      [reformer-dwg {:width w :height h}]
      [app-view/vertical-line {:height h}]
      [scroll-box (use-sub-style style :form-scroll)
-      [form style]]]))
+      [form style]]
+     ;;dialogs
+     (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
+       [edit-pyrometer])]))
 
 (defn settings []
   [app-view/layout-main

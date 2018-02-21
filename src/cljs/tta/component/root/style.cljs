@@ -36,7 +36,7 @@
              :margin-left "30px"}
       :link-icon {:margin-right "5px"}
       :icon-only {:font-size "18px"
-                  :width "40px"}}}))
+                  :width "30px"}}}))
 
 (def sub-header
   (let [{h :sub-head-row-height} ht/root-layout

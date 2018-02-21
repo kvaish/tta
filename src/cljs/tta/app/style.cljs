@@ -40,6 +40,22 @@
 (def widget-fg (color-hex :white))
 (def widget-err (color-hex :red))
 
+(def popover
+  {:border-radius "8px !important"
+   :margin-top "8px !important"
+   :overflow-y "visible !important"
+   :box-shadow "0 0 16px 4px rgba(0,0,0,0.24), 0 0 2px 2px rgba(0,0,0,0.12) !important"
+   ::stylefy/mode {:before {:content "no-close-quote"
+                            :height 0, :width 0
+                            :border-style "solid"
+                            :border-width "6px"
+                            :border-color "white white transparent transparent"
+                            :position "absolute"
+                            :top 0, :right "16px"
+                            :transform-origin "0 0"
+                            :transform "rotate(-45deg)"
+                            :box-shadow "4px -4px 8px 0 rgba(0,0,0,0.24), 2px -2px 2px 0 rgba(0,0,0,0.12)"}}})
+
 ;; 72x48
 (defn toggle [on? disabled?]
   (let [widget-bg (if disabled? widget-bg-d widget-bg-e)]
@@ -196,12 +212,14 @@
             :cursor "pointer"
             :left "3px"
             :bottom 0
-            :height "9px"}
+            :height "9px"
+            :z-index "9999"}
     :bar-v {:position "absolute"
             :cursor "pointer"
             :top "3px"
             :right 0
-            :width "9px"}
+            :width "9px"
+            :z-index "9999"}
     :line-h {:position "absolute"
              :background (color :alumina-grey -20)
              :bottom "4px"
