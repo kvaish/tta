@@ -90,7 +90,7 @@
             [:span {:style {:position "absolute"
                               :top 0, :right 0}}
              [app-comp/icon-button
-              {:icon ic/cancel
+              {:icon ic/delete
                :on-click #(do
                             (i/ocall % :preventDefault)
                             (i/ocall % :stopPropagation)

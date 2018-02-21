@@ -103,7 +103,11 @@
  ::delete-pyrometer
  (fn [db [_ index]]
    (let [data @(rf/subscribe [::subs/data])
-         i @(rf/subscribe [::subs/index])
+         i (if-let [i @(rf/subscribe [::subs/index])]
+             (if (< i index) i
+                 (if (= i index) nil (dec i))))
          data (vec (concat (take index data) (drop (inc index) data)))]
-     (cond-> (assoc-in db data-path data)
-       (= i index) (assoc-in po-path nil)))))
+     (cond-> db
+       true (assoc-in data-path data)
+       i (update-in po-path assoc :index i)
+       (nil? i) (assoc-in po-path nil)))))

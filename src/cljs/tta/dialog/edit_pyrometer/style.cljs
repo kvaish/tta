@@ -16,10 +16,11 @@
    {:label {:font-size "12px"
             :font-weight 300
             :margin-top "14px"
+            :color (color-hex :royal-blue)
             :vertical-align "top"
             :display "inline-block"}
     :error {:position "absolute"
-            :color "red"
+            :color app-style/widget-err
             :font-size "10px"
             :bottom 0, :left "12px"}}})
 
@@ -33,7 +34,7 @@
 
 (def edit
   {:padding "12px"
-   :border "1px solid lightblue"
+   :border (str "1px solid " app-style/widget-bg-e)
    :border-radius "8px"
    :position "relative"
    ::stylefy/sub-styles

@@ -127,3 +127,12 @@ m6,0 v-22 c -2,8 -5,3 -8,0 c 3,-3 3,-3 8,0 m-8,0 v8"}]]))
   ([props]
    [icon props
     [:path {:d "M3,12 l6,6 l12-12"}]]))
+
+(defn delete
+  ([] (delete nil))
+  ([props]
+   [icon props
+    [:path {:d "M5,7 h14 v-0.5 m0,0 c -7,0 0,-1 -7,-2 c-7,1 0,2 -7,2 m0,0 z"
+            :fill "currentColor"}]
+    [:path {:d "M6.5,6 l0.5,12 h10 l0.5,-12"}]
+    [:path {:d "M9.5,9 v6 m2.5,0 v-6 m2.5,0 v6"}]]))
