@@ -5,7 +5,7 @@
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.util.common :as au :refer [make-field missing-field
-                                            set-field set-text-field
+                                            set-field set-field-text
                                             set-field-number
                                             set-field-temperature
                                             validate-field parse-value]]
@@ -18,8 +18,15 @@
 (rf/reg-event-fx
  ::init
  (fn [_ _]
-   (let [pid (:value @(rf/subscribe [::subs/field [:pyrometer-id]]))]
-     {:dispatch [::set-field [:pyrometer-id] pid true]})))
+   (let [{:keys [pyrometer-id temp-unit emissivity-type min-tubes%]}
+         @(rf/subscribe [::subs/data])]
+     {:dispatch-n
+      (list [::set-field [:pyrometer-id] pyrometer-id true]
+            [::set-temp-unit (or temp-unit au/deg-C)]
+            (if-not emissivity-type
+              [::set-data-field [:emissivity-type] "common"])
+            (if-not min-tubes%
+              [::set-data-field [:min-tubes%] 50]))})))
 
 (rf/reg-event-db
  ::close
@@ -27,6 +34,12 @@
    (-> db
        (assoc-in form-path nil)
        (assoc-in data-path nil))))
+
+(rf/reg-event-db
+ ::set-data-field
+ (fn [db [_ path value]]
+   (let [data @(rf/subscribe [::subs/data])]
+     (assoc-in db data-path (assoc-in data path value)))))
 
 (rf/reg-event-fx
  ::upload
@@ -42,17 +55,20 @@
      (set-field db path value data data-path form-path required?))))
 
 (rf/reg-event-db
- ::set-text-field
+ ::set-text
  (fn [db [_ path value required?]]
    (let [data @(rf/subscribe [::subs/data])]
-     (set-text-field db path value data data-path form-path required?))))
+     (set-field-text db path value data data-path form-path required?))))
 
 (rf/reg-event-fx
  ::set-temp-unit
  (fn [{:keys [db]} [_ %]]
    (let [data @(rf/subscribe [::subs/data])
          target-temp (subs/get-field-temp [:target-temp] nil data %)
-         design-temp (subs/get-field-temp [:design-temp] nil data %)]
+         design-temp (subs/get-field-temp [:design-temp] nil data %)
+         design-temp (if (nil? (:value design-temp))
+                       (au/missing-field)
+                       design-temp)]
      {:dispatch [::set-field [:temp-unit] %]
       :db (update-in db form-path
                      #(-> %
@@ -70,14 +86,14 @@
  ::set-number
  (fn [db [_ path value required? {:keys [max min]}]]
    (let [data @(rf/subscribe [::subs/data])]
-     (au/set-field-number db path value data data-path form-path required?
+     (set-field-number db path value data data-path form-path required?
                        {:max max, :min min}))))
 
 (rf/reg-event-fx
  ::set-pyrometers
  (fn [{:keys [db]} [_ pyrometers]]
    (let [data @(rf/subscribe [::subs/data])
-         pid (:value @(rf/subscribe [::subs/field [:pyromter-id]]))
+         pid (:value @(rf/subscribe [::subs/field [:pyrometer-id]]))
          missing? (not (some #(= pid (:id %)) pyrometers))]
      {:db (assoc-in db data-path (assoc data :pyrometers pyrometers))
       :dispatch-n (list (if missing? [::set-field [:pyrometer-id] nil true]))})))

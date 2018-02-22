@@ -68,15 +68,16 @@
 
 ;; validation mulit-method (fn validate [field params])
 ;; each one will check further only if :valid? is true, otherwise skip it
-(defmulti validate #(:type %2))
+(defmulti validate #(if (:valid? %1) (:type %2)))
 
 (defn validate-field [field & validators]
   (reduce #(validate %1 %2) field (remove nil? validators)))
 
+(defmethod validate nil [field _] field)
+
 (defmethod validate :number
-  [{:keys [value valid?] :as field} _]
-  (if (and valid?
-           (not (re-matches #"\d+" value)))
+  [{:keys [value] :as field} _]
+  (if (not (re-matches #"\d+" value))
     (assoc field
            :error (translate [:validation :hint :number]
                              "Please enter a number only")
@@ -85,19 +86,23 @@
     field))
 
 (defmethod validate :decimal
-  [{:keys [value valid?] :as field} _]
-  (if (and valid?
-           (not (re-matches #"(\d+(\.\d*)?)|(\.\d+)" value)))
-    (assoc field
-           :error (translate [:validation :hint :decimal]
-                             "Please enter a decimal number only")
-           :valid? false)
-    ;; pass through
-    field))
+  [{:keys [value] :as field} {:keys [precision]}]
+  (let [precision (if (> precision 0) precision nil)]
+    (if (not (re-matches (if precision
+                           (re-pattern (str "(\\d+(\\.\\d{0," precision
+                                            "})?)|(\\.\\d{1," precision "})"))
+                           #"(\d+(\.\d*)?)|(\.\d+)")
+                         value))
+      (assoc field
+             :error (translate [:validation :hint :decimal]
+                               "Please enter a decimal number only")
+             :valid? false)
+      ;; pass through
+      field)))
 
 (defmethod validate :max-number
-  [{:keys [value valid?] :as field} {:keys [max]}]
-  (if (and valid? (> value max))
+  [{:keys [value] :as field} {:keys [max]}]
+  (if (> value max)
     (assoc field
            :error (translate [:validation :hint :max-number]
                              "Please enter a number smaller than {max}"
@@ -107,8 +112,8 @@
     field))
 
 (defmethod validate :min-number
-  [{:keys [value valid?] :as field} {:keys [min]}]
-  (if (and valid? (< value min))
+  [{:keys [value] :as field} {:keys [min]}]
+  (if (< value min)
     (assoc field
            :error (translate [:validation :hint :min-number]
                              "Please enter a number greater than {min}"
@@ -120,29 +125,23 @@
 ;; parse mulit-method (fn parse [field params])
 ;; parse method only checks the :valid? key, which when true implies
 ;; that the :value is in correct shape for parsing
-(defmulti parse #(:type %2))
+(defmulti parse #(if (:valid? %1) (:type %2)))
 
 (defn parse-value [field & parsers]
   (reduce #(parse %1 %2) field (remove nil? parsers)))
 
-(defmethod parse :number
-  [{:keys [value valid?] :as field} _]
-  (if valid?
-    (assoc field :value (js/Number value))
-    field))
+(defmethod parse nil [field _] field)
 
-(defmethod parse :decimal
-  [{:keys [value valid?] :as field} _]
-  (if valid?
-    (assoc field :value (js/Number value))
-    field))
+(defmethod parse :number [field _]
+  (update field :value js/Number))
 
-(defmethod parse :temp
-  [{:keys [value valid?] :as field} {:keys [temp-unit]}]
-  (if valid?
-    (assoc field :value (from-temp-unit value temp-unit))
-    field))
+(defmethod parse :decimal [field _]
+  (update field :value js/Number))
 
+(defmethod parse :temp [field {:keys [temp-unit]}]
+  (update field :value #(from-temp-unit % temp-unit)))
+
+;; field setters
 (defn set-field [db path value data data-path form-path required?]
   (cond-> db
     :always (assoc-in data-path (assoc-in data path value))
@@ -150,7 +149,7 @@
                                                    (make-field value)
                                                    (missing-field)))))
 
-(defn set-text-field [db path value data data-path form-path required?]
+(defn set-field-text [db path value data data-path form-path required?]
   (cond-> db
     :always (assoc-in data-path (assoc-in data path value))
     required? (update-in form-path assoc-in path (if (not-empty value)
@@ -164,7 +163,8 @@
     ;; optional! clear both data and form
     [true nil true nil]))
 
-(defn set-field-temperature [db path value data data-path form-path required? temp-unit]
+(defn set-field-temperature [db path value data data-path form-path
+                             required? temp-unit]
   (let [[d? value f? field]
         (if-let [value (not-empty value)]
           ;; has value, check and update
@@ -198,11 +198,12 @@
       d? (assoc-in data-path (assoc-in data path value)))))
 
 (defn set-field-decimal [db path value data data-path form-path required?
-                         {:keys [max min]}]
+                         {:keys [max min precision]}]
   (let [[d? value f? field]
         (if-let [value (not-empty value)]
           ;; has value, check and update
-          (let [f (validate-field (make-field value) {:type :decimal})
+          (let [f (validate-field (make-field value) {:type :decimal
+                                                      :precision precision})
                 v (parse-value f {:type :decimal})
                 f2 (validate-field v
                                    (if max {:type :max-number, :max max})

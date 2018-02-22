@@ -28,7 +28,6 @@
   {:font-size "14px"
    :line-height "24px"
    :padding "8px"
-   :border-radius "8px"
    :margin-bottom "8px"
    :position "relative"})
 

@@ -20,10 +20,7 @@
  :<- [::component]
  :<- [::src-data]
  (fn [[component src-data]]
-   (merge {:temp-unit au/deg-C
-           :emissivity-type "common"
-           :min-tubes% 50}
-          (or (:data component) src-data))))
+   (or (:data component) src-data)))
 
 (rf/reg-sub
  ::form

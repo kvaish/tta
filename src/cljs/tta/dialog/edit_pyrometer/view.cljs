@@ -52,13 +52,13 @@
        :width 200
        :value value, :valid? valid?}])))
 
-(defmethod prop-field :decimal [{:keys [label path max min]}]
+(defmethod prop-field :decimal [{:keys [label path max min precision]}]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])]
     (form-field
      label error
      [app-comp/text-input
       {:on-change #(rf/dispatch [::event/set-po-decimal path % true
-                                 {:max max :min min}])
+                                 {:max max, :min min, :precision precision}])
        :value value, :valid? valid?}])))
 
 (defmethod prop-field :date [{:keys [label path]}]
@@ -73,18 +73,19 @@
    :serial-number {:type :text, :wide? true
                    :label (translate [:pyrometer :serial-number :label]
                                      "Serial number")}
-   :wavelength {:type :decimal, :format #(str % " µm")
+   :wavelength {:type :decimal, :format #(str % " µm"), :precision 2
                 :label (translate [:pyrometer :wavelength :label] "Wavelength")}
    :date-of-calibration {:type :date, :format format-date
                          :label (translate [:pyrometer :date-of-calibration :label]
                                            "Date of calibration")}
-   :tube-emissivity {:type :decimal, :min 0 :max 1
+   :tube-emissivity {:type :decimal, :min 0, :max 1, :precision 2
                      :label (translate [:pyrometer :tube-emissivity :label]
                                        "Tube emissivity")}})
 
 (defn item [pyro index]
   (let [props (make-props)]
-    [ui/menu-item {:value index
+    [ui/menu-item {:style {:border-radius "8px"}
+                   :value index
                    :on-click #(rf/dispatch [::event/edit-pyrometer pyro index])}
      (into [:div (use-style style/menu-item)
             [:span {:style {:position "absolute"

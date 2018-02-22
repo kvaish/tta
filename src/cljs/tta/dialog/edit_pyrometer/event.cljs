@@ -5,18 +5,20 @@
             [ht.app.subs :refer [translate]]
             [tta.util.common :as au :refer [make-field missing-field
                                             set-field
-                                            set-text-field set-field-decimal
+                                            set-field-text
+                                            set-field-decimal
                                             validate-field parse-value]]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
-            [tta.dialog.edit-pyrometer.subs :as subs]))
+            [tta.dialog.edit-pyrometer.subs :as subs]
+            [ht.util.interop :as i]))
 
-(def ^:const dlg-path [:dialog :edit-pyrometer])
-(def ^:const data-path (conj dlg-path :data))
-(def ^:const form-path (conj dlg-path :form))
-(def ^:const po-path (conj dlg-path :po))
-(def ^:const po-data-path (conj po-path :data))
-(def ^:const po-form-path (conj po-path :form))
+(defonce ^:const dlg-path [:dialog :edit-pyrometer])
+(defonce ^:const data-path (conj dlg-path :data))
+(defonce ^:const form-path (conj dlg-path :form))
+(defonce ^:const po-path (conj dlg-path :po))
+(defonce ^:const po-data-path (conj po-path :data))
+(defonce ^:const po-form-path (conj po-path :form))
 
 (rf/reg-event-db
  ::open
@@ -57,14 +59,14 @@
  ::set-po-text
  (fn [db [_ path value required?]]
    (let [po-data (get-in db po-data-path)]
-     (set-text-field db path value po-data po-data-path po-form-path required?))))
+     (set-field-text db path value po-data po-data-path po-form-path required?))))
 
 (rf/reg-event-db
  ::set-po-decimal
- (fn [db [_ path value required? {:keys [max min]}]]
+ (fn [db [_ path value required? {:keys [max min precision]}]]
    (let [po-data (get-in db po-data-path)]
      (set-field-decimal db path value po-data po-data-path po-form-path required?
-                        {:max max, :min min}))))
+                        {:max max, :min min, :precision precision}))))
 
 (rf/reg-event-db
  ::save-pyrometer
@@ -89,9 +91,8 @@
  ::new-pyrometer
  (fn [db _]
    (let [data @(rf/subscribe [::subs/data])
-         id ""]
-     (assoc-in db po-path {:open? true
-                           :index (count data)
+         id (str (i/ocall (js/Date.) :valueOf))]
+     (assoc-in db po-path {:index (count data)
                            :data {:id id}
                            :form {:serial-number (missing-field)
                                   :tube-emissivity (missing-field)
