@@ -8,23 +8,61 @@
              :refer [color color-hex color-rgba vendors]]
             [tta.app.style :as app-style]))
 
-(def menu
-  {:width "100%"
-   :height "auto"
-   :border "1px solid red"})
-
-(def container
-  {:width "100%"
-   :height "90%"
-   :display "flex"})
-
-(def sketch
-  {:width "35%"
-   :height "auto"
-   :flex-direction "row"})
-
-(def form
-  {:width "65%"
-   :height "auto"
-   :flex-direction "row"
-   :margin "0px 10px"})
+(defn body [width height]
+  (let [fs-h (- height 40)
+        fs-w (* (- width 85) 0.6)
+        f-w (- fs-w 5)
+        c-w (- (* 0.25 f-w) 5)
+        c-w-2 (- (* 0.5 f-w) 5)
+        c-w-3 (- (* 0.3 f-w) 5)
+        c-w-4 (- f-w 5)]
+    {:width (px width), :height (px height)
+     :padding "20px"
+     :border (str "1px solid " app-style/widget-bg-e)
+     :border-radius "8px"
+     ::stylefy/sub-styles
+     {:data {:f-w f-w, :f-h fs-h, :c-w c-w, :c-w-2 c-w-2}
+      :form-scroll {:height (px fs-h)
+                    :width (px fs-w)
+                    :display "inline-block"
+                    :vertical-align "top"}
+      :form {:width (px f-w)
+             :padding "20px 0 0 0"}
+      :form-cell {:width (px c-w-3)
+                  :vertical-align "top"
+                  :display "inline-block"
+                  :padding "0 0 6px 0"
+                  :position "relative"}
+      :form-cell-2 {:width (px c-w-2)
+                    :vertical-align "top"
+                    :display "inline-block"
+                    :padding "0 0 6px 0"
+                    :position "relative"}
+      :form-cell-3 {:width (px 151)
+                    :vertical-align "top"
+                    :display "inline-block"
+                    :padding "0 0 6px 0"
+                    :position "relative"}
+      :form-cell-4 {:width (px c-w-4)
+                    :vertical-align "top"
+                    :display "inline-block"
+                    :padding "0 0 6px 0"
+                    :position "relative"}
+      :form-heading-label {:color (color-hex :royal-blue)
+                   :font-size "14px"
+                   :font-weight 400
+                   :display "inline-block"
+                   :padding "14px 12px 0 12px"
+                   :vertical-align "top"}
+      :form-label {:color (color-hex :royal-blue)
+                   :font-size "12px"
+                   :font-weight 300
+                   :display "inline-block"
+                   :padding "14px 12px 0 12px"
+                   :vertical-align "top"}
+      :form-error {:color (color-hex :red)
+                   :font-size "11px"
+                   :display "block"
+                   :position "absolute"
+                   ;:bottom 0,
+                   :left "12px"}}}))
