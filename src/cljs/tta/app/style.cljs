@@ -39,6 +39,7 @@
 (def widget-bg-h (color-hex :sky-blue 20))
 (def widget-fg (color-hex :white))
 (def widget-err (color-hex :red))
+(def widget-imp (color-hex :monet-pink))
 
 (def popover
   {:border-radius "8px !important"
@@ -123,10 +124,10 @@
                :overflow "hidden"
                :font-size "12px"
                :height "24px"
-               :line-height "20px"
-               :font-weight 300
+               :line-height "24px"
+               ;; :font-weight 300
                :text-align "center"
-               :top "4px"
+               :top "3px"
                :transition (:std widget-transition)
                :color widget-bg}]
     {:display "inline-block"
@@ -163,18 +164,53 @@
            :background-color widget-fg}}})
 
 ;; (120+)x48
+(defn action-label-box [left-disabled? right-disabled?]
+  (let [widget-bg widget-bg-e
+        icon-fg-d (color-hex :sky-blue 30)
+        icon-d {:vertical-align "top"
+                :border-radius "50%"
+                :color icon-fg-d
+                :background widget-bg-e
+                :border (str "1px solid " icon-fg-d)}
+        icon-e (merge icon-d {:cursor "pointer"
+                              ;; :background widget-bg-e
+                              :border (str "1px solid " widget-fg)
+                              :color widget-fg
+                              ::stylefy/mode
+                              {:hover {:background (color-hex :sky-blue 20)}}})]
+    {:display "inline-block"
+     :padding "8px 12px"
+     :vertical-align "top"
+     ::stylefy/sub-styles
+     {:main {:height "32px"
+             :border-radius "16px"
+             :padding "4px 4px"
+             :background-color widget-bg}
+      :span {:display "inline-block"
+             :overflow "hidden"
+             :vertical-align "top"
+             :font-size "12px"
+             :color widget-fg
+             :height "24px"
+             :padding "0 12px"
+             :line-height "24px"
+             :min-width "62px"}
+      :left (if left-disabled? icon-d icon-e)
+      :right (if right-disabled? icon-d icon-e)}}))
+
+;; (120+)x48
 (defn action-input-box [disabled? valid? action? left-disabled? right-disabled?]
   (let [widget-bg (if disabled? widget-bg-d widget-bg-e)
         left-disabled? (or disabled? left-disabled?)
         right-disabled? (or disabled? right-disabled?)
-        icon {:vertical-align "top"
-              :border-radius "50%"
-              :height "24px"
-              :color widget-fg}
-        icon-e {:cursor "pointer"
-                :background widget-bg-e
-                ::stylefy/mode
-                {:hover {:background (color-hex :sky-blue 20)}}}]
+        icon-d {:vertical-align "top"
+                :border-radius "50%"
+                :color widget-fg
+                :background widget-bg-d}
+        icon-e (merge icon-d {:cursor "pointer"
+                              :background widget-bg-e
+                              ::stylefy/mode
+                              {:hover {:background (color-hex :sky-blue 20)}}})]
     {:display "inline-block"
      :padding "8px 12px"
      :vertical-align "top"
@@ -194,14 +230,8 @@
              :line-height "24px"
              :min-width "62px"
              :cursor (if (and action? (not disabled?)) "pointer")}
-      :left (merge icon
-                   (if left-disabled?
-                     {:background widget-bg-d}
-                     icon-e))
-      :right (merge icon
-                    (if right-disabled?
-                      {:background widget-bg-d}
-                      icon-e))}}))
+      :left (if left-disabled? icon-d icon-e)
+      :right (if right-disabled? icon-d icon-e)}}))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -280,3 +310,64 @@
       :body {:height (px bh)
              :width (px bw)
              :margin "0 20px 20px 20px"}}}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 208x38
+(def tube-list-row
+  (let [widget-border (color-rgba :sky-blue 0 0.6)
+        widget-border-imp (color-rgba :monet-pink 0 0.6)
+        widget-selection (color-rgba :sky-blue 0 0.6)
+        imp {:border (str "1px solid " widget-border-imp)
+             :color widget-imp}
+        filled-imp (assoc imp
+                          :background widget-imp
+                          :color widget-fg)
+        pin {:border (str "1px solid " widget-bg-d)
+             :color widget-bg-d}
+        filled-pin (assoc pin
+                          :background widget-bg-d
+                          :color widget-fg)
+        tube-label {:display "inline-block"
+                    :border-radius "50%"
+                    :border (str "1px solid " widget-border)
+                    :font-size "10px"
+                    :line-height "26px"
+                    ;; :font-weight 300
+                    :color widget-bg-e
+                    :text-align "center"
+                    :vertical-align "top"
+                    :width "30px", :height "30px"
+                    :margin "0 8px"}
+        filled-label (assoc tube-label
+                            :color widget-fg
+                            :background widget-bg-e)
+        labels {nil tube-label
+                "imp" (merge tube-label imp)
+                "pin" (merge tube-label pin)}
+        filled {nil filled-label
+                "imp" (merge filled-label filled-imp)
+                "pin" (merge filled-label filled-pin)}
+        tube-input {:width "68px":height "30px"
+                    :border (str "1px solid " widget-border)
+                    :border-radius "16px"
+                    :padding "0 12px"
+                    :text-align "center"
+                    :vertical-align "top"
+                    :font-size "12px"
+                    :color widget-bg-e
+                    ::stylefy/mode {:selection {:background widget-selection}}}
+        inputs {nil tube-input
+                "imp" (merge tube-input imp)
+                "pin" (merge tube-input pin)}]
+    (fn [pref]
+      {:width "208px", :height "38px"
+       :display "block"
+       :padding "0 12px 8px 12px"
+       ::stylefy/sub-styles
+       {:label (labels pref)
+        :filled (filled pref)
+        :input (inputs pref)
+        :invalid-input (assoc tube-input
+                              :border (str "1px solid " widget-err)
+                              :color widget-err)}})))

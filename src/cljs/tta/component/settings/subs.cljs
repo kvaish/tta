@@ -7,13 +7,18 @@
             [tta.util.common :as au]))
 
 (rf/reg-sub
+ ::src-data
+ :<- [::app-subs/plant]
+ (fn [plant _] (:settings plant)))
+
+(rf/reg-sub
  ::component
  (fn [db _] (get-in db [:component :settings])))
 
 (rf/reg-sub
- ::src-data
- :<- [::app-subs/plant]
- (fn [plant _] (:settings plant)))
+ ::show-error? ;; used for hiding errors until first click on submit
+ :<- [::component]
+ (fn [component _] (:show-error? component)))
 
 (rf/reg-sub
  ::data

@@ -24,6 +24,10 @@
               ["dropdown" ic/dropdown]
               ["nav-left" ic/nav-left]
               ["nav-right" ic/nav-right]
-              ["pyrometer+" ic/pyrometer+]
-              ["emissivity+" ic/emissivity+]
-              ["mark-tube" ic/mark-tube]])))
+              ["pyrometer+" ic/pyrometer+ true]
+              ["emissivity+" ic/emissivity+ true]
+              ["mark-tube" ic/mark-tube true]
+              ["delete" ic/delete]
+              ["dataset" ic/dataset]
+              ["report" ic/report]
+              ["datasheet" ic/datasheet ]])))

@@ -12,8 +12,9 @@
             [tta.app.event :as app-event]
             [tta.component.settings.subs :as subs]))
 
-(def data-path [:component :settings :data])
-(def form-path [:component :settings :form])
+(defonce comp-path [:component :settings])
+(defonce data-path (conj comp-path :data))
+(defonce form-path (conj comp-path :form))
 
 (rf/reg-event-fx
  ::init
@@ -30,10 +31,7 @@
 
 (rf/reg-event-db
  ::close
- (fn [db _]
-   (-> db
-       (assoc-in form-path nil)
-       (assoc-in data-path nil))))
+ (fn [db _] (assoc-in db comp-path nil)))
 
 (rf/reg-event-db
  ::set-data-field
@@ -43,10 +41,11 @@
 
 (rf/reg-event-fx
  ::upload
- (fn [{:keys [db]} [_ next-event]]
-   ;;TODO: save and then dispatch next-event
-   (js/console.log "todo: upload settings")
-   (if next-event {:dispatch next-event})))
+ (fn [{:keys [db]} _]
+   (merge (when @(rf/subscribe [::subs/can-submit?])
+            ;;TODO: raise save fx with busy screen and then show confirmation
+            (js/console.log "todo: upload settings"))
+          {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db
  ::set-field

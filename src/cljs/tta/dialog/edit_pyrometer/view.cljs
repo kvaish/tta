@@ -44,27 +44,30 @@
   "N/A")
 
 (defmethod prop-field :text [{:keys [label path]}]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
     (form-field
-     label error
+     label (if show-err? error)
      [app-comp/text-input
       {:on-change #(rf/dispatch [::event/set-po-text path % true])
        :width 200
-       :value value, :valid? valid?}])))
+       :value value, :valid? (if show-err? valid? true)}])))
 
 (defmethod prop-field :decimal [{:keys [label path max min precision]}]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
     (form-field
-     label error
+     label (if show-err? error)
      [app-comp/text-input
       {:on-change #(rf/dispatch [::event/set-po-decimal path % true
                                  {:max max, :min min, :precision precision}])
-       :value value, :valid? valid?}])))
+       :value value, :valid? (if show-err? valid? true)}])))
 
 (defmethod prop-field :date [{:keys [label path]}]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
     (form-field
-     label error
+     label (if show-err? error)
      [:span "!!!"])))
 
 (defn make-props []
@@ -110,12 +113,15 @@
                 (apply concat)))]))
 
 (defn edit []
-  (let [props (make-props)]
+  (let [props (make-props)
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
     (into [:div (use-style style/edit)
            [:div (use-sub-style style/edit :btns)
             [app-comp/icon-button-l
              {:icon ic/accept
-              :disabled? (not @(rf/subscribe [::subs/po-can-submit?]))
+              :disabled? (if show-err?
+                           (not @(rf/subscribe [::subs/po-can-submit?]))
+                           (not @(rf/subscribe [::subs/po-dirty?])))
               :on-click #(rf/dispatch [::event/save-pyrometer])}]
             [app-comp/icon-button-l
              {:icon ic/cancel
@@ -125,14 +131,14 @@
                (map (fn [ks]
                       (->> ks
                            (map #(vector prop-field
-                                         (assoc (props %) :path [%]))))))
+                                         (assoc (props %) :key % :path [%]))))))
                (interleave (repeat '([:br])))
                (drop 1)
                (apply concat)))))
 
 (defn edit-pyrometer []
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
-        index @(rf/subscribe [::subs/index])
+        index @(rf/subscribe [::subs/po-index])
         edit? (some? index)
         h (* (if edit? 0.3 0.4) height)
         pms @(rf/subscribe [::subs/data])]

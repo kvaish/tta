@@ -34,8 +34,14 @@
    widget
    [:span (use-sub-style style :form-error) error]])
 
+(defn show-error? [] @(rf/subscribe [::subs/show-error?]))
+
+(defn validity [{:keys [error valid?]}]
+  (if (show-error?) [error valid?] [nil true]))
+
 (defn temp-unit [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:temp-unit]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:temp-unit]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :temp-unit :label] "Temperature unit")
      [app-comp/dropdown-selector
@@ -44,7 +50,8 @@
        :selected value, :items [au/deg-C au/deg-F]}]]))
 
 (defn target-temp [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:target-temp]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field-temp [:target-temp]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :target-temp :label] "Target temperature")
      [app-comp/text-input
@@ -52,7 +59,8 @@
        :value value, :valid? valid?}]]))
 
 (defn design-temp [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:design-temp]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field-temp [:design-temp]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :design-temp :label] "Design temperature")
      [app-comp/text-input
@@ -60,7 +68,8 @@
        :value value, :valid? valid?}]]))
 
 (defn default-pyrometer [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:pyrometer-id]])
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:pyrometer-id]])
+        [error valid?] (validity field)
         pyrometers @(rf/subscribe [::subs/pyrometers])
         selected (some #(if (= (:id %) value) %) pyrometers)]
     [form-cell-2 style error
@@ -79,7 +88,8 @@
                         :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}])]))
 
 (defn tube-emissivity [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:emissivity-type]])
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:emissivity-type]])
+        [error valid?] (validity field)
         options @(rf/subscribe [::subs/emissivity-types])
         selected (some #(if (= (:id %) value) %) options)]
     [form-cell-2 style error
@@ -99,7 +109,8 @@
                           :on-click #(js/console.log "custom emissivity")}]))]))
 
 (defn min-tubes% [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:min-tubes%]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:min-tubes%]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :min-tubes% :label] "Minimum % of tubes to measure")
      [app-comp/text-input
@@ -141,7 +152,9 @@
   [app-view/layout-main
    (translate [:settings :title :text] "Settings")
    (translate [:settings :title :sub-text] "Reformer preferences")
-   [[app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+   [[app-comp/button {:disabled? (if (show-error?)
+                                   (not @(rf/subscribe [::subs/can-submit?]))
+                                   (not @(rf/subscribe [::subs/dirty?])))
                       :icon ic/upload
                       :label (translate [:action :upload :label] "Upload")
                       :on-click #(rf/dispatch [::event/upload])}]

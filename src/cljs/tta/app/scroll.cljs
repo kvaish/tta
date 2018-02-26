@@ -7,23 +7,25 @@
                                     get-control-pos]]
             [tta.app.style :as app-style]))
 
+(def transition nil #_ "100ms cubic-bezier(0.18, 0.89, 0.32, 1.28)")
+
 (defn scroll-bar [{:keys [h? length page-f pos-f on-scroll]}]
   (let [state (atom {:length length
                      :page-f page-f
                      :pos-f pos-f
                      :on-scroll on-scroll})
         do-drag (fn [e]
-                  (if (:drag? @state)
-                    (let [{:keys [length page-f on-scroll
-                                  start-pos-f start-x start-y]} @state
-                          {:keys [page-x page-y]} (get-control-pos e)
-                          l (if h? (- page-x start-x) (- page-y start-y))
-                          p (+ start-pos-f (/ l length (- 1 page-f)))
-                          new-pos-f (if (> 0 p) 0
-                                        (if (< 1 p) 1
-                                            p))]
-                      ;; (js/console.log "new pos: " new-pos-f)
-                      (if (fn? on-scroll) (on-scroll new-pos-f)))))
+                  (let [{:keys [length page-f on-scroll drag?
+                                  start-pos-f start-x start-y]} @state]
+                    (if (and drag? (fn? on-scroll))
+                      (let [{:keys [page-x page-y]} (get-control-pos e)
+                            l (if h? (- page-x start-x) (- page-y start-y))
+                            p (+ start-pos-f (/ l length (- 1 page-f)))
+                            new-pos-f (if (> 0 p) 0
+                                          (if (< 1 p) 1
+                                              p))]
+                        ;; (js/console.log "new pos: " new-pos-f)
+                        (on-scroll new-pos-f)))))
         end-drag (fn _ed [e]
                    (let [{:keys [drag? ev-move ev-end]} @state]
                      (when drag?
@@ -33,6 +35,7 @@
                        (remove-event js/window ev-end _ed))))
         start-drag (fn [touch? e]
                      (i/ocall e :preventDefault)
+                     (i/ocall e :stopPropagation)
                      (let [[ev-move ev-end]
                            (if touch? ["touchmove" "touchend"]
                                ["mousemove" "mouseup"])
@@ -44,7 +47,27 @@
                                              :ev-move ev-move, :ev-end ev-end
                                              :start-x page-x, :start-y page-y)))
                        (add-event js/window ev-move do-drag)
-                       (add-event js/window ev-end end-drag)))]
+                       (add-event js/window ev-end end-drag)))
+        on-click-bar (fn [e]
+                       (let [{:keys [length page-f on-scroll]} @state]
+                         (if (fn? on-scroll)
+                           (let [rect (-> e
+                                          (i/oget :target)
+                                          (i/ocall :getBoundingClientRect))
+                                 pos (if h?
+                                       (- (i/oget e :clientX) (i/oget rect :left))
+                                       (- (i/oget e :clientY) (i/oget rect :top)))
+                                 p (/ (- pos (* length page-f 0.5))
+                                      (* length (- 1 page-f)))
+                                 new-pos-f (if (> 0  p) 0
+                                               (if (< 1 p) 1
+                                                   p))]
+                             ;; (js/console.log "new pos:" new-pos-f)
+                             (on-scroll new-pos-f)))))
+        on-click-track #(doto %
+                          (i/ocall :preventDefault)
+                          (i/ocall :stopPropagation))]
+
     (fn [{:keys [h? length page-f pos-f on-scroll]
          :or {h? false, pos-f 0}}]
       (let [length (- length 8)
@@ -56,8 +79,7 @@
                                  (if h? :bar-h :bar-v))
                   (update :style merge
                           (if h? {:width length} {:height length}))
-                  (assoc :on-click (fn [e] ;; TODO: add click handler
-                                     )))
+                  (assoc :on-click on-click-bar))
          [:div (update (use-sub-style app-style/scroll-bar
                                       (if h? :line-h :line-v))
                        :style merge
@@ -68,7 +90,8 @@
                            (if h?
                              {:left pos-l, :width page-l}
                              {:top pos-l, :height page-l}))
-                   (merge {:on-mouse-down (partial start-drag false)
+                   (merge {:on-click on-click-track
+                           :on-mouse-down (partial start-drag false)
                            :on-touch-start (partial start-drag true)
                            :on-mouse-up end-drag
                            :on-touch-end end-drag}))
@@ -106,12 +129,23 @@
                                                sw w (+ l dx))]
                      (assoc state :hf hf, :wf wf, :t t, :l l))))))
 
+(defn- scroll-to [state {:keys [top left]}]
+  (swap! state (fn [{:keys [sh h sw w] :as state}]
+                 (let [[hf t wf l] (update-f sh h top
+                                             sw w left)]
+                   (assoc state :hf hf, :wf wf, :t t, :l l)))))
+
 (defn lazy-scroll-box
-  "**props**: a map with width, height, scroll-width, scroll-height,
+  "[{:keys [width height scroll-width scroll-height
+            style class-name body-style body-class-name render-fn]}]
+  **props**: a map with width, height, scroll-width, scroll-height,
   style, class-name, body-style, body-class-name  
   **render-fn**: a function to render the content, it will be passed
-  a map with top, left, height, width, scroll-height, scroll-width"
-  [{:keys [width height scroll-width scroll-height]} render-fn]
+  a map with top, left, height, width, scroll-height, scroll-width.
+  Also a function is passed in as second parameter to it which can be
+  called to scroll it to a specified position. Provide the new position
+  as the top left coordinate in the scroll pane like {:top top, :left left}."
+  [{:keys [width height scroll-width scroll-height]}]
   ;; (js/console.log "lazy:" [width height scroll-width scroll-height])
   (let [state (r/atom {:wf 0, :hf 0, :l 0, :t 0
                        :h height, :w width
@@ -122,7 +156,8 @@
                            [hf t wf l] (update-f sh h t sw w l)]
                        (assoc state
                               :hf hf, :wf wf
-                              :t t, :l l)))]
+                              :t t, :l l)))
+        scroll-to (partial scroll-to state)]
     (r/create-class
      {:component-did-mount (fn [this]
                              (let [node (dom/dom-node this)]
@@ -137,13 +172,11 @@
                                         (when (not= old new)
                                           ;; (js/console.log "receive-props:" [old new])
                                           (swap! state update-box new))))
+
       :reagent-render
-      (fn [props render-fn]
-        (let [{:keys [style class-name body-style body-class-name]} props
+      (fn [props]
+        (let [{:keys [style class-name body-style body-class-name render-fn]} props
               {:keys [sh h hf t, sw w wf l]} @state]
-          ;; (js/console.log "props:" props)
-          ;; (js/console.log "state:" state)
-          ;; (js/console.log "sh sw h w" [sh sw h w])
           [:div {:style (assoc style :width w :height h
                                :overflow "hidden"
                                :position "relative")
@@ -151,12 +184,13 @@
            [:div {:style (assoc body-style
                                 :width sw, :height sh
                                 :position "absolute"
-                                :transition "200ms ease-in-out"
+                                :transition transition
                                 :top (- t), :left (- l))
                   :class-name body-class-name}
             (if render-fn (render-fn {:top t, :left l
                                       :height h, :scroll-height sh
-                                      :width w, :scroll-width sw}))]
+                                      :width w, :scroll-width sw}
+                                     scroll-to))]
            (if (and h sh (< h sh))
              [scroll-bar {:h? false
                           :length h
@@ -219,7 +253,7 @@
                  (fn [_ children]
                    (let [{:keys [t l]} @state]
                      (into [:div {:style {:position "absolute"
-                                          :transition "200ms ease-in-out"
+                                          :transition transition
                                           :top (- t) :left (- l)}}]
                            children)))}))]
 
@@ -259,3 +293,68 @@
                           :page-f (/ w sw)
                           :pos-f wf
                           :on-scroll #(swap! state update-l %)}])]))})))
+
+(defn- show-list-item [state index]
+  (let [{:keys [scroll-to top height item-height]} @state
+        item-top (* index item-height)
+        item-bottom (+ item-top item-height)]
+    (if (< item-top top)
+      (scroll-to {:top item-top, :left 0})
+      (if (> item-bottom (+ top height))
+        (scroll-to {:top (- item-bottom height), :left 0})))))
+
+(defn lazy-list-box
+  "[{:keys [width height item-count item-height render-items-fn]}]
+  Good for showing long list of dom heavy items. It renders only those visible.  
+  **render-items-fn**: (fn [index-list show-item])  
+  It should return a sequence of hiccups , for each index in **index-list**.
+  You can scroll to bring an item into view by calling the **show-item**
+  function which takes a single argument *item-index*."
+  [props]
+  (let [state (atom {})
+        render-fn
+        (fn [{:keys [top]} scroll-to]
+          (let [{:keys [height item-height item-count render-items-fn]}
+                (swap! state assoc :top top, :scroll-to scroll-to)
+                from (quot top item-height)
+                to (min item-count (js/Math.ceil (/ (+ top height) item-height)))
+                items (render-items-fn (range from to)
+                                       (partial show-list-item state))]
+            (doall
+             (map (fn [item i]
+                    (let [index (+ from i)]
+                      [:span {:key index
+                              :style {:display "block"
+                                      :margin "0", :padding "0"
+                                      :position "absolute"
+                                      :top (* item-height index)
+                                      :left 0}}
+                       item]))
+                  items (range)))))]
+    (fn [{:keys [width height item-count item-height] :as props}]
+      (let [scroll-height (* item-height item-count)]
+        (swap! state merge props)
+        [lazy-scroll-box
+         {:width width, :height height
+          :scroll-width width, :scroll-height scroll-height
+          :render-fn render-fn}]))))
+
+(defn- show-list-col [state index]
+  ;;TODO:
+  )
+
+(defn- lazy-list-cols
+  ""
+  [props]
+  ;;TODO:
+  )
+
+(defn- show-grid-item [state row col]
+  ;;TODO:
+  )
+
+(defn- lazy-grid-box
+  ""
+  [props]
+  ;;TODO:
+  )

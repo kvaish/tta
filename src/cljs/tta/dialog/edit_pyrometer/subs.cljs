@@ -58,7 +58,7 @@
  :<- [::dirty?]
  :<- [::valid?]
  :<- [::data]
- :<- [::index]
+ :<- [::po-index]
  (fn [[dirty? valid? data index] _] (and dirty? valid?
                                         (not-empty data) (nil? index))))
 
@@ -78,7 +78,12 @@
  (fn [dialog _] (:po dialog)))
 
 (rf/reg-sub
- ::index
+ ::po-show-error? ;; used to hide errors until first click on accept
+ :<- [::po]
+ (fn [po _] (:show-error? po)))
+
+(rf/reg-sub
+ ::po-index
  :<- [::po]
  (fn [po _] (:index po)))
 
@@ -104,7 +109,7 @@
 (rf/reg-sub
  ::po-dirty?
  :<- [::po-data]
- :<- [::index]
+ :<- [::po-index]
  :<- [::data]
  (fn [[pyro index data] _]
    (if index (not= (get data index) pyro))))
