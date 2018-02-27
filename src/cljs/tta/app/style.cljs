@@ -363,7 +363,7 @@
     (fn [pref]
       {:width "208px", :height "38px"
        :display "block"
-       :padding "0 12px 8px 12px"
+       :padding "4px 12px"
        ::stylefy/sub-styles
        {:label (labels pref)
         :filled (filled pref)
@@ -371,3 +371,47 @@
         :invalid-input (assoc tube-input
                               :border (str "1px solid " widget-err)
                               :color widget-err)}})))
+
+(defn tab-layout [top-tabs? bot-tabs? width height]
+  (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))
+        w2 width
+        t2 (if top-tabs? 24 0)
+        h3 (- h2 40)
+        w3 (- width 40)]
+    [{:t2 t2, :h2 h2, :w2 w2, :h3 h3, :w3 w3}
+     {:position "relative"
+      ::stylefy/sub-styles
+      {:div2 {:position "absolute", :left 0
+              :border (str "1px solid " widget-bg-e)
+              :border-radius
+              (str (if top-tabs? "0 0" "8p 8px")
+                   (if bot-tabs? "0 8px" "8px 8px"))
+              :overflow "hidden"}
+       :div3 {:position "absolute", :left "20px"
+              :background widget-fg
+              :overflow "hidden"}}}]))
+
+(defn tab-head [position selected? last?]
+  (let [[fg bg] (if selected?
+                  [widget-bg-e widget-fg]
+                  [widget-fg widget-bg-e])
+        b (str "1px solid " widget-bg-e)]
+    {:display "inline-block"
+     :height "25px" :min-width "88px"
+     :padding "0 24px"
+     :margin-right (if-not last? "1px")
+     :vertical-align "top"
+     :color fg
+     :background-color bg
+     :border-left b, :border-right b
+     :border-top (if (= :top position) b "none")
+     :border-bottom (if (= :bottom position) b "none")
+     :border-radius (case position
+                      :top "8px 8px 0 0"
+                      :bottom "0 0 8px 8px")
+     :font-size "12px"
+     :line-height "24px"
+     :text-align "center"
+     :cursor (if-not selected? "pointer")
+     ::stylefy/mode (if-not selected?
+                      {:hover {:background widget-bg-h}})}))

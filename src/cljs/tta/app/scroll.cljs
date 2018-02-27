@@ -1,11 +1,22 @@
 (ns tta.app.scroll
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
+            [cljsjs.react-motion]
             [stylefy.core :refer [use-style use-sub-style]]
             [ht.util.interop :as i]
             [ht.util.common :refer [add-event remove-event
                                     get-control-pos]]
             [tta.app.style :as app-style]))
+
+(def motion (r/adapt-react-class js/ReactMotion.Motion))
+(def spring js/ReactMotion.spring)
+(def presets js/ReactMotion.presets)
+(def presets-wobbly (i/oget presets :wobbly))
+(def presets-stiff (i/oget presets :stiff))
+(def presets-gentle (i/oget presets :gentle))
+(defn spring-wobbly [x] (spring x presets-wobbly))
+(defn spring-stiff [x] (spring x presets-stiff))
+(defn spring-gentle [x] (spring x presets-gentle))
 
 (def transition nil #_ "100ms cubic-bezier(0.18, 0.89, 0.32, 1.28)")
 
@@ -135,6 +146,13 @@
                                              sw w left)]
                    (assoc state :hf hf, :wf wf, :t t, :l l)))))
 
+(defn- prevent-scroll [e]
+  (let [ele (i/oget e :target)]
+    (if (pos? (i/oget ele :scrollTop))
+      (i/oset ele :scrollTop 0))
+    (if (pos? (i/oget ele :scrollLeft))
+      (i/oset ele :scrollLeft 0))))
+
 (defn lazy-scroll-box
   "[{:keys [width height scroll-width scroll-height
             style class-name body-style body-class-name render-fn]}]
@@ -181,16 +199,26 @@
                                :overflow "hidden"
                                :position "relative")
                  :class-name class-name}
-           [:div {:style (assoc body-style
-                                :width sw, :height sh
-                                :position "absolute"
-                                :transition transition
-                                :top (- t), :left (- l))
-                  :class-name body-class-name}
-            (if render-fn (render-fn {:top t, :left l
-                                      :height h, :scroll-height sh
-                                      :width w, :scroll-width sw}
-                                     scroll-to))]
+           [:div {:style (assoc style :width w, :height h
+                                :overflow "hidden"
+                                :position "absolute")
+                  :on-scroll prevent-scroll}
+            [motion {:defaultStyle #js{:t 0, :l 0}
+                     :style #js{:t (spring t), :l (spring l)}}
+             (fn [s]
+               (let [t (i/oget s :t)
+                     l (i/oget s :l)]
+                 (r/as-element
+                  [:div {:style (assoc body-style
+                                       :width sw, :height sh
+                                       :position "absolute"
+                                       :transition transition
+                                       :top (- t), :left (- l))
+                         :class-name body-class-name}
+                   (if render-fn (render-fn {:top t, :left l
+                                             :height h, :scroll-height sh
+                                             :width w, :scroll-width sw}
+                                            scroll-to))])))]]
            (if (and h sh (< h sh))
              [scroll-bar {:h? false
                           :length h
@@ -252,10 +280,16 @@
                  :reagent-render
                  (fn [_ children]
                    (let [{:keys [t l]} @state]
-                     (into [:div {:style {:position "absolute"
-                                          :transition transition
-                                          :top (- t) :left (- l)}}]
-                           children)))}))]
+                     [motion {:defaultStyle #js{:t 0, :l 0}
+                              :style #js{:t (spring t), :l (spring l)}}
+                      (fn [s]
+                        (let [t (i/oget s :t)
+                              l (i/oget s :l)]
+                          (r/as-element
+                           (into [:div {:style {:position "absolute"
+                                                :transition transition
+                                                :top (- t) :left (- l)}}]
+                                 children))))]))}))]
 
     ;; outer scroll box
     (r/create-class
@@ -279,7 +313,8 @@
         (let [{:keys [sw w wf, sh h hf]} @state]
           ;; (js/console.log "wf:" wf "hf:" hf)
           [:div (assoc props :style (merge style {:overflow "hidden"
-                                                  :position "relative"}))
+                                                  :position "relative"})
+                       :on-scroll prevent-scroll)
            [body {} children]
            (if (and h sh (< h sh))
              [scroll-bar {:h? false

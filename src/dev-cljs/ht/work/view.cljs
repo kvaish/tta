@@ -16,7 +16,8 @@
             [tta.comp-set]
             [tta.scroll]
             [tta.ref-sketch]
-            [tta.tube-list]))
+            [tta.tube-list]
+            [tta.tab]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -33,5 +34,6 @@
        :tta/scroll [tta.scroll/scroll-test]
        :tta/ref-sketch [tta.ref-sketch/ref-sketch]
        :tta/tube-list [tta.tube-list/tube-list]
+       :tta/tab [tta.tab/tab]
        ;; default
        [:p "empty workspace"])]))

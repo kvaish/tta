@@ -18,12 +18,13 @@
 
 (defn- shift-focus [state index side event]
   (let [key-code (i/oget event :keyCode)
-        [arrow? index side] (case key-code
-                              37 [true index (dec side)] ;; left
-                              38 [true (dec index) side] ;; up
-                              39 [true index (inc side)] ;; right
-                              40 [true (inc index) side] ;; down
-                              [false])]
+        [arrow? index side show-index]
+        (case key-code
+          37 [true index (dec side) index] ;; left
+          38 [true (dec index) side (- index 2)] ;; up
+          39 [true index (inc side) index]       ;; right
+          40 [true (inc index) side (+ index 2)] ;; down
+          [false])]
     (when arrow?
       ;; (js/console.log "arrow" index side)
       (doto event
@@ -32,9 +33,8 @@
       (when (and (>= index 0) (>= 1 side 0))
         (let [{:keys [show-row input]} (swap! state assoc :focus [index side])
               input (get-in input [index side])]
-          (show-row index)
-          (if input
-            (js/setTimeout #(set-focus state input) 50)))))))
+          (show-row show-index)
+          (if input (set-focus state input)))))))
 
 (defn- register-input [state index side input]
   (let [{:keys [focus]} (swap! state assoc-in [:input index side] input)]
