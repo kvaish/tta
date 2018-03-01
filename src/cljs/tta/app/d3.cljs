@@ -190,7 +190,7 @@
   [props]
   (let [{:keys [width height view-box preserve-aspect-ratio
                 style class node data]
-         :or {preserve-aspect-ratio "xMidYmid meet"}} props
+         :or {preserve-aspect-ratio "xMidYMid meet"}} props
         idv [(:class node)]
         state (atom {})
         div (-> js/d3

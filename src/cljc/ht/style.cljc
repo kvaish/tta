@@ -1,5 +1,5 @@
-(ns ht.style)
-
+(ns ht.style
+  (:require [garden.color :refer [as-hsla as-hex as-rgb]]))
 
 (def colors { ;; haldor topsoe standard colors
              :royal-blue   "#002856"
@@ -26,6 +26,48 @@
              :yellow       "#ffeb3b"
              :orange       "#ff9800"
              :brown        "#795548"})
+
+(defn lighten [color pct]
+  (let [c (as-hsla color)]
+    (update c :lightness
+            (fn [value]
+              (+ value (if (pos? pct)
+                         (* (- 100 value) (/ pct 100))
+                         (/ (* value pct) 100)))))))
+
+(defn color
+  "get color suitable for use with stylefy and garden"
+  ([color-key]
+   (get colors color-key))
+  ([color-key %-lighten]
+   (-> (get colors color-key)
+       (lighten %-lighten))))
+
+(defn color-hex
+  "get color as hex string"
+  ([color-key]
+   (as-hex
+    (get colors color-key)))
+  ([color-key %-lighten]
+   (-> (get colors color-key)
+       (lighten %-lighten)
+       (as-hex))))
+
+(defn color-rgba
+  "get color as rgba() string"
+  ([color-key]
+   (color-rgba color-key nil nil))
+  ([color-key %-lighten]
+   (color-rgba color-key %-lighten nil))
+  ([color-key %-lighten opacity]
+   (let [{:keys [red green blue]}
+         (as-rgb
+          (if %-lighten
+            (color color-key %-lighten)
+            (color color-key)))
+         opacity (or opacity 1)]
+     (str "rgba(" red "," green "," blue "," opacity ")"))))
+
 
 (def palettes
   {:chart [(:royal-blue colors)

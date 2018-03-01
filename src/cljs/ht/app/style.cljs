@@ -1,42 +1,9 @@
 (ns ht.app.style
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
-            [ht.style :as ht]))
+            [ht.style :as ht :refer [color color-hex color-rgba]]))
 
 (def vendors ["webkit" "ms" "moz" "o"])
-
-(defn color
-  "get color suitable for use with stylefy and garden"
-  ([color-key]
-   (get ht/colors color-key))
-  ([color-key %-lighten]
-   (-> (get ht/colors color-key)
-       (gc/scale-lightness %-lighten))))
-
-(defn color-hex
-  "get color as hex string"
-  ([color-key]
-   (gc/as-hex
-    (get ht/colors color-key)))
-  ([color-key %-lighten]
-   (-> (get ht/colors color-key)
-       (gc/scale-lightness %-lighten)
-       (gc/as-hex))))
-
-(defn color-rgba
-  "get color as rgba() string"
-  ([color-key]
-   (color-rgba color-key nil nil))
-  ([color-key %-lighten]
-   (color-rgba color-key %-lighten nil))
-  ([color-key %-lighten opacity]
-   (let [{:keys [red green blue]}
-         (gc/as-rgb
-          (if %-lighten
-            (color color-key %-lighten)
-            (color color-key)))
-         opacity (or opacity 1)]
-     (str "rgba(" red "," green "," blue "," opacity ")"))))
 
 (def theme
   {:font-family "open_sans"
