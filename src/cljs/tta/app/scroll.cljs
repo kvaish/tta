@@ -1,24 +1,12 @@
 (ns tta.app.scroll
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
-            [cljsjs.react-motion]
             [stylefy.core :refer [use-style use-sub-style]]
             [ht.util.interop :as i]
             [ht.util.common :refer [add-event remove-event
                                     get-control-pos]]
+            [tta.util.common :refer [motion spring]]
             [tta.app.style :as app-style]))
-
-(def motion (r/adapt-react-class js/ReactMotion.Motion))
-(def spring js/ReactMotion.spring)
-(def presets js/ReactMotion.presets)
-(def presets-wobbly (i/oget presets :wobbly))
-(def presets-stiff (i/oget presets :stiff))
-(def presets-gentle (i/oget presets :gentle))
-(defn spring-wobbly [x] (spring x presets-wobbly))
-(defn spring-stiff [x] (spring x presets-stiff))
-(defn spring-gentle [x] (spring x presets-gentle))
-
-(def transition nil #_ "100ms cubic-bezier(0.18, 0.89, 0.32, 1.28)")
 
 (defn scroll-bar [{:keys [h? length page-f pos-f on-scroll]}]
   (let [state (atom {:length length
@@ -212,7 +200,6 @@
                   [:div {:style (assoc body-style
                                        :width sw, :height sh
                                        :position "absolute"
-                                       :transition transition
                                        :top (- t), :left (- l))
                          :class-name body-class-name}
                    (if render-fn (render-fn {:top t, :left l
@@ -287,7 +274,6 @@
                               l (i/oget s :l)]
                           (r/as-element
                            (into [:div {:style {:position "absolute"
-                                                :transition transition
                                                 :top (- t) :left (- l)}}]
                                  children))))]))}))]
 

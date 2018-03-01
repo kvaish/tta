@@ -239,17 +239,17 @@
 (def scroll-bar
   {::stylefy/sub-styles
    {:bar-h {:position "absolute"
+            ;; :z-index "9999"
             :cursor "pointer"
             :left "3px"
             :bottom 0
-            :height "9px"
-            :z-index "9999"}
+            :height "9px"}
     :bar-v {:position "absolute"
+            ;; :z-index "9999"
             :cursor "pointer"
             :top "3px"
             :right 0
-            :width "9px"
-            :z-index "9999"}
+            :width "9px"}
     :line-h {:position "absolute"
              :background (color :alumina-grey -20)
              :bottom "4px"

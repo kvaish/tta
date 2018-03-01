@@ -1,25 +1,20 @@
 (ns tta.app.view
   "collection of common small view elements for re-use"
-  (:require [re-frame.core :as rf]
+  (:require [clojure.string :as str]
+            [re-frame.core :as rf]
             [reagent.core :as r]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
-            [cljsjs.react-motion]
             [ht.util.interop :as i]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.util.common :refer [trans-motion spring]]
             [tta.app.style :as style]
             [tta.app.subs :as subs]
             [tta.app.event :as event]
-            [tta.app.style :as app-style]
-            [clojure.string :as str]))
+            [tta.app.style :as app-style]))
 
-(def trans-motion (r/adapt-react-class js/ReactMotion.TransitionMotion))
-#_(defn spring [s] (js/ReactMotion.spring s #js{:stiffness 40
-                                              :damping 40
-                                              :precision 0.02}))
-(def spring js/ReactMotion.spring)
 
 (defn layout-main [title sub-title actions body]
   (let [view-size @(rf/subscribe [::ht-subs/view-size])
@@ -138,16 +133,15 @@
                                  t (* t h3)
                                  l (* l w3)]
                              [(if (= k current-key) 0 1)
-                              (if (< 0.01 o)
-                                [:div (-> (use-sub-style style :div3)
-                                          (assoc :key k)
-                                          (update :style assoc
-                                                  :opacity (+ 0.2 (* 0.8 o))
-                                                  :width w3, :height h3
-                                                  :top t, :left l))
-                                 ;; the content
-                                 [content {:width w3, :height h3
-                                           :selected [ts bs]}]])])))
+                              [:div (-> (use-sub-style style :div3)
+                                        (assoc :key k)
+                                        (update :style assoc
+                                                :opacity (+ 0.2 (* 0.8 o))
+                                                :width w3, :height h3
+                                                :top t, :left l))
+                               ;; the content
+                               [content {:width w3, :height h3
+                                         :selected [ts bs]}]]])))
                     (remove #(nil? (second %)))
                     (sort-by first <)
                     (map second)

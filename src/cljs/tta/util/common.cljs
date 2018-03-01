@@ -1,8 +1,10 @@
 (ns tta.util.common
-  (:require [re-frame.core :as rf]
+  (:require [clojure.string :as str]
+            [re-frame.core :as rf]
+            [cljsjs.react-motion]
+            [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
-            [clojure.string :as str]
-            [ht.app.subs :as ht-subs :refer [translate]]))
+            [reagent.core :as r]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; temperature units and conversion
@@ -216,3 +218,22 @@
     (cond-> db
       f? (update-in form-path assoc-in path field)
       d? (assoc-in data-path (assoc-in data path value)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; react-motion
+
+(def motion (r/adapt-react-class js/ReactMotion.Motion))
+(def stag-motion (r/adapt-react-class js/ReactMotion.StaggeredMotion))
+(def trans-motion (r/adapt-react-class js/ReactMotion.TransitionMotion))
+(defn spring
+  "with precision to 0.02 (default 0.01)"
+  ([s]
+   (js/ReactMotion.spring s #js{:precision 0.02}))
+  ([s {:keys [stiffness damping precision]
+       :or {stiffness 170, damping 26, precision 0.02}}]
+   (js/ReactMotion.spring s #js{:stiffness stiffness
+                                :damping damping
+                                :precision precision})))
+(defn spring-gentle [s] (js/ReactMotion.spring s js/ReactMotion.presets.gentle))
+(defn spring-wobbly [s] (js/ReactMotion.spring s js/ReactMotion.presets.wobbly))
+(defn spring-stiff [s] (js/ReactMotion.spring s js/ReactMotion.presets.stiff))
