@@ -121,3 +121,40 @@ m6,0 v-22 c -2,8 -5,3 -8,0 c 3,-3 3,-3 8,0 m-8,0 v8"}]]))
   ([props]
    [icon props
     [:path {:d "M6,6 l12,12 m0,-12 l-12,12"}]]))
+
+(defn accept
+  ([] (accept nil))
+  ([props]
+   [icon props
+    [:path {:d "M3,12 l6,6 l12-12"}]]))
+
+(defn delete
+  ([] (delete nil))
+  ([props]
+   [icon props
+    [:path {:d "M6,7 h12.5 m-5,0 v-2 h-2.5 v2"
+            :fill "currentColor"}]
+    [:path {:d "M7.5,6 v11 l1,1 h8 l1,-1 v-11"}]
+    [:path {:d "M10,9 v6 m2.5,0 v-6 m2.5,0 v6"}]]))
+
+(defn dataset
+  ([] (dataset nil))
+  ([props]
+   [icon props
+    [:rect {:x 5, :y 6 :width 14, :height 12}]
+    [:path {:d "M6,7 h12 m0,3.3 h-12 m0,3.3 h12 m0,3.4 h-12
+m4,0 v-12 m4,0 v12"}]]))
+
+(defn report
+  ([] (dataset nil))
+  ([props]
+   [icon props
+    [:path {:d "M7,9 h3 v-3 h7 v12 h-10 v-9 l3,-3"}]
+    [:path {:d "M9,11 h6 m0,2 h-6 m0,2 h6"}]]))
+
+(defn datasheet
+  ([] (dataset nil))
+  ([props]
+   [icon props
+    [:path {:d "M7,9 h3 v-3 h7 v12 h-10 v-9 l3,-3"}]
+    [:path {:d "M10,11 l5,5 m0,-5 l-5,5"}]]))

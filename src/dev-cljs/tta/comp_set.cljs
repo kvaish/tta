@@ -54,6 +54,7 @@
                                   :action #(js/console.log "clicked middle")
                                   :left-icon ic/nav-left
                                   :left-action #(js/console.log "clicked left")
+                                  :left-disabled? true
                                   :right-icon ic/nav-right
                                   :right-action #(js/console.log "clicked right")}]
       [app-comp/dropdown-selector {:width "100px"
@@ -62,4 +63,11 @@
                                    :on-select #(swap! my-state assoc :selected %1)
                                    :selected (:selected @my-state)
                                    :items ["Option 1a sdlw asdi we t"
-                                           "Option 2" "Option 3"]}]]]))
+                                           "Option 2" "Option 3"]}]]
+     [:div {:style {:height "64px"}}
+      [app-comp/action-label-box {:width 150, :label "Tube row 1"
+                                  :left-icon ic/nav-left
+                                  :left-action #(js/console.log "clicked left")
+                                  :left-disabled? disabled?
+                                  :right-icon ic/delete
+                                  :right-action #(js/console.log "clicked right")}]]]))

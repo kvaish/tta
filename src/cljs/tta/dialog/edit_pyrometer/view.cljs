@@ -6,11 +6,15 @@
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
             [cljs-react-material-ui.core :as ui-core]
-            [cljs-time.core :as clj-date]
+            [cljs-time.core :as t]
+            [cljs-time.format :as tf]
             [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.app.icon :as ic]
+            [tta.app.comp :as app-comp]
+            [tta.app.scroll :refer [scroll-box]]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -19,142 +23,141 @@
             [tta.dialog.edit-pyrometer.subs :as subs]
             [tta.dialog.edit-pyrometer.event :as event]))
 
+(def date-formatter (tf/formatter "yyyy-MM-dd"))
+(defn format-date [date] (tf/unparse date-formatter (t/date-time date)))
 
-(defn- text-field [id label type pyrometer-id validations]
-  (let [field-path (conj [] (keyword id))
-        field @(rf/subscribe [::subs/get-pyrometer-field field-path pyrometer-id])]
-    (print field)
-    [ui/text-field 
-     {:on-change #(rf/dispatch [::event/set-field field-path %2 pyrometer-id  validations])
-      :default-value
-      (if (= type "date")
-        (js/Date (:value field))            
-        (:value  field))
-      :id (str id pyrometer-id) 
-      :hint-text label
-      :error-text (:error field)
-      #_:floating-label-text #_label
-      :floating-label-fixed true
-      :style {:width "150px"
-              :margin "5px"}
-      :name (str id pyrometer-id) 
-      :type type
-      :label label}]))
+(defn prop-label [text]
+  [:span {:style {:font-weight 300}} text ": "])
 
-(defn edit-popover [props]
-  (let [anchor-el (:menu @props)
-        id (:id @props)]
-    [ui/popover
-     {:open (if (nil? @(rf/subscribe [::subs/popover-open?])) false
-                @(rf/subscribe [::subs/popover-open?]))
-      :desktop true
-      :anchor-el anchor-el
-      :anchor-origin {:horizontal "left"
-                      :vertical "bottom"}
-      :target-origin {:horizontal "left"
-                      :vertical "bottom"}
-      :use-layer-for-click-away false
-      :animated true
-      :auto-close-when-off-screen false
-      :on-request-close #(rf/dispatch [::event/discard-popover-data id])
-      ;;:on-click-away  #(rf/dispatch [::event/discard-popover-data id])
-      } 
-     [ui/menu]
-     [:div (merge (use-style style/row) {:class "row"})
-      (text-field "name"
-                  (translate [:pyrometerDialog :name :label]
-                             "Name")
-                  "text"
-                  id
-                  {:required? true})
-      (text-field "serial-number"
-                  (translate [:pyrometerDialog :serial-number :label]
-                             "Serial Number")
-                  "text"
-                  id
-                  {:required? true})
-      (text-field "wavelength"
-                  (translate [:pyrometerDialog :wavelength :label]
-                             "Wavelength")
-                  "number"
-                  id
-                  {:required? true
-                   :number {:min 0
-                            :max 100
-                            :decimal false}})
-      (text-field "date-of-calibration"
-                  (translate [:pyrometerDialog :weblength :label]
-                             "Date of Calibration")
-                  "date"
-                  id
-                  [:required])
-      
-      [ui/icon-button
-       {:icon-class-name "fa fa-close"
-        :on-click #(rf/dispatch [::event/discard-popover-data id])}]
+(defn prop-value [text]
+  [:span {:style {:margin "0 24px 0 12px"}} text])
 
-      [ui/icon-button
-       {:icon-class-name "fa fa-save"
-        :disabled (not @(rf/subscribe [::subs/valid-dirty? id]))
-        :on-click #(rf/dispatch [::event/save-popover-data id])}]
-      ]]))
+(defn form-field [label error widget]
+  [:div (use-style style/form-field)
+   [:span (use-sub-style style/form-field :label) label]
+   widget
+   [:span (use-sub-style style/form-field :error) error]])
 
+(defmulti prop-field :type)
+
+(defmethod prop-field :default [_]
+  "N/A")
+
+(defmethod prop-field :text [{:keys [label path]}]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
+    (form-field
+     label (if show-err? error)
+     [app-comp/text-input
+      {:on-change #(rf/dispatch [::event/set-po-text path % true])
+       :width 200
+       :value value, :valid? (if show-err? valid? true)}])))
+
+(defmethod prop-field :decimal [{:keys [label path max min precision]}]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
+    (form-field
+     label (if show-err? error)
+     [app-comp/text-input
+      {:on-change #(rf/dispatch [::event/set-po-decimal path % true
+                                 {:max max, :min min, :precision precision}])
+       :value value, :valid? (if show-err? valid? true)}])))
+
+(defmethod prop-field :date [{:keys [label path]}]
+  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
+    (form-field
+     label (if show-err? error)
+     [:span "!!!"])))
+
+(defn make-props []
+  {:name {:type :text, :wide? true
+          :label (translate [:pyrometer :name :label] "Name")}
+   :serial-number {:type :text, :wide? true
+                   :label (translate [:pyrometer :serial-number :label]
+                                     "Serial number")}
+   :wavelength {:type :decimal, :format #(str % " µm"), :precision 2
+                :label (translate [:pyrometer :wavelength :label] "Wavelength")}
+   :date-of-calibration {:type :date, :format format-date
+                         :label (translate [:pyrometer :date-of-calibration :label]
+                                           "Date of calibration")}
+   :tube-emissivity {:type :decimal, :min 0, :max 1, :precision 2
+                     :label (translate [:pyrometer :tube-emissivity :label]
+                                       "Tube emissivity")}})
+
+(defn item [pyro index]
+  (let [props (make-props)]
+    [ui/menu-item {:style {:border-radius "8px"}
+                   :value index
+                   :on-click #(rf/dispatch [::event/edit-pyrometer pyro index])}
+     (into [:div (use-style style/menu-item)
+            [:span {:style {:position "absolute"
+                              :top 0, :right 0}}
+             [app-comp/icon-button
+              {:icon ic/delete
+               :on-click #(do
+                            (i/ocall % :preventDefault)
+                            (i/ocall % :stopPropagation)
+                            (rf/dispatch [::event/delete-pyrometer index]))}]]]
+           (->> [[:name :serial-number]
+                 [:wavelength :date-of-calibration :tube-emissivity]]
+                (map (fn [ks]
+                       (->> ks
+                            (map #(list % (props %)))
+                            (mapcat (fn [[k {:keys [label format]
+                                            :or {format identity}}]]
+                                      (list (prop-label label)
+                                            (prop-value (format (get pyro k)))))))))
+                (interleave (repeat '([:br])))
+                (drop 1)
+                (apply concat)))]))
+
+(defn edit []
+  (let [props (make-props)
+        show-err? @(rf/subscribe [::subs/po-show-error?])]
+    (into [:div (use-style style/edit)
+           [:div (use-sub-style style/edit :btns)
+            [app-comp/icon-button-l
+             {:icon ic/accept
+              :disabled? (if show-err?
+                           (not @(rf/subscribe [::subs/po-can-submit?]))
+                           (not @(rf/subscribe [::subs/po-dirty?])))
+              :on-click #(rf/dispatch [::event/save-pyrometer])}]
+            [app-comp/icon-button-l
+             {:icon ic/cancel
+              :on-click #(rf/dispatch [::event/cancel-pyrometer-edit])}]]]
+          (->> [[:name :serial-number]
+                [:wavelength :date-of-calibration :tube-emissivity]]
+               (map (fn [ks]
+                      (->> ks
+                           (map #(vector prop-field
+                                         (assoc (props %) :key % :path [%]))))))
+               (interleave (repeat '([:br])))
+               (drop 1)
+               (apply concat)))))
 
 (defn edit-pyrometer []
-  (let [anchor (atom {})]
-    (fn []
-      (let [open? @(rf/subscribe [::subs/open?])
-            data @(rf/subscribe [::subs/pyrometers])
-            title (translate [:pyrometerDialog :title] "Manage IR Pyrometer")
-            on-close #(rf/dispatch [::event/discard-data])
-            close-tooltip  (translate [:pyrometerDialog :close :hint] "Close")]
-        
-        [ui/dialog
-         {:open open?
-          :modal false
-          :title (r/as-element (ht-comp/optional-dialog-head
-                                {:title title
-                                 :on-close on-close
-                                 :close-tooltip close-tooltip}))
-          :auto-scroll-body-content true
-          :actions (r/as-element [ui/floating-action-button
-                                  {:id "add"
-                                   :icon-class-name "fa fa-plus"
-                                   :on-click #(do
-                                                (i/ocall % :preventDefault)
-                                                (swap! anchor assoc  :menu (i/oget % :currentTarget)
-                                                       :id "new")
-                                                (rf/dispatch [::event/set-popover-open true]))
-                                   }])
-          }
-         [:div
-          [ui/list {:class-name "pyrometer-list"}
-
-           (doall (map (fn [{:keys [serial-number date-of-calibration name id wavelength]}]
-                  [ui/list-item
-                   {:key id
-                    :on-click #(do
-                                 (i/ocall % :preventDefault)
-                                 (swap! anchor assoc  :menu (i/oget % :currentTarget)
-                                        :id id)
-                                 (rf/dispatch [::event/set-popover-open true]))}
-                   [:div (merge (use-style style/row) {:class "row"})
-                    [:div (merge (use-style style/col) {:class "col1" })
-                     name]
-                    [:div (merge (use-style style/col) {:class "col1" })
-                     (str (translate [:pyrometerDialog :wavelength :label]
-                                     "Wavelength") ":")
-                     wavelength]                ]
-                   [:div (merge (use-style style/row) {:class "row"})
-                    [:div (merge (use-style style/col) {:class "col1" })
-                     (str
-                      (translate [:pyrometerDialog :serialNumber :label]
-                                 "Serial Number") ":") serial-number]
-                    [:div (merge (use-style style/col) {:class "col" })
-                     (str
-                      (translate [:pyrometerDialog :calibrationDate :label]
-                                 "Calibration Date") ":") (js/Date
-                                                           date-of-calibration)]]]) data))]]
-         
-         [edit-popover anchor]
-         ]))))
+  (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
+        index @(rf/subscribe [::subs/po-index])
+        edit? (some? index)
+        h (* (if edit? 0.3 0.4) height)
+        pms @(rf/subscribe [::subs/data])]
+    [ui/dialog {:open @(rf/subscribe [::subs/open?])
+                :title (translate [:pyrometer :manage :title] "Manage IR pyrometers")}
+     [:div (use-style style/body)
+      (if (not-empty pms) [scroll-box {:style {:height h}}
+                           (into [ui/menu {:value index}]
+                                 (map item pms (range)))])
+      (if edit? [edit])
+      [:div (use-sub-style style/body :btns)
+       [app-comp/button {:icon ic/plus
+                         :disabled? edit?
+                         :label (translate [:action :add :label] "Add")
+                         :on-click #(rf/dispatch [::event/new-pyrometer])}]
+       [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+                         :icon ic/accept
+                         :label (translate [:action :done :label] "Done")
+                         :on-click #(rf/dispatch [::event/submit])}]
+       [app-comp/button {:icon ic/cancel
+                         :label (translate [:action :cancel :label] "Cancel")
+                         :on-click #(rf/dispatch [::event/close])}]]]]))

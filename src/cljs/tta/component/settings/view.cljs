@@ -19,6 +19,7 @@
             [tta.component.settings.style :as style]
             [tta.component.settings.subs :as subs]
             [tta.component.settings.event :as event]
+            [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
 (defn form-cell [style error label widget]
@@ -33,8 +34,14 @@
    widget
    [:span (use-sub-style style :form-error) error]])
 
+(defn show-error? [] @(rf/subscribe [::subs/show-error?]))
+
+(defn validity [{:keys [error valid?]}]
+  (if (show-error?) [error valid?] [nil true]))
+
 (defn temp-unit [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:temp-unit]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:temp-unit]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :temp-unit :label] "Temperature unit")
      [app-comp/dropdown-selector
@@ -43,7 +50,8 @@
        :selected value, :items [au/deg-C au/deg-F]}]]))
 
 (defn target-temp [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:target-temp]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field-temp [:target-temp]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :target-temp :label] "Target temperature")
      [app-comp/text-input
@@ -51,7 +59,8 @@
        :value value, :valid? valid?}]]))
 
 (defn design-temp [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field-temp [:design-temp]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field-temp [:design-temp]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :design-temp :label] "Design temperature")
      [app-comp/text-input
@@ -59,37 +68,49 @@
        :value value, :valid? valid?}]]))
 
 (defn default-pyrometer [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:pyrometer-id]])
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:pyrometer-id]])
+        [error valid?] (validity field)
         pyrometers @(rf/subscribe [::subs/pyrometers])
         selected (some #(if (= (:id %) value) %) pyrometers)]
     [form-cell-2 style error
      (translate [:settings :default-pyrometer :label] "Default IR pyrometer")
-     [app-comp/dropdown-selector
-      {:valid? valid?
-       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-       :on-select #(rf/dispatch [::event/set-field [:pyrometer-id] (:id %) true])
-       :selected selected, :items pyrometers
-       :value-fn :id, :label-fn :name
-       :left-icon ic/pyrometer+
-       :left-action #(js/console.log "manage pyrometers")}]]))
+     (list
+      [app-comp/dropdown-selector
+       {:key :selector
+        :valid? valid?
+        :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+        :on-select #(rf/dispatch [::event/set-field [:pyrometer-id] (:id %) true])
+        :selected selected, :items pyrometers
+        :value-fn :id, :label-fn :name}]
+      [app-comp/button {:key :edit
+                        :icon ic/pyrometer+
+                        :label (translate [:action :edit :label] "Edit")
+                        :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}])]))
 
 (defn tube-emissivity [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:emissivity-type]])
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:emissivity-type]])
+        [error valid?] (validity field)
         options @(rf/subscribe [::subs/emissivity-types])
         selected (some #(if (= (:id %) value) %) options)]
     [form-cell-2 style error
      (translate [:settings :tube-emissivity :label] "Tube emissivity")
-     [app-comp/dropdown-selector
-      {:valid? valid?
-       :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-       :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
-       :selected selected, :items options
-       :value-fn :id, :label-fn :name, :disabled?-fn :disabled?
-       :left-icon ic/emissivity+
-       :left-action #(js/console.log "custom emissivity")}]]))
+     (list
+      [app-comp/dropdown-selector
+       {:key :selector
+        :valid? valid?
+        :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
+        :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
+        :selected selected, :items options
+        :value-fn :id, :label-fn :name, :disabled?-fn :disabled?}]
+      (if (= value "custom")
+        [app-comp/button {:key :edit
+                          :icon ic/emissivity+
+                          :label (translate [:action :edit :label] "Edit")
+                          :on-click #(js/console.log "custom emissivity")}]))]))
 
 (defn min-tubes% [style]
-  (let [{:keys [value error valid?]} @(rf/subscribe [::subs/field [:min-tubes%]])]
+  (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:min-tubes%]])
+        [error valid?] (validity field)]
     [form-cell-2 style error
      (translate [:settings :min-tubes% :label] "Minimum % of tubes to measure")
      [app-comp/text-input
@@ -122,13 +143,18 @@
      [reformer-dwg {:width w :height h}]
      [app-view/vertical-line {:height h}]
      [scroll-box (use-sub-style style :form-scroll)
-      [form style]]]))
+      [form style]]
+     ;;dialogs
+     (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
+       [edit-pyrometer])]))
 
 (defn settings []
   [app-view/layout-main
    (translate [:settings :title :text] "Settings")
    (translate [:settings :title :sub-text] "Reformer preferences")
-   [[app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+   [[app-comp/button {:disabled? (if (show-error?)
+                                   (not @(rf/subscribe [::subs/can-submit?]))
+                                   (not @(rf/subscribe [::subs/dirty?])))
                       :icon ic/upload
                       :label (translate [:action :upload :label] "Upload")
                       :on-click #(rf/dispatch [::event/upload])}]

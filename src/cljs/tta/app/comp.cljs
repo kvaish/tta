@@ -1,32 +1,17 @@
 (ns tta.app.comp
-  (:require [re-frame.core :as rf]
-            [reagent.core :as r]
+  (:require [reagent.core :as r]
+            [reagent.dom :as dom]
             [cljs-react-material-ui.reagent :as ui]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
+            [ht.util.interop :as i]
             [ht.app.subs :refer [translate]]
             [ht.app.style :as ht-style]
-            [ht.app.icon :as ht-ic]
             [tta.app.style :as app-style]
-            [tta.app.icon :as ic]
-            [ht.util.interop :as i]
-            [reagent.dom :as dom]))
+            [tta.app.icon :as ic]))
 
 (defn popover [props & children]
-  [ui/popover (assoc props :style {:background "none"
-                                   :border "none"
-                                   :box-shadow "none"})
-   [:div {:style {:height 0, :width 0
-                  :position "absolute"
-                  :top -8, :right 25
-                  :border "8px solid rgba(0,0,0,0)"
-                  :border-bottom-color "white"}}]
-   [:div {:style {:height 5, :width 0}}]
-   (into [:div {:style {:background "white"
-                        :box-shadow "rgba(0,0,0,0.12) 2px 2px 16px 2px,
-rgba(0,0,0,0.12) 2px 2px 8px 2px"
-                        :border-radius "5px"
-                        :margin "3px 15px 15px 15px"}}]
-         children)])
+  (into [ui/popover (merge props (use-style app-style/popover))]
+        children))
 
 ;; 72x48
 (defn toggle [{:keys [disabled? value on-toggle]}]
@@ -43,16 +28,26 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
          (translate [:ht-comp :toggle :off] "off"))]
       [:div (use-sub-style style :circle)]]]))
 
+;; 48x48, icon: 24x24, back: 32x32
+(defn icon-button-l [{:keys [disabled? icon on-click]}]
+  [ui/icon-button {:disabled disabled?
+                   :on-click on-click
+                   :style {:vertical-align "top"}}
+   [icon (-> (use-style (app-style/icon-button disabled?))
+             (update :style assoc :padding "4px"
+                     :width "32px", :height "32px"
+                     :margin "-4px"))]])
+
 ;; 48x48, icon: 24x24
 (defn icon-button [{:keys [disabled? icon on-click]}]
   [ui/icon-button {:disabled disabled?
-                   :on-click (or on-click (fn []))}
+                   :on-click on-click}
    [icon (use-style (app-style/icon-button disabled?))]])
 
 ;; 48x48, icon: 22x22
 (defn icon-button-s [{:keys [disabled? icon on-click]}]
   [ui/icon-button {:disabled disabled?
-                   :on-click (or on-click (fn []))}
+                   :on-click on-click}
    [icon (-> (use-style (assoc (app-style/icon-button disabled?)
                                :width "22px" :height "22px"
                                :margin "1px"))
@@ -72,8 +67,12 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
        [:span (use-style (:span style)) label]]]]))
 
 ;; *x48
-(defn selector [{:keys [disabled? valid? item-width selected options on-select]
-                 :or [valid? true]}]
+(defn selector
+  "options: list of items, selected: selected item  
+  on-select: (fn [selected-item])  
+  label-fn: (fn [item]) should return the label to display"
+  [{:keys [disabled? valid? item-width selected options on-select label-fn]
+    :or {valid? true, label-fn identity, item-width 48}}]
   (let [index (some #(if (= selected (first %)) (second %))
                     (map list options (range)))
         style (app-style/selector disabled? valid?)]
@@ -93,9 +92,10 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
                                 :left (+ 4 (* i item-width))
                                 :width item-width)
                         (assoc :on-click (if-not disabled? #(on-select o i))))
-              o])
+              (label-fn o)])
            options (range)))]))
 
+;; *x48
 (defn text-input [{:keys [read-only? valid? align width value on-change]
                    :or {valid? true, width 96, align "left"}}]
   (let [style (app-style/text-input read-only? valid?)]
@@ -105,31 +105,53 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
                          :width width
                          :text-align align)
                  (merge {:type "text"
-                         :value value
+                         :value (or value "")
                          :on-change #(on-change (i/oget-in % [:target :value]))
                          :read-only read-only?}))]]))
 
+(defn action-label-box [{:keys [width label
+                                left-icon left-action left-disabled?
+                                right-icon right-action right-disabled?]}]
+  (let [style (app-style/action-label-box left-disabled? right-disabled?)
+        align (if (and left-icon right-icon) "center" "left")]
+    [:span (use-style style)
+     [:div (use-sub-style style :main)
+      (if left-icon
+        [left-icon (merge (use-sub-style style :left)
+                          {:on-click (if-not left-disabled? left-action)})])
+      [:span (-> (use-sub-style style :span)
+                 (update :style assoc
+                         :width width
+                         :text-align align))
+       label]
+      (if right-icon
+        [right-icon (merge (use-sub-style style :right)
+                           {:on-click (if-not right-disabled? right-action)})])]]))
+
+;; *x48
 (defn action-input-box [{:keys [disabled? valid? width label action
                                 left-icon left-action left-disabled?
                                 right-icon right-action right-disabled?]
                          :or {valid? true}}]
   (let [style (app-style/action-input-box disabled? valid? (some? action)
                                           left-disabled? right-disabled?)
+        left-disabled? (or disabled? left-disabled?)
+        right-disabled? (or disabled? right-disabled?)
         align (if (and left-icon right-icon) "center" "left")]
     [:span (use-style style)
      [:div (use-sub-style style :main)
       (if left-icon
         [left-icon (merge (use-sub-style style :left)
-                          {:on-click left-action})])
+                          {:on-click (if-not left-disabled? left-action)})])
       [:span (-> (use-sub-style style :span)
                  (update :style assoc
                          :width width
                          :text-align align)
-                 (merge {:on-click action}))
+                 (merge {:on-click (if-not disabled? action)}))
        label]
       (if right-icon
         [right-icon (merge (use-sub-style style :right)
-                           {:on-click right-action})])]]))
+                           {:on-click (if-not right-disabled? right-action)})])]]))
 
 ;; *x48
 (defn dropdown-selector [props]
@@ -173,7 +195,8 @@ rgba(0,0,0,0.12) 2px 2px 8px 2px"
                                                 :min-height "24px"}}]
                     (map (fn [item i]
                            [ui/menu-item
-                            {:primary-text (label-fn item)
+                            {:key i
+                             :primary-text (label-fn item)
                              :on-click #(do
                                           (swap! state assoc :open? false)
                                           (on-select item i))

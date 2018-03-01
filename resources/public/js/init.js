@@ -11,8 +11,9 @@ window.addEventListener("beforeunload", function(e) {
         e.returnValue = dialogText;
         return dialogText;
     }
-    e.returnValue = undefined;
-    return undefined;
+    // e.returnValue = undefined;
+    // return undefined;
+    // TODO:
 });
 
 document.onreadystatechange = function() {

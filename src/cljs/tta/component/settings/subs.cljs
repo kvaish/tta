@@ -7,23 +7,25 @@
             [tta.util.common :as au]))
 
 (rf/reg-sub
+ ::src-data
+ :<- [::app-subs/plant]
+ (fn [plant _] (:settings plant)))
+
+(rf/reg-sub
  ::component
  (fn [db _] (get-in db [:component :settings])))
 
 (rf/reg-sub
- ::src-data
- :<- [::app-subs/plant]
- (fn [plant _] (:settings plant)))
+ ::show-error? ;; used for hiding errors until first click on submit
+ :<- [::component]
+ (fn [component _] (:show-error? component)))
 
 (rf/reg-sub
  ::data
  :<- [::component]
  :<- [::src-data]
  (fn [[component src-data]]
-   (merge {:temp-unit au/deg-C
-           :emissivity-type "common"
-           :min-tubes% 50}
-          (or (:data component) src-data))))
+   (or (:data component) src-data)))
 
 (rf/reg-sub
  ::form
@@ -82,7 +84,10 @@
  ::warn-on-close?
  :<- [::dirty?]
  :<- [::valid?]
- (fn [[dirty? valid?] _] (or dirty? (not valid?))))
+ :<- [:tta.dialog.edit-pyrometer.subs/warn-on-close?]
+ (fn [[dirty? valid? pyro-warn?] _]
+   (or dirty? (not valid?)
+       pyro-warn?)))
 
 (rf/reg-sub
  ::has-gold-cup-emissivity?
