@@ -15,6 +15,8 @@
         settings {:gold-cup-wavelength "goldCupWavelength"
                   :emissivity-type     "emissivityType"
                   :emissivity          "emissivity"
+                  :role-types          "roleTypes"  ;; TODO: remove later :PKPA
+                  :role-type-id        "roleTypeId" ;; TODO: remove later :PKPA
                   :pyrometer-id        "pyrometerId"
                   :pyrometers          {:name   "pyrometers"
                                         :schema :pyrometer
@@ -82,54 +84,74 @@
 
      :plant/push-history (with-meta history {:db true})
 
-     ::tube-settings {:gold-cup-emissivity {:name    "goldCupEmissivity"
-                                            :parse   js->clj
-                                            :unparse clj->js}
-                      :custom-emissivity   {:name    "customEmissivity"
-                                            :parse   js->clj
-                                            :unparse clj->js}
-                      :tube-prefs          {:name    "tubePrefs"
-                                            :parse   js->clj
-                                            :unparse clj->js}}
-
-     ::tf-settings {:rows {:name "rows"
-                           :array? true
-                           :schema ::tube-settings}}
+     ::tf-settings {:levels {:name   "levels"
+                             :array? true
+                             :schema
+                             {:rows {:name   "rows"
+                                     :array? true
+                                     :schema
+                                     {:gold-cup-emissivity {:name    "goldCupEmissivity"
+                                                            ;; 2D array: side x tube
+                                                            :parse   js->clj
+                                                            :unparse clj->js}
+                                      :custom-emissivity   {:name    "customEmissivity"
+                                                            ;; 2D array: side x tube
+                                                            :parse   js->clj
+                                                            :unparse clj->js}}}}}
+                    :rows   {:name   "rows"
+                             :array? true
+                             :schema
+                             {:tube-prefs {:name    "tubePrefs"
+                                           ;; array: for each tube
+                                           :parse   js->clj
+                                           :unparse clj->js}}}}
 
      ::sf-settings {:chambers {:name   "chambers"
                                :array? true
-                               :schema ::tube-settings}}
+                               :schema
+                               {:gold-cup-emissivity {:name    "goldCupEmissivity"
+                                                      ;; 2D array: side x tube
+                                                      :parse   js->clj
+                                                      :unparse clj->js}
+                                :custom-emissivity   {:name    "customEmissivity"
+                                                      ;; 2D array: side x tube
+                                                      :parse   js->clj
+                                                      :unparse clj->js}
+                                :tube-prefs          {:name    "tubePrefs"
+                                                      ;; array: for each tube
+                                                      :parse   js->clj
+                                                      :unparse clj->js}}}}
 
-     ::tf-config {:wall-names {:name "wallNames"
-                               :schema {:north "north"
-                                        :east "east"
-                                        :west "west"
-                                        :south "south"}}
-                  :burner-first? "isBurnerFirst"
+     ::tf-config {:wall-names       {:name   "wallNames"
+                                     :schema {:north "north"
+                                              :east  "east"
+                                              :west  "west"
+                                              :south "south"}}
+                  :burner-first?    "isBurnerFirst"
                   ;; tube/burner rows arranged from west to east
                   ;; and tubes/burners in each rows are north to south
                   ;; sections are arranged north to south
-                  :tube-row-count "tubeRowCount"
-                  :tube-rows {:name "tubeRows"
-                              :array? true
-                              :schema {:tube-count "tubeCount"
-                                       :start-tube "startTube"
-                                       :end-tube "endTube"}}
+                  :tube-row-count   "tubeRowCount"
+                  :tube-rows        {:name   "tubeRows"
+                                     :array? true
+                                     :schema {:tube-count "tubeCount"
+                                              :start-tube "startTube"
+                                              :end-tube   "endTube"}}
                   :burner-row-count "burnerRowCount"
-                  :burner-rows {:name "burnerRows"
-                                :array? true
-                                :schema {:burner-count "burnerCount"
-                                         :start-burner "startBurner"
-                                         :end-burner "endBurner"}}
-                  :section-count "sectionCount"
-                  :sections {:name "sections"
-                             :array? true
-                             :schema {:tube-count "tubeCount"
-                                      :burner-count "burnerCount"}}
-                  :measure-levels {:name "measureLevels"
-                                   :schema {:top? "hasTop"
-                                            :bottom? "hasBottom"
-                                            :middle? "hasMiddle"}}}
+                  :burner-rows      {:name   "burnerRows"
+                                     :array? true
+                                     :schema {:burner-count "burnerCount"
+                                              :start-burner "startBurner"
+                                              :end-burner   "endBurner"}}
+                  :section-count    "sectionCount"
+                  :sections         {:name   "sections"
+                                     :array? true
+                                     :schema {:tube-count   "tubeCount"
+                                              :burner-count "burnerCount"}}
+                  :measure-levels   {:name   "measureLevels"
+                                     :schema {:top?    "hasTop"
+                                              :bottom? "hasBottom"
+                                              :middle? "hasMiddle"}}}
 
      ::sf-config {:chambers         {:name   "chambers"
                                      :schema ::chamber
