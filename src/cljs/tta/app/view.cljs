@@ -122,10 +122,8 @@
              ;; container(2) for tab-bar and content-container
              [:div (update (use-sub-style style :div2) :style assoc
                            :width w2, :height h2, :top t2)
-              [:div {:style {:width w3, :height h3
-                             :position "absolute"
-                             :top 20, :left 20
-                             :overflow "hidden"}}
+              [:div (update (use-sub-style style :div3) :style
+                            assoc :width w3, :height h3)
                (->> interpolations
                     (map #(js->clj % :keywordize-keys true))
                     (map (fn [s]

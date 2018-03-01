@@ -387,7 +387,8 @@
               (str (if top-tabs? "0 0" "8p 8px")
                    (if bot-tabs? "0 8px" "8px 8px"))
               :overflow "hidden"}
-       :div3 {:position "absolute", :left "20px"
+       :div3 {:position "absolute"
+              :top "20px", :left "20px"
               :background widget-fg
               :overflow "hidden"}}}]))
 
