@@ -226,11 +226,11 @@
 (def stag-motion (r/adapt-react-class js/ReactMotion.StaggeredMotion))
 (def trans-motion (r/adapt-react-class js/ReactMotion.TransitionMotion))
 (defn spring
-  "with precision to 0.02 (default 0.01)"
+  "with precision to 0.03 (default 0.01)"
   ([s]
-   (js/ReactMotion.spring s #js{:precision 0.02}))
+   (js/ReactMotion.spring s #js{:precision 0.03}))
   ([s {:keys [stiffness damping precision]
-       :or {stiffness 170, damping 26, precision 0.02}}]
+       :or {stiffness 170, damping 26, precision 0.03}}]
    (js/ReactMotion.spring s #js{:stiffness stiffness
                                 :damping damping
                                 :precision precision})))

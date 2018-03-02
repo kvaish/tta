@@ -3,7 +3,7 @@
             [reagent.dom :as dom]
             [tta.app.view :refer [tab-layout]]
             [tta.app.style :as app-style]
-            [ht.app.style :as ht-style]
+            [ht.style :as ht-style]
             [tta.tube-list :refer [tube-list]]))
 
 (defonce state (r/atom {:top 0
@@ -22,7 +22,7 @@
                 :width 600, :height 450
                 :content
                 (fn [{:keys [width height selected]}]
-                  (let [lighten (if (= 0 (first selected)) -20 20)]
+                  (let [lighten (if (= 0 (first selected)) 0 20)]
                     [:div {:style
                            {:width width, :height height
                             :color "white"
@@ -30,7 +30,7 @@
                             :padding "20px"
                             :background
                             (get [(ht-style/color-hex :sky-blue lighten)
-                                  (ht-style/color-hex :royal-blue lighten)
+                                  (ht-style/color-hex :ocean-blue lighten)
                                   (ht-style/color-hex :monet-pink lighten)]
                                  (second selected))}}
                      [:div {:style {:display "inline-block"

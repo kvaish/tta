@@ -2,9 +2,8 @@
   (:require [stylefy.core :as stylefy]
             [garden.units :refer [px]]
             [garden.color :as gc]
-            [ht.style :as ht]
-            [ht.app.style :as ht-style
-             :refer [color color-hex color-rgba vendors]]))
+            [ht.style :as ht :refer [color color-hex color-rgba]]
+            [ht.app.style :as ht-style :refer [vendors]]))
 
 (defn content-height [view-size]
   (let [{:keys [head-row-height sub-head-row-height]} ht/root-layout]
@@ -47,15 +46,21 @@
    :overflow-y "visible !important"
    :box-shadow "0 0 16px 4px rgba(0,0,0,0.24), 0 0 2px 2px rgba(0,0,0,0.12) !important"
    ::stylefy/mode {:before {:content "no-close-quote"
-                            :height 0, :width 0
-                            :border-style "solid"
-                            :border-width "6px"
-                            :border-color "white white transparent transparent"
+                            :height "12px", :width "12px"
+                            ;; :border-style "solid"
+                            ;; :border-width "6px"
+                            ;; :border-color "white"; "white white transparent transparent"
+                            :background-color "white"
                             :position "absolute"
                             :top 0, :right "16px"
                             :transform-origin "0 0"
                             :transform "rotate(-45deg)"
-                            :box-shadow "4px -4px 8px 0 rgba(0,0,0,0.24), 2px -2px 2px 0 rgba(0,0,0,0.12)"}}})
+                            :box-shadow "4px -4px 16px 0 rgba(0,0,0,0.24), 2px -2px 2px 0 rgba(0,0,0,0.12)"}
+                   :after {:content "no-close-quote"
+                           :height "8px", :width "24px"
+                           :position "absolute"
+                           :top 0, :right "8px"
+                           :background "white"}}})
 
 ;; 72x48
 (defn toggle [on? disabled?]
@@ -177,7 +182,7 @@
                               :border (str "1px solid " widget-fg)
                               :color widget-fg
                               ::stylefy/mode
-                              {:hover {:background (color-hex :sky-blue 20)}}})]
+                              {:hover {:background widget-bg-h}}})]
     {:display "inline-block"
      :padding "8px 12px"
      :vertical-align "top"
@@ -210,7 +215,7 @@
         icon-e (merge icon-d {:cursor "pointer"
                               :background widget-bg-e
                               ::stylefy/mode
-                              {:hover {:background (color-hex :sky-blue 20)}}})]
+                              {:hover {:background widget-bg-h}}})]
     {:display "inline-block"
      :padding "8px 12px"
      :vertical-align "top"
@@ -387,7 +392,8 @@
               (str (if top-tabs? "0 0" "8p 8px")
                    (if bot-tabs? "0 8px" "8px 8px"))
               :overflow "hidden"}
-       :div3 {:position "absolute", :left "20px"
+       :div3 {:position "absolute"
+              :top "20px", :left "20px"
               :background widget-fg
               :overflow "hidden"}}}]))
 

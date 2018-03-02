@@ -3,6 +3,7 @@
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [cljs-react-material-ui.icons :as mic]
             [ht.util.interop :as i]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
@@ -153,22 +154,18 @@
          (map
           (fn [[id icon label action]]
             ^{:key id}
-            [:a (merge (use-sub-style style/header :link)
-                       {:href "#" :on-click action})
-             (if icon
-               [:i (use-sub-style style/header
-                                  (if (= id :language) :icon-only :link-icon)
-                                  {::stylefy/with-classes [icon]})])
-             label])
+            [:a (merge (use-sub-style style/header :link) {:on-click action})
+             [icon {:style {:width "18px", :height "18px"}, :color "white"}]
+             [:span (use-sub-style style/header :link-label) label]])
           [[:language
-            "fa fa-language"
+            mic/action-translate
             nil
             #(do
                (i/ocall % :preventDefault)
                (swap! anchors assoc :language (i/oget % :currentTarget))
                (rf/dispatch [::event/set-menu-open? :language true]))]
            [:settings
-            "fa fa-caret-right"
+            mic/navigation-arrow-drop-right
             (translate [:header-link :settings :label] "Settings")
             #(do
                (i/ocall % :preventDefault)
