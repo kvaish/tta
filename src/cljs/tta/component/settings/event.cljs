@@ -44,7 +44,8 @@
  (fn [{:keys [db]} _]
    (merge (when @(rf/subscribe [::subs/can-submit?])
             ;;TODO: raise save fx with busy screen and then show confirmation
-            (js/console.log "todo: upload settings"))
+            (js/console.log "todo: upload settings")
+            {})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db

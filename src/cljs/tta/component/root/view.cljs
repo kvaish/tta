@@ -18,14 +18,11 @@
             [tta.component.root.style :as style]
             [tta.component.root.subs :as subs]
             [tta.component.root.event :as event]
-            [tta.component.home.view :refer [home]]
-            [tta.component.config.view :refer [config]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
             [tta.dialog.choose-plant.view :refer [choose-plant]]
-            [tta.util.auth :as auth]
-            [tta.app.icon :as ic]
-            [tta.app.comp :as app-comp]
+            [tta.component.home.view :refer [home]]
+            [tta.component.config.view :refer [config]]
             [tta.component.settings.view :refer [settings]]))
 
 ;;; language-menu ;;;
@@ -184,8 +181,9 @@
                    :font-size "18px"}} "True"]
    [:span {:style {:font-weight "300"
                    :font-size "18px"}} "Temp"]
-   [:span {:style {:font-size "12px"
-                   :vertical-align "text-top"}} "â„¢"]])
+   [:span {:style {:font-size "8px"
+                   :font-weight 700
+                   :vertical-align "text-top"}} "TM"]])
 
 (defn hot-links []
   [:div (use-style style/hot-links)

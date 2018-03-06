@@ -5,14 +5,8 @@
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
             [tta.util.auth :as auth]
-            [tta.util.common :as au]))
-
-(defn get-field
-  ([path form data] (get-field path form data identity))
-  ([path form data parse]
-   (or (get-in form path)
-       {:value (parse (get-in data path))
-        :valid? true})))
+            [tta.util.common :as au]
+            [clojure.string :as str]))
 
 (rf/reg-sub
   ::src-data
@@ -21,9 +15,23 @@
 
 (rf/reg-sub
  ::component
- (fn [db _]
-   (or (get-in db [:component :config])
-       (get-in db [:plant :config]))))
+ (fn [db _] (get-in db [:component :config])))
+
+(rf/reg-sub
+ ::show-error? ;; used for hiding errors until first click on submit
+ :<- [::component]
+ (fn [component _] (:show-error? component)))
+
+(rf/reg-sub
+ ::data
+ :<- [::src-data]
+ :<- [::component]
+ (fn [[src-data component] _] (or (:data component) src-data)))
+
+(rf/reg-sub
+ ::form
+ :<- [::component]
+ (fn [component _] (:form component)))
 
 (rf/reg-sub
   ::dirty?
@@ -48,18 +56,14 @@
   :<- [::valid?]
   (fn [[dirty? valid?] _] (or dirty? (not valid?))))
 
-(rf/reg-sub
-  ::data
-  :<- [::src-data]
-  :<- [::component]
-  (fn [[src-data component] _]
-    (or (:data component)
-        src-data)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(rf/reg-sub
-  ::form
-  :<- [::component]
-  (fn [component _] (:form component)))
+(defn get-field
+  ([path form data] (get-field path form data identity))
+  ([path form data parse]
+   (or (get-in form path)
+       {:value (parse (get-in data path))
+        :valid? true})))
 
 (rf/reg-sub
   ::field
@@ -67,147 +71,344 @@
   :<- [::data]
   (fn [[form data] [_ path]] (get-field path form data)))
 
+(defn reformer-name-field []
+  (rf/subscribe [::field [:name]]))
+
 (rf/reg-sub
   ::firing
-  :<- [::form]
   :<- [::data]
-  (fn [[form data] _]
-    (get-field [:firing] form data)))
+  (fn [data _] (:firing data)))
+
+(defn firing-field []
+  (rf/subscribe [::field [:firing]]))
 
 (rf/reg-sub
-  ::firing-opts
-  (fn []
-    [{:id "side" :name "Side fired"}
-     {:id "top" :name "Top fired"}]))
+ ::firing-options
+ :<- [::ht-subs/translation [:config :firing :side]]
+ :<- [::ht-subs/translation [:config :firing :top]]
+  (fn [[side top] _]
+    [{:id "side" :name (or side "Side fired")}
+     {:id "top" :name (or top "Top fired")}]))
 
 (rf/reg-sub
-  ::config
-  :<- [::data]
-  (fn [data [_ path]]
-    (case (:firing data)
-      "side" (get-in data (into [] (concat [:sf-config] path)))
-      "top"  (get-in data (into [] (concat [:tf-config] path))))))
+ ::sketch-config
+ :<- [::data]
+ (fn [data _]
+   (case (:firing data)
+     "side" (dissoc data :tf-config)
+     "top" (dissoc data :sf-config)
+     {})))
 
-(defn make-field [v]
-  {:value v
-   :valid? true})
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(rf/reg-sub
-  ::config-field-tf
-  :<- [::form]
-  :<- [::config]
-  (fn [[form config] [_ path]]
-    (or
-      (get-in form (into [:tf-config] path))
-      (make-field (get-in config path)))))
+(defn get-numbers-options
+  "returns the list of possible numbers options.
+  each option is a map {:id id-string, :label label-string, :nums [start end]}"
+  [row-count row-length]
+  (if (and row-count row-length)
+    (->> (range row-count)
+         (mapcat #(let [n (* row-length %)
+                        start (inc n)
+                        end (+ n row-length)]
+                    (list {:id (str % 0)
+                           :nums [start end]
+                           :label (str start "→" end)}
+                          {:id (str % 1)
+                           :nums [end start]
+                           :label (str end "←" start)}))))
+    []))
 
-(rf/reg-sub
-  ::tube-count-tf
-  :<- [::form]
-  :<- [::config]
-  (fn [[form config] [_ path]]
-    (or
-      (get-in form [:tf-config :tube-count])
-      (make-field (get-in config [:tube-rows 0 :tube-count])))))
+(defn get-numbers-selection
+  "returns the form field with id corresponding to the selected option"
+  [row-path form data options row-type]
+  (let [[start-key end-key sel-key]
+        (case row-type
+          :tube [:start-tube :end-tube :tube-numbers-selection]
+          :burner [:start-burner :end-burner :burner-numbers-selection])]
+    (or (get-in form (conj row-path sel-key))
+        (let [{start start-key, end end-key} (get-in data row-path)]
+          (some (fn [{:keys [id nums]}]
+                  (if (= nums [start end]) id))
+                options)))))
 
-(rf/reg-sub
-  ::burner-count-tf
-  :<- [::form]
-  :<- [::config]
-  (fn [[form config] [_ path]]
-    (or
-      (get-in form [:tf-config :burner-count])
-      (make-field (get-in config [:burner-rows 0 :burner-count])))))
-
-(rf/reg-sub
-  ::chambers
-  :<- [::config]
-  (fn [config [_ path]]
-    (get-in config (into [] (concat [:chambers] path)))))
+;;; TOP-FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
-  ::ch-fields
-  :<- [::form]
-  :<- [::chambers]
-  (fn [[form chambers] [_ path]]
-    (or
-      (get-in form (into [] (concat [:sf-config :chambers] path)))
-      (make-field (get-in chambers path)))))
+ ::tf-measure-level?
+ :<- [::data]
+ (fn [data [_ level-key]] ;; level-key: :top?, :middle?, :bottom?
+   (get-in data [:tf-config :measure-levels level-key])))
 
 (rf/reg-sub
-  ::ch-common-field
-  :<- [::form]
-  :<- [::config]
-  (fn [[form config] [_ path]]
-    (or
-      (get-in form (into [] (concat [:sf-config] path)))
-      (make-field (get-in config (into [] (concat [:chambers 0] path)))))))
+ ::tf-measure-levels-validity
+ :<- [::form]
+ (fn [form _]
+   (get-in form [:tf-config :measure-levels-validity])))
 
 (rf/reg-sub
-  ::ch-count
-  :<- [::chambers]
-  (fn [chambers _]
-    (count chambers)))
+ ::tf-burner-first?
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :burner-first?])))
 
 (rf/reg-sub
-  ::pdt-count
-  :<- [::form]
-  :<- [::chambers]
-  (fn [[form chambers] _]
-    (let [ptc (get-in chambers [0 :peep-door-tube-count])
-          pc (count ptc)
-          sc (get-in chambers [0 :section-count])
-          psc (/ pc sc)
-          form-data (:value (get-in form [:sf-config :peep-door-tube-count]))]
-      (or
-        (if form-data
-          (take psc form-data))
-        (into [] (map #(make-field %) (take psc ptc)))))))
+ ::tf-wall-name-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ wall-key]]
+   (get-field [:tf-config :wall-names wall-key] form data)))
+
+;; tubes
+(rf/reg-sub
+ ::tf-tube-row-count
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :tube-row-count])))
 
 (rf/reg-sub
-  ::start-end-options
-  :<- [::config]
-  :<- [::firing]
-  :<- [::burner-count-tf]
-  :<- [::tube-count-tf]
-  (fn [[config firing bc tc] [_ key]]
-    (let [[k1 v1] (if (= key :tube-row-count)
-                    [:tube-rows (:value tc)]
-                    [:burner-rows (:value bc)])
-          [c rc]
-          (case (:value firing)
-            "side" [(get-in config [:chambers 0 key])
-                    (count (:chambers config))]
-            "top" [v1 (count (k1 config))])
-          starts (map #(inc (* % c)) (range rc))
-          ends (map #(* (inc %) c) (range rc))
-          opts (into
-                 (map #(str %1 "→" %2) starts ends)
-                 (map #(str %1 "←" %2) ends starts))]
-      (reduce (fn [coll v]
-                (conj coll {:id   v
-                            :name v})) [] opts))))
+ ::tf-tube-row-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:tf-config :tube-row-count] form data)))
 
 (rf/reg-sub
-  ::selected-start-end
-  :<- [::config]
-  :<- [::firing]
-  (fn [[config firing] [_ path key]]
-    (let [[k1 k2] (case key
-                    :tube-count [:start-tube :end-tube]
-                    :burner-count [:start-burner :end-burner])
-          [s e] (case (:value firing)
-                  "side" [(get-in config (into [] (concat [:chambers] path [k1])))
-                          (get-in config (into [] (concat [:chambers] path [k2])))]
-                  "top" [(get-in config (into path [k1]))
-                         (get-in config (into path [k2]))])]
-      (js/console.log s e)
-      (if (< s e)
-        (str s "→" e)
-        (str s "←" e)))))
+ ::tf-tube-count-per-row
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :tube-rows 0 :tube-count])))
 
 (rf/reg-sub
-  ::section-rows-tf
-  :<- [::config-field-tf]
-  (fn [config-field-tf [_ index key]]
-    (get-in config-field-tf [:sections index key])))
+ ::tf-tube-count-per-row-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:tf-config :tube-rows 0 :tube-count] form data)))
+
+(rf/reg-sub
+ ::tf-tube-numbers-options
+ :<- [::tf-tube-row-count]
+ :<- [::tf-tube-count-per-row]
+ (fn [[row-count tube-count] _]
+   (get-numbers-options row-count tube-count)))
+
+(rf/reg-sub
+ ::tf-tube-numbers-selection
+ :<- [::data]
+ :<- [::form]
+ :<- [::tf-tube-numbers-options]
+ (fn [[data form opts] [_ row-index]]
+   (get-numbers-selection [:tf-config :tube-rows row-index]
+                          form data opts :tube)))
+
+;; burners
+(rf/reg-sub
+ ::tf-burner-row-count
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :burner-row-count])))
+
+(rf/reg-sub
+ ::tf-burner-row-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:tf-config :burner-row-count] form data)))
+
+(rf/reg-sub
+ ::tf-burner-count-per-row
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :burner-rows 0 :burner-count])))
+
+(rf/reg-sub
+ ::tf-burner-count-per-row-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:tf-config :burner-rows 0 :burner-count] form data)))
+
+(rf/reg-sub
+ ::tf-burner-numbers-options
+ :<- [::tf-burner-row-count]
+ :<- [::tf-burner-count-per-row]
+ (fn [[row-count burner-count] _]
+   (get-numbers-options row-count burner-count)))
+
+(rf/reg-sub
+ ::tf-burner-numbers-selection
+ :<- [::data]
+ :<- [::form]
+ :<- [::tf-burner-numbers-options]
+ (fn [[data form opts] [_ row-index]]
+   (get-numbers-selection [:tf-config :burner-rows row-index]
+                          form data opts :burner)))
+
+;; sections
+(rf/reg-sub
+ ::tf-section-count
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :section-count])))
+
+(rf/reg-sub
+ ::tf-section-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:tf-config :section-count] form data)))
+
+(rf/reg-sub
+ ::tf-section-tube-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ s-index]]
+   (get-field [:tf-config :sections s-index :tube-count] form data)))
+
+(rf/reg-sub
+ ::tf-section-burner-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ s-index]]
+   (get-field [:tf-config :sections s-index :burner-count] form data)))
+
+(rf/reg-sub
+ ::tf-sections-validity
+ :<- [::form]
+ (fn [form _]
+   (get-in form [:tf-config :sections-validity])))
+
+;;; SIDE-FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-sub
+ ::sf-placement-of-WHS
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:sf-config :placement-of-WHS])))
+
+(rf/reg-sub
+ ::sf-dual-nozzle?
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:sf-config :dual-nozzle?])))
+
+(rf/reg-sub
+ ::sf-dual-chamber?
+ :<- [::data]
+ (fn [data _]
+   (= 2 (count (get-in data [:sf-config :chambers])))))
+
+(defn sf-chamber-name-field [ch-index]
+  (rf/subscribe [::field [:sf-config :chambers ch-index :name]]))
+
+(defn sf-side-name-field [ch-index s-index]
+  (rf/subscribe [::field [:sf-config :chambers ch-index :side-names s-index]]))
+
+(rf/reg-sub
+ ::sf-section-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:sf-config :chambers 0 :section-count] form data)))
+
+(rf/reg-sub
+ ::sf-pd-tube-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ pd-index]]
+   (get-field [:sf-config :chambers 0 :peep-door-tube-count pd-index]
+              form data)))
+
+(rf/reg-sub
+ ::sf-pd-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:sf-config :chambers 0 :peep-door-count] form data)))
+
+;; tubes
+(rf/reg-sub
+ ::sf-tube-count
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:sf-config :chambers 0 :tube-count])))
+
+(rf/reg-sub
+ ::sf-tube-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:sf-config :chambers 0 :tube-count] form data)))
+
+(rf/reg-sub
+ ::sf-tube-numbers-options
+ :<- [::sf-dual-chamber?]
+ :<- [::sf-tube-count]
+ (fn [[dual? tcount]]
+   (get-numbers-options (if dual? 2 1) tcount)))
+
+(rf/reg-sub
+ ::sf-tube-numbers-selection
+ :<- [::data]
+ :<- [::form]
+ :<- [::sf-tube-numbers-options]
+ (fn [[data form opts] [_ ch-index]]
+   (get-numbers-selection [:sf-config :chambers ch-index]
+                          form data opts :tube)))
+
+;; burners
+(rf/reg-sub
+ ::sf-burner-count-per-row
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:sf-config :chambers 0 :burner-count-per-row])))
+
+(rf/reg-sub
+ ::sf-burner-count-per-row-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:sf-config :chambers 0 :burner-count-per-row] form data)))
+
+(rf/reg-sub
+ ::sf-burner-numbers-options
+ :<- [::sf-dual-chamber?]
+ :<- [::sf-burner-count-per-row]
+ (fn [[dual? bcount]]
+   (get-numbers-options (if dual? 2 1) bcount)))
+
+(rf/reg-sub
+ ::sf-burner-numbers-selection
+ :<- [::data]
+ :<- [::form]
+ :<- [::sf-burner-numbers-options]
+ (fn [[data form opts] [_ ch-index]]
+   (get-numbers-selection [:sf-config :chambers ch-index]
+                          form data opts :burner)))
+
+(rf/reg-sub
+ ::sf-burner-row-count-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (get-field [:sf-config :chambers 0 :burner-row-count] form data)))
+
+;; pseudo field for validity
+(rf/reg-sub
+ ::sf-chamber-validity
+ :<- [::form]
+ (fn [form _]
+   (get-in form [:sf-config :chamber-validity])))
+
+(rf/reg-sub
+ ::sf-pd-count-per-section
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] _]
+   (let [fch (get-in form [:sf-config :chambers 0])
+         ch (get-in data [:sf-config :chambers 0])
+         chk? (some-fn nil? :valid?)
+         sn (if (chk? (:section-count fch)) (:section-count ch))
+         pdn (if (chk? (:peep-door-count fch)) (:peep-door-count ch))
+         pdn (if (and sn pdn (zero? (mod pdn sn))) (quot pdn sn))]
+     pdn)))

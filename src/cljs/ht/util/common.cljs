@@ -88,7 +88,7 @@ none matched, returns nil."
 
 (defn get-control-pos [e]
   (let [cpos (if-let [ts (i/oget e :touches)]
-               (first ts)
+               (i/ocall ts :item 0)
                e)]
     {:page-x (i/oget cpos :pageX)
      :page-y (i/oget cpos :pageY)}))

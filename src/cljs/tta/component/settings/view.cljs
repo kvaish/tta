@@ -26,13 +26,15 @@
   [:div (use-sub-style style :form-cell)
    [:span (use-sub-style style :form-label) label]
    widget
-   [:span (use-sub-style style :form-error) error]])
+   [:span (use-sub-style style :form-error)
+    (if (fn? error) (error) error)]])
 
 (defn form-cell-2 [style error label widget]
   [:div (use-sub-style style :form-cell-2)
    [:span (use-sub-style style :form-label) label]
    widget
-   [:span (use-sub-style style :form-error) error]])
+   [:span (use-sub-style style :form-error)
+    (if (fn? error) (error) error)]])
 
 (defn show-error? [] @(rf/subscribe [::subs/show-error?]))
 

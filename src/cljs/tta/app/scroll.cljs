@@ -186,26 +186,27 @@
           [:div {:style (assoc style :width w :height h
                                :overflow "hidden"
                                :position "relative")
-                 :class-name class-name}
-           [:div {:style (assoc style :width w, :height h
+                 :class-name class-name
+                 :on-scroll prevent-scroll}
+           #_[:div {:style (assoc style :width w, :height h
                                 :overflow "hidden"
                                 :position "absolute")
-                  :on-scroll prevent-scroll}
-            [motion {:defaultStyle #js{:t 0, :l 0}
-                     :style #js{:t (spring t), :l (spring l)}}
-             (fn [s]
-               (let [t (i/oget s :t)
-                     l (i/oget s :l)]
-                 (r/as-element
-                  [:div {:style (assoc body-style
-                                       :width sw, :height sh
-                                       :position "absolute"
-                                       :top (- t), :left (- l))
-                         :class-name body-class-name}
-                   (if render-fn (render-fn {:top t, :left l
-                                             :height h, :scroll-height sh
-                                             :width w, :scroll-width sw}
-                                            scroll-to))])))]]
+                  :on-scroll prevent-scroll}]
+           [motion {:defaultStyle #js{:t 0, :l 0}
+                    :style #js{:t (spring t), :l (spring l)}}
+            (fn [s]
+              (let [t (i/oget s :t)
+                    l (i/oget s :l)]
+                (r/as-element
+                 [:div {:style (assoc body-style
+                                      :width sw, :height sh
+                                      :position "absolute"
+                                      :top (- t), :left (- l))
+                        :class-name body-class-name}
+                  (if render-fn (render-fn {:top t, :left l
+                                            :height h, :scroll-height sh
+                                            :width w, :scroll-width sw}
+                                           scroll-to))])))]
            (if (and h sh (< h sh))
              [scroll-bar {:h? false
                           :length h
@@ -244,11 +245,15 @@
                                  :hf hf, :wf wf
                                  :t t, :l l)))
         changed? (fn [so sn]
-                   (let [{sho :sh ho :h hfo :hf} so
-                         {shn :sh hn :h hfn :hf} sn]
-                     (or (< 0.1 (js/Math.abs (- sho shn)))
-                         (< 0.1 (js/Math.abs (- ho hn)))
-                         (< 1e-6 (js/Math.abs (- hfo hfn))))))
+                   (let [[w? h?]
+                         (->> [[:sh :h :hf] [:sw :w :wf]]
+                              (map (fn [[sj j jf]]
+                                     (let [{sho sj, ho j, hfo jf} so
+                                           {shn sj, hn j, hfn jf} sn]
+                                       (or (< 0.1 (js/Math.abs (- sho shn)))
+                                           (< 0.1 (js/Math.abs (- ho hn)))
+                                           (< 1e-6 (js/Math.abs (- hfo hfn))))))))]
+                     (or w? h?)))
 
         ;; inner scroll body
         body (fn [_ children]
@@ -301,7 +306,7 @@
           [:div (assoc props :style (merge style {:overflow "hidden"
                                                   :position "relative"})
                        :on-scroll prevent-scroll)
-           [body {} children]
+           [body {} children] ;; do pass the props to ensure re-render
            (if (and h sh (< h sh))
              [scroll-bar {:h? false
                           :length h

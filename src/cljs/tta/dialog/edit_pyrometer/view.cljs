@@ -36,7 +36,8 @@
   [:div (use-style style/form-field)
    [:span (use-sub-style style/form-field :label) label]
    widget
-   [:span (use-sub-style style/form-field :error) error]])
+   [:span (use-sub-style style/form-field :error)
+    (if (fn? error) (error) error)]])
 
 (defmulti prop-field :type)
 
