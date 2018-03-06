@@ -15,7 +15,9 @@
             [tta.icon-set]
             [tta.comp-set]
             [tta.scroll]
-            [tta.ref-sketch]))
+            [tta.ref-sketch]
+            [tta.calendar]
+            [tta.datepickers]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -31,5 +33,7 @@
        :tta/comps [tta.comp-set/comp-set]
        :tta/scroll [tta.scroll/scroll-test]
        :tta/ref-sketch [tta.ref-sketch/ref-sketch]
+       :tta/calendar [tta.calendar/calendar-test]
+       :tta/datepickers [tta.datepickers/datepickers-test]
        ;; default
        [:p "empty workspace"])]))
