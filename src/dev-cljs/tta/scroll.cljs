@@ -31,8 +31,7 @@
                 [:div {:key "b"
                        :style {:top top, :left left
                                :position "absolute"
-                               :padding 10
-                               :transition scroll/transition}}
+                               :padding 10}}
                  [:p [:b "top: " top]]
                  [:p [:b "left: " left]]]))]
          [:div {:style {:display "inline-block"

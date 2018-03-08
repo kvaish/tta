@@ -188,7 +188,7 @@
                  "default")]
      (tube-prefs-head label (-  (/ (:width props) 2) 100) on-clear))
 
-   (let [{:keys [width height  plant item-height on-select item-width]} props
+   (let [{:keys [width height container plant item-height on-select item-width]} props
          tube-prefs (:tube-prefs ch)
          firing (get-in  plant [:config :firing])
          {:keys [start-tube end-tube]} (case firing
@@ -222,15 +222,16 @@
 
 (defn tube-pref-list
   [props]
-  (let [{:keys [width height item-height item-width
-                tube-prefs  on-clear on-select rows]} props
-        render-items-fn
-        (fn [indexes show-item]
-          (map-indexed (fn [ind ch]
-                         (render-tubes props ch ind)) rows))] 
+  [:div
+   (let [{:keys [width height item-height item-width
+                 tube-prefs  on-clear on-select rows]} props
+         render-items-fn
+         (fn [indexes show-item]
+           (map-indexed (fn [ind ch]
+                          (render-tubes props ch ind)) rows))] 
 
-    [app-scroll/lazy-list-cols {:height height
-                                :width width
-                                :item-width item-width  
-                                :item-count (count rows)
-                                :render-items-fn render-items-fn}]))
+     [app-scroll/lazy-list-cols {:height height
+                                 :width width
+                                 :item-width item-width  
+                                 :item-count (count rows)
+                                 :render-items-fn render-items-fn}])])

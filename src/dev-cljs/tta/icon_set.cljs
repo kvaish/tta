@@ -3,7 +3,7 @@
             [reagent.core :as r]
             [cljs-react-material-ui.reagent :as ui]
             [tta.app.icon :as ic]
-            [ht.app.style :as ht-style]))
+            [ht.style :as ht-style]))
 
 (defn icon-set []
   (into [:div]
