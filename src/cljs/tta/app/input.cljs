@@ -169,11 +169,68 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- tube-prefs-head [label width on-clear]
+  [app-comp/action-label-box {:width width ;; icon 24 & padding 32 takes 56
+                              :label label
+                              :right-icon ic/delete
+                              :right-action on-clear
+                              :right-disabled? (not on-clear)}])
+
+(defn render-tubes [props ch ind]
+  [:div {:style {:position "absolute"
+                 :left (str (* ind 100) "px")}}
+
+   (let [{:keys [plant on-clear]} props
+         firing (get-in  plant [:config :firing])
+         label (case firing
+                 "side" (get-in plant [:config :sf-config :chambers ind :name])
+                 "top" (get-in plant [:config :tf-config :rows ind :name])
+                 "default")]
+     (tube-prefs-head label (-  (/ (:width props) 2) 100) on-clear))
+
+   (let [{:keys [width height  plant item-height on-select item-width]} props
+         tube-prefs (:tube-prefs ch)
+         firing (get-in  plant [:config :firing])
+         {:keys [start-tube end-tube]} (case firing
+                                         "side" (get-in plant [:config :sf-config :chambers ind])
+                                         "top" (get-in plant [:config :tf-config :rows ind :name]))
+         render-items-fn
+         (fn [indexes show-item]
+           (map (fn [i]
+                  [:div  (merge  (use-style (app-style/tube-list-row))
+                                 {:style {:margin-top "10px"
+                                          :display "inline-table"
+                                          :height item-height
+                                          :width (/ width 2)}})  
+                   [:span (merge (use-sub-style (app-style/tube-list-row) :label)
+                                 {:style {:margin-top "10px"}})  
+                    (if (> start-tube end-tube)
+                      (- start-tube i)
+                      (- end-tube i ))]
+                   [:span 
+                    [app-comp/selector {:options ["imp" "pinched" "none"]
+                                        :item-width 70
+                                        :on-select #(on-select i)
+                                        :selected (tube-prefs i)}]]])   
+                indexes))]
+
+     [app-scroll/lazy-list-box {:height height
+                                :width (/ width 2)
+                                :item-height item-height
+                                :item-count (count tube-prefs)
+                                :render-items-fn render-items-fn}])])
+
 (defn tube-pref-list
-  "[{:keys [label height
-            start-tube end-tube
-            field-fn on-clear on-change]}]"
   [props]
-  ;;TODO: show tube number and a slider to choose none/important/pinched
-  ;; on-clear would set all to none
-  )
+  (let [{:keys [width height item-height item-width
+                tube-prefs  on-clear on-select rows]} props
+        render-items-fn
+        (fn [indexes show-item]
+          (map-indexed (fn [ind ch]
+                         (render-tubes props ch ind)) rows))] 
+
+    [app-scroll/lazy-list-cols {:height height
+                                :width width
+                                :item-width item-width  
+                                :item-count (count rows)
+                                :render-items-fn render-items-fn}]))
