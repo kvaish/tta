@@ -12,11 +12,14 @@
                                             set-field-number
                                             validate-field parse-value]]
             [tta.app.event :as app-event]
-            [tta.component.config.subs :as subs]))
+            [tta.component.config.subs :as subs]
+            [tta.app.subs :as app-subs]))
 
 (defonce ^:const comp-path [:component :config])
 (defonce ^:const data-path (conj comp-path :data))
 (defonce ^:const form-path (conj comp-path :form))
+
+(def chk? (some-fn nil? :valid?))
 
 (rf/reg-event-fx
  ::set-data-field ;; used for initializing a property with default value
@@ -74,14 +77,114 @@
                           {:unregister ::sf-peep-doors}
                           {:unregister ::sf-chamber-validity})}))
 
+(defn bump-version? [config old-config]
+  (if old-config
+    (if (not= (:firing config) (:firing old-config)) ;; firing changed - unlikely
+      true
+      (case (:firing config)
+        "side" ;; side-fired
+        (let [chs  (get-in config [:sf-config :chambers])
+              ochs (get-in old-config [:sf-config :chambers])]
+          (or
+           (not= (count chs) (count ochs))
+           (some (fn [cs]
+                   (apply not= (map #(select-keys % [:peep-door-count
+                                                     :tube-count
+                                                     :burner-count-per-row
+                                                     :burner-row-count])
+                                    cs)))
+                 (map list chs ochs))))
+        "top"  ;; top-fired
+        (let [tf (:tf-config config)
+              otf (:tf-config old-config)]
+          (or
+           (let [ks [:tube-row-count :burner-row-count :measure-levels]]
+             (not= (select-keys tf ks) (select-keys otf ks)))
+           (some (fn [[ck rk]]
+                   (not= (map ck (rk tf)) (map ck (rk otf))))
+                 [[:tube-count :tube-rows]
+                  [:burner-count :burner-rows]])))
+        ;;unlikely
+        true))))
+
+(rf/reg-event-fx
+ ::update-client-plants
+ (fn [_ [_ client plant]]
+   (let [new-client? (empty? (:plants client))
+         client (update client :plants
+                        conj {:id (:id plant)
+                              :name (:name plant)
+                              :capacity (str/join " " [(:capacity plant)
+                                                       (:capacity-unit plant)])})]
+     {:service/save-client
+      {:client client
+       :new? new-client?
+       :evt-success [::app-event/fetch-client (:id client)]}})))
+
+(rf/reg-event-fx
+ ::sync-after-save
+ [(inject-cofx ::inject/sub [::app-subs/plant])]
+ (fn [{:keys [db ::app-subs/plant]} [_ [eid]]]
+   (cond-> {:forward-events {:unregister ::sync-after-save}}
+     (= eid ::app-event/fetch-plant-success)
+     (assoc :db (assoc-in db data-path (:config plant))))))
+
+(rf/reg-event-fx
+ ::do-upload
+ [(inject-cofx ::inject/sub [::app-subs/client])]
+ (fn [{:keys [::app-subs/client]} [_ config plant]]
+   (merge {:forward-events {:register ::sync-after-save
+                            :events #{::app-event/fetch-plant-success
+                                      ::ht-event/service-failure}
+                            :dispatch-to [::sync-after-save]}}
+          (if (:config plant)
+            ;; existing plant, update config => fetch-plant
+            {:dispatch [::ht-event/set-busy? true]
+             :service/update-plant-config
+             {:client-id (:id client), :plant-id (:id plant)
+              :change-id (:change-id plant)
+              :config config
+              :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}}
+            ;; new plant, create plant => save-client
+            (let [{:keys [firing sf-config tf-config]} config
+                  settings (case firing
+                             "top" {:tf-settings
+                                    {:tube-rows
+                                     (mapv (fn [{tc :tube-count}]
+                                             {:tube-prefs (vec (repeat tc nil))})
+                                           (:tube-rows tf-config))}}
+                             "side" {:sf-settings
+                                     {:chambers
+                                      (mapv (fn [{tc :tube-count}]
+                                              {:tube-prefs (vec (repeat tc nil))})
+                                            (:chambers sf-config))}})]
+              {:dispatch [::ht-event/set-busy? true]
+               :service/create-plant
+               {:client-id (:id client)
+                :plant (assoc plant :config config, :settings settings)
+                :evt-success [::update-client-plants client plant]}})))))
+
 (rf/reg-event-fx
  ::upload
- [(inject-cofx ::inject/sub [::subs/can-submit?])]
- (fn [{:keys [db ::subs/can-submit?]} _]
+ [(inject-cofx ::inject/sub [::subs/can-submit?])
+  (inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::app-subs/plant])]
+ (fn [{:keys [db ::subs/can-submit? ::subs/data ::app-subs/plant]} _]
    (merge (when can-submit?
-            ;;TODO: raise save fx with busy screen and then show confirmation
-            (js/console.log "todo: upload config")
-            {})
+            {:dispatch
+             (if (bump-version? data (:config plant))
+               ;; warn and then upload
+               [::ht-event/show-message-box
+                {:message (translate [:config :critical-change :message]
+                                     "You are going to make critical changes to configruation. Existing datasets will no longer be compatible. You can view them but not edit!")
+                 :title (translate [:config :critical-change :title]
+                                   "Major configuration change!")
+                 :level :warning
+                 :label-ok (translate [:action :continue :label] "Continue")
+                 :event-ok [::do-upload data plant]
+                 :label-cancel (translate [:action :cancel :label] "Cancel")}]
+               ;; no need to war. directly upload
+               [::do-upload data plant])})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-fx
@@ -124,8 +227,10 @@
  ::set-firing
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ firing]]
-   {:db (cond-> (assoc-in db data-path
+   {:db (cond-> db
+          :data (assoc-in data-path
                           (assoc data :firing firing))
+          :form (assoc-in (conj form-path :firing) nil)
           (= firing "top")
           (update-in form-path
                      (fn [form]
@@ -150,7 +255,10 @@
           (update-in data-path
                      (fn [data]
                        (assoc data :sf-config nil
-                              :tf-config {:measure-levels {:top? true}
+                              :tf-config {:burner-first? false
+                                          :measure-levels {:top? true
+                                                           :middle? false
+                                                           :bottom? false}
                                           :wall-names {:north "North"
                                                        :east "East"
                                                        :west "West"
@@ -160,6 +268,7 @@
                      (fn [data]
                        (assoc data :tf-config nil
                               :sf-config {:placement-of-WHS "end"
+                                          :dual-nozzle? false
                                           :chambers [{:name "Chamber"
                                                       :side-names ["A" "B"]}]}))))}))
 
@@ -220,7 +329,7 @@
                           :burner [:burner-row-count nil])
         db (set-field-number db [:tf-config row-count-key] (str row-count)
                              data data-path form-path true checks)
-        {:keys [valid?]} (get-in db (conj form-path :tf-config row-count-key))]
+        valid? (chk? (get-in db (conj form-path :tf-config row-count-key)))]
     (cond-> db
       valid? (reset-tf-rows row-type))))
 
@@ -235,7 +344,7 @@
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} _]
    (let [{:keys [burner-first? tube-row-count]} (:tf-config data)
-         {:keys [valid?]} (get-in db (conj form-path :tf-config :tube-row-count))]
+         valid? (chk? (get-in db (conj form-path :tf-config :tube-row-count)))]
      (if valid?
        (let [row-count (if burner-first? (inc tube-row-count) (dec tube-row-count))]
          {:db (set-tf-row-count db data :burner row-count)})))))
@@ -248,7 +357,7 @@
                                :burner [:burner-rows :burner-count])
         db (set-field-number db [:tf-config rows-key 0 count-key]
                              count-per-row data data-path form-path true)
-        {:keys [valid?]} (get-in db (conj form-path :tf-config rows-key 0 count-key))]
+        valid? (chk? (get-in db (conj form-path :tf-config rows-key 0 count-key)))]
     (cond-> db
       valid? (reset-tf-rows row-type))))
 
@@ -337,7 +446,6 @@
    ;; update only when the change is valid, else just skip
    (let [form (get-in db (conj form-path :tf-config))
          data (:tf-config data)
-         chk? (some-fn nil? :valid?)
          sn (if (chk? (:section-count form))
               (get-in data [:section-count]))
          tn (if (chk? (get-in form [:tube-rows 0 :tube-count]))
@@ -445,7 +553,7 @@
           :tube [:tube-count :start-tube :end-tube :tube-numbers-selection]
           :burner [:burner-count-per-row :start-burner :end-burner
                    :burner-numbers-selection])
-        {:keys [valid?]} (get-in db (conj form-path :sf-config :chambers 0 count-key))]
+        valid? (chk? (get-in db (conj form-path :sf-config :chambers 0 count-key)))]
     (cond-> db
       valid? (update-in (conj data-path :sf-config :chambers 0)
                         #(assoc % start-key 1, end-key (get % count-key)))
@@ -510,7 +618,6 @@
  (fn [{:keys [db]} _]
    (let [fch (get-in db (conj form-path :sf-config :chambers 0))
          ch (get-in db (conj data-path :sf-config :chambers 0))
-         chk? (some-fn nil? :valid?)
          sn (if (chk? (:section-count fch)) (:section-count ch))
          pdn (if (chk? (:peep-door-count fch)) (:peep-door-count ch))
          tn (if (chk? (:tube-count fch)) (:tube-count ch))

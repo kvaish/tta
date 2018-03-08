@@ -72,39 +72,41 @@
                     :created-by    "createdBy"
                     :date-created  (u/date-field "dateCreated")
                     :modified-by   "modifiedBy"
-                    :date-modified (u/date-field "dateModified")})
+                    :date-modified (u/date-field "dateModified")
+                    :change-id     "changeId"})
 
-     :plant/update-settings ^:api {:last-modified (u/date-field "lastModified")
-                                   :settings      {:name   "settings"
-                                                   :schema settings}}
+     :plant/update-settings ^:api {:change-id "changeId"
+                                   :settings  {:name   "settings"
+                                               :schema settings}}
 
-     :plant/update-config ^:api {:last-modified (u/date-field "lastModified")
-                                 :config        {:name   "configuration"
-                                                 :schema config}}
+     :plant/update-config ^:api {:change-id "changeId"
+                                 :config    {:name   "configuration"
+                                             :schema config}}
 
      :plant/push-history (with-meta history {:db true})
 
-     ::tf-settings {:levels {:name   "levels"
-                             :array? true
-                             :schema
-                             {:rows {:name   "rows"
-                                     :array? true
-                                     :schema
-                                     {:gold-cup-emissivity {:name    "goldCupEmissivity"
-                                                            ;; 2D array: side x tube
-                                                            :parse   js->clj
-                                                            :unparse clj->js}
-                                      :custom-emissivity   {:name    "customEmissivity"
-                                                            ;; 2D array: side x tube
-                                                            :parse   js->clj
-                                                            :unparse clj->js}}}}}
-                    :rows   {:name   "rows"
-                             :array? true
-                             :schema
-                             {:tube-prefs {:name    "tubePrefs"
-                                           ;; array: for each tube
-                                           :parse   js->clj
-                                           :unparse clj->js}}}}
+     ::tf-settings {:levels    {:name   "levels"
+                                :array? true
+                                :schema
+                                {:tube-rows
+                                 {:name   "tubeRows"
+                                  :array? true
+                                  :schema
+                                  {:gold-cup-emissivity {:name    "goldCupEmissivity"
+                                                         ;; 2D array: side x tube
+                                                         :parse   js->clj
+                                                         :unparse clj->js}
+                                   :custom-emissivity   {:name    "customEmissivity"
+                                                         ;; 2D array: side x tube
+                                                         :parse   js->clj
+                                                         :unparse clj->js}}}}}
+                    :tube-rows {:name   "tubeRows"
+                                :array? true
+                                :schema
+                                {:tube-prefs {:name    "tubePrefs"
+                                              ;; array: for each tube
+                                              :parse   js->clj
+                                              :unparse clj->js}}}}
 
      ::sf-settings {:chambers {:name   "chambers"
                                :array? true

@@ -46,3 +46,8 @@
                    :display "block"
                    :position "absolute"
                    :bottom 0, :left "12px"}}}))
+
+(def no-config {:font-size "32px"
+                :text-align "center"
+                :padding "32px 0"
+                :color (ht.style/color-hex :red)})

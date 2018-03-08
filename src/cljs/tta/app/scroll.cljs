@@ -245,7 +245,7 @@
                                  :hf hf, :wf wf
                                  :t t, :l l)))
         changed? (fn [so sn]
-                   (let [[w? h?]
+                   (let [[h? w?]
                          (->> [[:sh :h :hf] [:sw :w :wf]]
                               (map (fn [[sj j jf]]
                                      (let [{sho sj, ho j, hfo jf} so
@@ -253,6 +253,7 @@
                                        (or (< 0.1 (js/Math.abs (- sho shn)))
                                            (< 0.1 (js/Math.abs (- ho hn)))
                                            (< 1e-6 (js/Math.abs (- hfo hfn))))))))]
+                     ;; (js/console.log [w? h?])
                      (or w? h?)))
 
         ;; inner scroll body
@@ -264,11 +265,13 @@
                                                (dom/dom-node this)))
                  :component-did-update (fn [_ _]
                                          ;; (js/console.log "body updated")
-                                         (let [o @state
-                                               n (update-scroll o nil)]
-                                           (when (changed? o n)
-                                             ;; (js/console.log n)
-                                             (swap! state merge n))))
+                                         (js/setTimeout
+                                          #(let [o @state
+                                                 n (update-scroll o nil)]
+                                             (when (changed? o n)
+                                               ;; (js/console.log n)
+                                               (swap! state merge n)))
+                                          50))
                  :reagent-render
                  (fn [_ children]
                    (let [{:keys [t l]} @state]
@@ -303,10 +306,12 @@
       (fn [{:keys [style] :as props} & children]
         (let [{:keys [sw w wf, sh h hf]} @state]
           ;; (js/console.log "wf:" wf "hf:" hf)
-          [:div (assoc props :style (merge style {:overflow "hidden"
-                                                  :position "relative"})
-                       :on-scroll prevent-scroll)
-           [body {} children] ;; do pass the props to ensure re-render
+          [:div (-> props
+                    (dissoc props :*-force-render)
+                    (assoc :style (merge style {:overflow "hidden"
+                                                      :position "relative"})
+                           :on-scroll prevent-scroll))
+           [body {:props props} children] ;; do pass the props to ensure re-render
            (if (and h sh (< h sh))
              [scroll-bar {:h? false
                           :length h

@@ -110,8 +110,11 @@
   (let [anchor-el (:settings @(:anchors props))
         content-id @(rf/subscribe [::subs/active-content])
         allow-content? @(rf/subscribe [::subs/content-allowed? content-id])
-        context-menu (not-empty (if allow-content?
-                                  (get-in settings-menu-data [:middle content-id])))]
+        context-menu (let [f (if allow-content?
+                               (get-in settings-menu-data [:middle content-id]))]
+                       (->> (if (fn? f) (f) f)
+                            (remove nil?)
+                            (not-empty)))]
     [app-comp/popover
      {:open @(rf/subscribe [::subs/menu-open? :settings])
       :desktop true

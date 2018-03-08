@@ -150,17 +150,26 @@
      (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
        [edit-pyrometer])]))
 
+(defn no-config [{:keys [width height]}]
+  [:div {:style {:width width, :height height}}
+   [:div (use-style style/no-config)
+    "Missing configuration!"]])
+
 (defn settings []
-  [app-view/layout-main
-   (translate [:settings :title :text] "Settings")
-   (translate [:settings :title :sub-text] "Reformer preferences")
-   [[app-comp/button {:disabled? (if (show-error?)
-                                   (not @(rf/subscribe [::subs/can-submit?]))
-                                   (not @(rf/subscribe [::subs/dirty?])))
-                      :icon ic/upload
-                      :label (translate [:action :upload :label] "Upload")
-                      :on-click #(rf/dispatch [::event/upload])}]
-    [app-comp/button {:icon ic/cancel
-                      :label (translate [:action :cancel :label] "Cancel")
-                      :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
-   body])
+  (let [config? @(rf/subscribe [::app-subs/config?])]
+    [app-view/layout-main
+     (translate [:settings :title :text] "Settings")
+     (translate [:settings :title :sub-text] "Reformer preferences")
+     [(if config?
+        [app-comp/button {:disabled? (if (show-error?)
+                                       (not @(rf/subscribe [::subs/can-submit?]))
+                                       (not @(rf/subscribe [::subs/dirty?])))
+                          :icon ic/upload
+                          :label (translate [:action :upload :label] "Upload")
+                          :on-click #(rf/dispatch [::event/upload])}])
+      [app-comp/button {:icon ic/cancel
+                        :label (translate [:action :cancel :label] "Cancel")
+                        :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
+     (if config?
+       body
+       no-config)]))

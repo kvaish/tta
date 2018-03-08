@@ -19,122 +19,8 @@
             [tta.component.root.event :as root-event]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
-            [tta.component.reformer-dwg.view :refer [reformer-dwg]]
-            [ht.util.interop :as i]))
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
-#_ (    (defn dual-chamber [style]
-      [form-cell style nil
-       (translate [:config :dual-chamber? :label] "Dual chamber")
-       (let [chs @(rf/subscribe [::subs/ch-count])
-             val (case chs
-                   2 true
-                   1 false)]
-         (toggle-input [val ::event/set-dual-chamber [:sf-config :dual-chamber?]]))])
-
-    (defn dual-nozzle [style]
-      [form-cell style nil
-       (translate [:config :dual-fuel-nozzle? :label] "Dual fuel nozzle")
-       (let [val @(rf/subscribe [::subs/config [:dual-nozzle?]])]
-         (toggle-input [val ::event/set-field [:sf-config :dual-nozzle?]]))])
-
-    (defn ch-common-field [style label key]
-      (let [{:keys [:value :valid? :error]} @(rf/subscribe [::subs/ch-common-field [key]])]
-        [form-cell-3 style error
-         label
-         (text-input [valid? value ::event/set-ch-common-field-sf [key]])]))
-
-    (defn tpsc [style]
-      (let [data @(rf/subscribe [::subs/pdt-count])
-            ch @(rf/subscribe [::subs/chambers [0]])
-            sc (get-in ch [:section-count])
-            pc (get-in ch [:peep-door-count])
-            n (/ pc sc)]
-        [:div
-         [:label (use-sub-style style :form-label)
-          (translate [:config :peep-door-tube-count :label]
-                     "No of tubes for each peep door in one section")]
-         (into [:div]
-               (mapv (fn [i]
-                       [form-cell-3 style (:error (get data i))
-                        (text-input [true (:value (get data i))
-                                     ::event/set-pdt-count-sf
-                                     [:sf-config :peep-door-tube-count i]])])
-                     (range n)))]))
-
-    (defn r-name [style path]
-      (let [{:keys [:valid? :value :error]}
-            @(rf/subscribe [::subs/ch-fields [path :side-names 1]])]
-        [form-cell-3 style error
-         (translate [:config :chamber :right-side-name :label] "Name- right side")
-         (text-input [valid? value ::event/set-field
-                      [:sf-config :chambers path :side-names 1]])]))
-
-    (defn l-name [style path]
-      (let [{:keys [:valid? :value :error]}
-            @(rf/subscribe [::subs/ch-fields [path :side-names 0]])]
-        [form-cell-3 style error
-         (translate [:config :chamber :left-side-name :label] "Name- left side")
-         (text-input [valid? value ::event/set-field
-                      [:sf-config :chambers path :side-names 0]])]))
-
-    (defn burner-numbering [style path]
-      (let [options @(rf/subscribe [::subs/start-end-options :burner-count-per-row])
-            value @(rf/subscribe [::subs/selected-start-end [path] :burner-count])
-            selected (some #(if (= (:id %) value) %) options)]
-        [form-cell-3 style nil
-         (translate [:config :chamber :burner-numbering :label] "Burners")
-         (select-input [true options selected ::event/set-start-end-options
-                        [:sf-config :chambers path :burner-count] :id :name])]))
-
-    (defn tube-numbering [style path]
-      (let [options @(rf/subscribe [::subs/start-end-options :tube-count])
-            value @(rf/subscribe [::subs/selected-start-end [path] :tube-count])
-            selected (some #(if (= (:id %) value) %) options)]
-        [form-cell-3 style nil
-         (translate [:config :chamber :tube-numbering :label] "Tubes")
-         (select-input [true options selected ::event/set-start-end-options
-                        [:sf-config :chambers path :tube-count] :id :name])]))
-
-    (defn ch-name [style path]
-      (let [{:keys [:valid? :value :error]}
-            @(rf/subscribe [::subs/ch-fields [path :name]])]
-        [form-cell-3 style error
-         (translate [:config :chamber :name :label] "Name")
-         (text-input [valid? value ::event/set-field
-                      [:sf-config :chambers path :name]])]))
-
-    (defn chamber [style path]
-      [:div
-       [:label (use-sub-style style :form-heading-label)
-        (translate [:config :chamber :label]
-                   (str "Chamber #" (inc path)))] [:br]
-       [ch-name style path]
-       [tube-numbering style path]
-       [burner-numbering style path]
-       [l-name style path]
-       [r-name style path]])
-
-    (defn chambers [style]
-      [:div
-       [chamber style 0]
-       (let [chs @(rf/subscribe [::subs/ch-count])]
-         (if (= chs 2) [chamber style 1]))])
-
-    (defn whs-position [style]
-      (let [chs @(rf/subscribe [::subs/ch-count])]
-        (if (= chs 1)
-          [form-cell-2 style nil
-           (translate [:config :placement-of-WHS? :label] "Placement of WHS")
-           (let [val @(rf/subscribe [::subs/config [:placement-of-WHS]])]
-             (app-comp/selector
-              {:item-width 40
-               :selected   val
-               :options    ["end" "side" "roof"]
-               :on-select  #(rf/dispatch [::event/set-field [:sf-config :placement-of-WHS] %])}))])))
-
-    (defn form-sf [style]
-      )
-)
 
 (defn show-error? [] @(rf/subscribe [::subs/show-error?]))
 
@@ -352,34 +238,7 @@
     [sf-section-count style]
     [sf-peep-doors style]]
    [sf-chamber-validity style]
-   [sf-chambers style]
-   #_[:div
-        ;;tube count
-        [ch-common-field style
-         (translate [:config :tube-count :label] "No of tubes")
-         :tube-count]
-
-        ;;burner-row-count
-        [ch-common-field style
-         (translate [:config :burner-row-count :label] "No of burner rows")
-         :burner-row-count]
-
-        ;;burner count per row
-        [ch-common-field style
-         (translate [:config :burner-count-per-row :label] "No of burners per row")
-         :burner-count-per-row]
-
-        ;;peep door count
-        [ch-common-field style
-         (translate [:config :peep-door-count :label] "No of peepdoors")
-         :peep-door-count]
-
-        ;;section count
-        [ch-common-field style
-         (translate [:config :peep-door-count :label] "No of sections")
-         :section-count]]
-#_       [tpsc style]
-  #_     [chambers style]])
+   [sf-chambers style]])
 
 ;; top-fired ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -545,46 +404,50 @@
    [tf-sections-validity style]
    [tf-measure-levels style]])
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Reformer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn reformer-name [style]
+  (let [{:keys [value error valid?]} (query-fn subs/reformer-name-field)]
+    [form-cell-2 style error
+     (translate [:config :name :label] "Reformer name")
+     [app-comp/text-input {:valid? valid?
+                           :value value
+                           :width 200
+                           :on-change event/set-reformer-name}]]))
+
+(defn firing-type [style]
+  (let [{:keys [value error valid?]} (query-fn subs/firing-field)
+        options @(rf/subscribe [::subs/firing-options])
+        selected (some #(if (= (:id %) value) %) options)]
+    [form-cell-2 style error
+     (translate [:config :type :label] "Reformer type")
+     [app-comp/dropdown-selector
+      {:valid?    valid?
+       :items     options
+       :selected  selected
+       :width     150
+       :on-select #(rf/dispatch [::event/set-firing (:id %)])
+       :value-fn  :id, :label-fn :name}]]))
 
 (defn form [style]
-  (let [on-select-firing #(rf/dispatch [::event/set-firing (:id %)])]
-    (fn [style]
-      [:div
-       ;; reformer name
-       (let [{:keys [value error valid?]} (query-fn subs/reformer-name-field)]
-         [form-cell-2 style error
-          (translate [:config :name :label] "Reformer name")
-          [app-comp/text-input {:valid? valid?
-                                :value value
-                                :width 200
-                                :on-change event/set-reformer-name}]])
-       ;; firing type
-       (let [{:keys [value error valid?]} (query-fn subs/firing-field)
-             options @(rf/subscribe [::subs/firing-options])
-             selected (some #(if (= (:id %) value) %) options)]
-         [form-cell-2 style error
-          (translate [:config :type :label] "Reformer type")
-          [app-comp/dropdown-selector
-           {:valid?    valid?
-            :items     options
-            :selected  selected
-            :width     150
-            :on-select on-select-firing
-            :value-fn  :id, :label-fn :name}]])
-       ;; firing specific reformer form
-       (case @(rf/subscribe [::subs/firing])
-         "top" [tf-form style]
-         "side" [sf-form style]
-         ;; none selected
-         nil)])))
+  [:div
+   [reformer-name style]
+   [firing-type style]
+   ;; firing specific reformer form
+   (case @(rf/subscribe [::subs/firing])
+     "top" [tf-form style]
+     "side" [sf-form style]
+     ;; none selected
+     nil)])
 
 (defn body [{:keys [width height]}]
   (let [w (* (- width 85) 0.4)
         h (- height 40)
-        style (style/body width height)]
+        style (style/body width height)
+        data @(rf/subscribe [::subs/data])]
     [:div (use-style style)
-     [scroll-box (use-sub-style style :form-scroll)
+     [scroll-box (assoc (use-sub-style style :form-scroll)
+                        :*-force-render data)
       [form style]]
      [app-view/vertical-line {:height h}]
      [reformer-dwg {:width  w, :height h
