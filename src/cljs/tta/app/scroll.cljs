@@ -372,13 +372,44 @@
 
 (defn- show-list-col [state index]
   ;;TODO:
-  )
+  (let [{:keys [scroll-to top left height width item-width item-height]} @state
+        item-left (* index item-width)
+        item-right (+ item-left item-width)]
+    (if (< item-left left)
+      (scroll-to {:left item-left, :top 0})
+      (if (> item-right (+ left width))
+        (scroll-to {:left (- item-right width), :top 0})))))
 
 (defn- lazy-list-cols
-  ""
   [props]
-  ;;TODO:
-  )
+  (let [state (atom {})
+        render-fn
+        (fn [{:keys [top left]} scroll-to]
+          (let [{:keys [width item-width item-count render-items-fn]}
+                (swap! state assoc :top top, :left left,  :scroll-to scroll-to)
+                from (quot left item-width)
+                to (min item-count (js/Math.ceil (/ (+ left width) item-width)))
+                items (render-items-fn (range from to)
+                                       (partial show-list-col state))]
+            (doall
+             (map (fn [item i]
+                    (let [index (+ from i)]
+                      [:span {:key index
+                              :style {:display "inline-block"
+                                      :margin "10", :padding "0"
+                                      :position "absolute"
+                                      :top 0
+                                      :left (* item-width index)}}
+                       item]))
+                  items (range)))))]
+
+    (fn [{:keys [width height item-count item-width] :as props}]
+      (let [scroll-width (* item-width item-count)]
+        (swap! state merge props) 
+        [lazy-scroll-box
+         {:width width, :height height
+          :scroll-width scroll-width, :scroll-height height
+          :render-fn render-fn}]))))
 
 (defn- show-grid-item [state row col]
   ;;TODO:

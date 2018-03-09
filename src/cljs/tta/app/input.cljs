@@ -16,29 +16,29 @@
   (i/ocall input :focus)
   (swap! state assoc :focus nil))
 
-(defn- shift-focus [state index side event]
+(defn- shift-focus [state index col-no event]
   (let [key-code (i/oget event :keyCode)
-        [arrow? index side show-index]
+        [arrow? index col-no show-index]
         (case key-code
-          37 [true index (dec side) index] ;; left
-          38 [true (dec index) side (- index 2)] ;; up
-          39 [true index (inc side) index]       ;; right
-          40 [true (inc index) side (+ index 2)] ;; down
+          37 [true index (dec col-no) index] ;; left
+          38 [true (dec index) col-no (- index 2)] ;; up
+          39 [true index (inc col-no) index]       ;; right
+          40 [true (inc index) col-no (+ index 2)] ;; down
           [false])]
     (when arrow?
       ;; (js/console.log "arrow" index side)
       (doto event
         (i/ocall :preventDefault)
         (i/ocall :stopPropagation))
-      (when (and (>= index 0) (>= 1 side 0))
-        (let [{:keys [show-row input]} (swap! state assoc :focus [index side])
-              input (get-in input [index side])]
+      (when (and (>= index 0) (>= 1 col-no 0))
+        (let [{:keys [show-row input]} (swap! state assoc :focus [index col-no])
+              input (get-in input [index col-no])]
           (show-row show-index)
           (if input (set-focus state input)))))))
 
-(defn- register-input [state index side input]
-  (let [{:keys [focus]} (swap! state assoc-in [:input index side] input)]
-    (when (and input (= [index side] focus))
+(defn- register-input [state index col-no input]
+  (let [{:keys [focus]} (swap! state assoc-in [:input index col-no] input)]
+    (when (and input (= [index col-no] focus))
       (set-focus state input))))
 
 (defn- on-focus-input [event]
@@ -53,12 +53,12 @@
       (if-let [c (i/oget js/window :clipboardData)]
         (i/ocall c :getData "Text")))))
 
-(defn- on-change-input [state index side event]
+(defn- on-change-input [state index col-no event]
   (let [{:keys [on-change]} (:props @state)
         v (i/oget-in event [:target :value])]
-    (on-change index side (not-empty v))))
+    (on-change index col-no (not-empty v))))
 
-(defn- on-paste-input [state index side event]
+(defn- on-paste-input [state index col-no event]
   (doto event
     (i/ocall :preventDefault)
     (i/ocall :stopPropagation))
@@ -71,22 +71,30 @@
       (doseq [[l i] (map list (butlast (str/split txt #"\r?\n")) (range))]
         (doseq [[c j] (map list (butlast (str/split (str l "\t.") #"\t")) (range))]
           (let [index (+ index i)
-                side (+ side j)]
+                side (+ col-no j)]
             (if (and (> tube-count index) (> 2 side))
               (on-paste index side (not-empty c)))))))))
 
+;; 220x48
+(defn- list-head [label on-clear width]
+  [app-comp/action-label-box {:width width ;; icon 24 & padding 32 takes 56
+                              :label label
+                              :right-icon ic/delete
+                              :right-action on-clear
+                              :right-disabled? (not on-clear)}])
+
 ;; 68x30
-(defn- tube-list-input [state index side _ _]
-  (let [on-paste (partial on-paste-input state index side)
-        on-change (partial on-change-input state index side)
-        on-key-down (partial shift-focus state index side)]
+(defn- list-input [state index col-no _ _]
+  (let [on-paste (partial on-paste-input state index col-no)
+        on-change (partial on-change-input state index col-no)
+        on-key-down (partial shift-focus state index col-no)]
     (r/create-class
      {:component-did-mount
       (fn [this]
-        (register-input state index side (dom/dom-node this)))
+        (register-input state index col-no (dom/dom-node this)))
       :component-will-unmount
       (fn [_]
-        (register-input state index side nil))
+        (register-input state index col-no nil))
       :reagent-render
       (fn [_ _ _ style field]
         (let [{:keys [value valid?]} field]
@@ -99,6 +107,8 @@
                           :on-change on-change
                           :on-key-down on-key-down})]))})))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; 208x38
 (defn- tube-list-row [state index field-fn]
   (let [{:keys [tube-number], {:keys [pref-fn]} :props} @state
@@ -108,17 +118,9 @@
         label-style-key (if (or (:value left-field) (:value right-field))
                           :filled :label)]
     [:span (use-style style)
-     [tube-list-input state index 0 style left-field]
+     [list-input state index 0 style left-field]
      [:span (use-sub-style style label-style-key) (tube-number index)]
-     [tube-list-input state index 1 style right-field]]))
-
-;; 220x48
-(defn- tube-list-head [label on-clear]
-  [app-comp/action-label-box {:width 164 ;; icon 24 & padding 32 takes 56
-                              :label label
-                              :right-icon ic/delete
-                              :right-action on-clear
-                              :right-disabled? (not on-clear)}])
+     [list-input state index 1 style right-field]]))
 
 ;; 220x*
 (defn tube-list
@@ -139,7 +141,7 @@
           (let [{{:keys [field-fn]} :props} (swap! state assoc :show-row show-row)]
             (map (fn [i] [tube-list-row state i field-fn]) indexes)))]
     (fn [{:keys [height start-tube end-tube label on-clear field-fn] :as props}]
-      (let [w 220, wl 208
+      (let [w 220, wl (- w 12)
             [tube-count tube-number]
             (if (> end-tube start-tube)
               [(- end-tube (dec start-tube))
@@ -150,7 +152,7 @@
                :tube-count tube-count
                :tube-number tube-number)
         [:div {:style {:width w, :height height}}
-         [tube-list-head label on-clear]
+         [list-head label on-clear 164]
          [app-scroll/lazy-list-box
           {:width wl, :height (- height 48)
            :item-count tube-count
@@ -160,20 +162,119 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; 208x38
+(defn- wall-list-row [state index n field-fn add-row-fn]
+  (let [{:keys [tube-number], {:keys [pref-fn]} :props} @state
+        style (app-style/wall-list-row)
+        field (field-fn index 0)
+        btn-style (app-style/add-row-btn)]
+
+    (if (= index n)
+
+       #_[app-comp/button {:disabled? false
+                          :icon      ic/plus
+                          :label     (translate [:action :add :label] "Add")
+                          :on-click  #(add-row-fn n)}]
+       [:span {:style {:display       " inline-block"
+                       :padding       " 4px 12px"
+                       :vertical-align " top"
+                       :cursor "pointer"
+                       }
+               :on-click  #(add-row-fn n)}
+        [:div {:style {:height "32px"
+                       :border-radius "16px"
+                       :background-color "#54c9e9"
+                       :padding "4px 10px"}}
+         [ic/plus {:style {:color "#fff"
+                           :width "18px"
+                           :height "20px"}}]
+         [:span {:style {:color "#fff"
+                         :font-size "12px"
+                         :padding "0 4px"
+                         :overflow "hidden"
+                         :line-height "24px"
+                         :height "24px"
+                         :vertical-align "top"
+                         :display "inline-block"}}
+          (translate [:action :add :label] "Add")]]]
+
+       [:span (use-style style)
+       [list-input state index 0 style field]])))
+
 (defn wall-list
   "[{:keys [label height wall-count
             field-fn on-clear on-add on-change on-paste]}]"
   [props]
-  ;;TODO: just one input per row, but with one plus button to add more field
-  )
+  (let [state (atom {}) ;; props, tube-number show-row
+        render-items-fn
+        (fn [indexes show-row]
+          (let [{{:keys [field-fn add-row-fn end-tube]} :props} (swap! state assoc :show-row show-row)
+                new-indexes (if (zero? (first indexes))
+                              indexes
+                              (cons (first indexes) (map inc indexes)))]
+            (map (fn [i] [wall-list-row state i end-tube field-fn add-row-fn]) new-indexes)))]
+    (fn [{:keys [height start-tube end-tube label on-clear field-fn] :as props}]
+      (let [w 138, wl 126
+            [tube-count tube-number]
+            (if (> end-tube start-tube)
+              [(inc (- end-tube (dec start-tube)))
+               #(+ start-tube %)]
+              [(inc (- start-tube (dec end-tube)))
+               #(- end-tube %)])]
+        (swap! state assoc :props props
+               :tube-count tube-count
+               :tube-number tube-number)
+        [:div {:style {:width w, :height height}}
+         [list-head label on-clear 82]
+         [app-scroll/lazy-list-box
+          {:width wl, :height (- height 48)
+           :item-count tube-count
+           :item-height 38
+           :render-items-fn render-items-fn
+           :-*- field-fn}]]))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn tube-pref-list-row [state index selected-fn]
+  (let [{:keys [tube-number], {:keys [selected-fn on-select]} :props} @state
+        pref (selected-fn index)
+        style (app-style/tube-list-row pref)
+        options [{:id nil, :label "None"}
+                 {:id "imp", :label "Important"}
+                 {:id "pin", :label "Pinched"}]
+        selected (some #(if (= (:id %) pref) %) options)]
+    [:span (use-style style)
+     [:span (use-sub-style style :label) (tube-number index)]
+     [app-comp/selector {:options options
+                         :item-width 70
+                         :label-fn :label
+                         :value-fn :id
+                         :on-select #(on-select index (:id %))
+                         :selected selected}]]))
+
 (defn tube-pref-list
-  "[{:keys [label height
-            start-tube end-tube
-            field-fn on-clear on-change]}]"
-  [props]
-  ;;TODO: show tube number and a slider to choose none/important/pinched
-  ;; on-clear would set all to none
-  )
+  [{:keys [label height start-tube end-tube
+           selected-fn on-clear on-select]}]
+  (let [state (atom {}) ;; props, tube-number show-row
+        render-items-fn
+        (fn [indexes _]
+          (let [{{:keys [selected-fn]} :props} @state]
+            (map (fn [i] [tube-pref-list-row state i selected-fn]) indexes)))]
+    (fn [{:keys [height start-tube end-tube label on-clear] :as props}]
+      (let [w 300, wl (- w 12)
+            [tube-count tube-number]
+            (if (> end-tube start-tube)
+              [(- end-tube (dec start-tube))
+               #(+ start-tube %)]
+              [(- start-tube (dec end-tube))
+               #(- end-tube %)])]
+        (swap! state assoc :props props
+               :tube-count tube-count
+               :tube-number tube-number)
+        [:div {:style {:width w, :height height}}
+         [list-head label on-clear 164]
+         [app-scroll/lazy-list-box
+          {:width wl, :height (- height 48)
+           :item-count tube-count
+           :item-height 38
+           :render-items-fn render-items-fn}]]))))

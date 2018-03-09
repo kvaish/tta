@@ -1,7 +1,9 @@
 (ns tta.scroll
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
-            [tta.app.scroll :as scroll :refer [lazy-scroll-box scroll-box lazy-list-box]]))
+            [tta.app.scroll :as scroll :refer [lazy-scroll-box
+                                               lazy-list-cols
+                                               scroll-box lazy-list-box]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -51,6 +53,7 @@
        (let [width (:width @my-state)
              height (:height @my-state)
              item-height 96
+             item-width 96
              render-items-fn
              (fn [indexes show-item]
                (map (fn [i]
@@ -67,6 +70,34 @@
                         :margin-left "50px"}}
           [lazy-list-box {:height height
                           :width width
+                          :item-height item-height
+                          :item-count 30
+                          :render-items-fn render-items-fn}]])
+
+       (let [my-state     
+             (r/atom {:text "content"
+                      :height 300, :width 600}) 
+             width (:width @my-state)
+             height (:height @my-state)
+             item-height 96
+             item-width 196
+             render-items-fn
+             (fn [indexes show-item]
+               (map (fn [i]
+                      [:span {:style {:width item-width, :height item-height
+                                      :display "block"
+                                      :border "1px solid lightblue"  
+                                      :border-radius "8px"}}
+                       [:a {:href "#", :on-click #(show-item (dec i))} "prev"]
+                       " -" i "- "
+                       [:a {:href "#", :on-click #(show-item (inc i))} "next"]])
+                    indexes))]
+         [:div {:style {:display "inline-block"
+                        :border "1px solid grey"
+                        :margin-left "50px"}}
+          [lazy-list-cols {:height height
+                           :width width
+                           :item-width item-width  
                           :item-height item-height
                           :item-count 30
                           :render-items-fn render-items-fn}]])])))

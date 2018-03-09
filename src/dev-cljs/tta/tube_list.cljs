@@ -9,8 +9,8 @@
 (defn create-data [tube-count]
   {:sides (vec (repeat 2 {:tubes (vec (repeat tube-count {:temp nil}))}))})
 
-(defonce state (r/atom {:start-tube 101
-                        :end-tube 200
+(defonce state (r/atom {:start-tube 1
+                        :end-tube 20
                         :data (create-data 100)}))
 
 (defn field [index side]
@@ -23,6 +23,9 @@
 (defn clear []
   (swap! state assoc :data (create-data 100)))
 
+(defn add-row [end-tube]
+  (swap! state assoc :end-tube (inc end-tube)))
+
 (defn pref [index]
   (if (#{1 10 25} index) "imp"
       (if (#{4 15 21} index) "pin")))
@@ -33,12 +36,22 @@
                              (some :temp (:tubes side)))
                            (:sides data))
                    clear)]
-    [:div {:style {:height 320}}
-     [app-inp/tube-list {:label "Chamber 1"
-                         :height 300
-                         :start-tube start-tube
-                         :end-tube end-tube
-                         :field-fn field
-                         :pref-fn pref
-                         :on-change set-field
-                         :on-clear on-clear}]]))
+    [:div
+     [:div {:style {:height 320 :display "inline-block"}}
+      [app-inp/tube-list {:label      "Chamber 1"
+                          :height     300
+                          :start-tube start-tube
+                          :end-tube   end-tube
+                          :field-fn   field
+                          :pref-fn    pref
+                          :on-change  set-field
+                          :on-clear   on-clear}]]
+     [:div {:style {:height 320 :display "inline-block"}}
+      [app-inp/wall-list {:label      "Chamber 1"
+                          :height     300
+                          :start-tube start-tube
+                          :end-tube   end-tube
+                          :field-fn   field
+                          :add-row-fn add-row
+                          :on-change  set-field
+                          :on-clear   on-clear}]]]))

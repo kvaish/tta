@@ -377,6 +377,86 @@
                               :border (str "1px solid " widget-err)
                               :color widget-err)}})))
 
+(def wall-list-row
+  (let [widget-border (color-rgba :sky-blue 0 0.6)
+        widget-border-imp (color-rgba :monet-pink 0 0.6)
+        widget-selection (color-rgba :sky-blue 0 0.6)
+        imp {:border (str "1px solid " widget-border-imp)
+             :color widget-imp}
+        filled-imp (assoc imp
+                     :background widget-imp
+                     :color widget-fg)
+        pin {:border (str "1px solid " widget-bg-d)
+             :color widget-bg-d}
+        filled-pin (assoc pin
+                     :background widget-bg-d
+                     :color widget-fg)
+        tube-label {:display "inline-block"
+                    :border-radius "50%"
+                    :border (str "1px solid " widget-border)
+                    :font-size "10px"
+                    :line-height "26px"
+                    ;; :font-weight 300
+                    :color widget-bg-e
+                    :text-align "center"
+                    :vertical-align "top"
+                    :width "30px", :height "30px"
+                    :margin "0 8px"}
+        filled-label (assoc tube-label
+                       :color widget-fg
+                       :background widget-bg-e)
+        labels {nil tube-label
+                "imp" (merge tube-label imp)
+                "pin" (merge tube-label pin)}
+        filled {nil filled-label
+                "imp" (merge filled-label filled-imp)
+                "pin" (merge filled-label filled-pin)}
+        tube-input {:width "68px":height "30px"
+                    :border (str "1px solid " widget-border)
+                    :border-radius "16px"
+                    :padding "0 12px"
+                    :text-align "center"
+                    :vertical-align "top"
+                    :font-size "12px"
+                    :color widget-bg-e
+                    ::stylefy/mode {:selection {:background widget-selection}}}
+        inputs {nil tube-input
+                "imp" (merge tube-input imp)
+                "pin" (merge tube-input pin)}]
+    (fn [pref]
+      {:width "136px", :height "38px"
+       :display "block"
+       :padding "4px 12px"
+       ::stylefy/sub-styles
+       {:label (labels pref)
+        :filled (filled pref)
+        :input (inputs pref)
+        :invalid-input (assoc tube-input
+                         :border (str "1px solid " widget-err)
+                         :color widget-err)}})))
+
+(defn add-row-btn []
+  {:bg widget-bg-e
+   :fg widget-fg
+   :hc widget-bg-h
+   :container {:display "inline-block"
+               :height "48px"
+               :padding "8px 12px"}
+   :btn {:border-radius "16px"
+         :height "32px"
+         :color widget-fg}
+   :div {:height "24px"
+         :padding "0 24px 0 12px"
+         :color widget-fg}
+   :icon {:color widget-fg}
+   :span {:display "inline-block"
+          :vertical-align "top"
+          :height "24px"
+          :line-height "24px"
+          :font-size "12px"
+          :margin-left "12px"
+          :color widget-fg}})
+
 (defn tab-layout [top-tabs? bot-tabs? width height]
   (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))
         w2 width
