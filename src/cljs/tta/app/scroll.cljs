@@ -309,7 +309,7 @@
           [:div (-> props
                     (dissoc props :*-force-render)
                     (assoc :style (merge style {:overflow "hidden"
-                                                      :position "relative"})
+                                                :position "relative"})
                            :on-scroll prevent-scroll))
            [body {:props props} children] ;; do pass the props to ensure re-render
            (if (and h sh (< h sh))
@@ -371,7 +371,6 @@
           :render-fn render-fn}]))))
 
 (defn- show-list-col [state index]
-  ;;TODO:
   (let [{:keys [scroll-to top left height width item-width item-height]} @state
         item-left (* index item-width)
         item-right (+ item-left item-width)]
@@ -405,7 +404,7 @@
 
     (fn [{:keys [width height item-count item-width] :as props}]
       (let [scroll-width (* item-width item-count)]
-        (swap! state merge props) 
+        (swap! state merge props)
         [lazy-scroll-box
          {:width width, :height height
           :scroll-width scroll-width, :scroll-height height
