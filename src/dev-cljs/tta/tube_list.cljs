@@ -33,9 +33,9 @@
                              (some :temp (:tubes side)))
                            (:sides data))
                    clear)]
-    [:div {:style {:height 400}}
+    [:div {:style {:height 320}}
      [app-inp/tube-list {:label "Chamber 1"
-                         :height 350
+                         :height 300
                          :start-tube start-tube
                          :end-tube end-tube
                          :field-fn field

@@ -3,5 +3,5 @@ var htAppConfig = "";
 var htAppEnv = {};
 
 // functions and vars in util.js
-function svgString2Image();
-function getSVGString();
+function svgString2Image(){}
+function getSVGString(){}

@@ -1,5 +1,6 @@
 (ns ht.core
   (:require [cljsjs.material-ui] ;; the first thing to ensure react loaded
+            [cljs-react-material-ui.core]
             [reagent.core :as r]
             [re-frame.core :as rf]
             [ht.util.interop :as i]
