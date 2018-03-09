@@ -15,12 +15,12 @@
     ]}]
     (let [
             mystate (r/atom {})
-            ;; calculate scroll height
-            scroll-height 800
-            ;; calculate scroll width
-            scroll-width 800
             [table-count-x table-count-y] table-count
             [gutter-width gutter-height] gutter
+            ;; calculate scroll height
+            scroll-height (- (* table-count-y  (+ col-header-height gutter-height (* row-count row-height))) gutter-height)
+            ;; calculate scroll width
+            scroll-width (- (* table-count-x  (+ row-header-width gutter-width (* col-count col-width))) gutter-width)
         ]
         [:div 
             [lazy-scroll-box {:height height
@@ -32,11 +32,16 @@
                             table-height (/ (- height (* gutter-height (dec table-count-y))) table-count-y)
                             table-width (/ (- width (* gutter-width (dec table-count-x))) table-count-x)
                             max-left (- scroll-width width)
-                            max-top (- scroll-height top)
+                            max-top (- scroll-height height)
                             table-render-width (* col-count col-width)
                             table-render-height (* row-count row-height)
                             scroll-x (* -1 left (/ (- table-render-width (- table-width row-header-width)) max-left))
                             scroll-y (* -1 top (/ (- table-render-height (- table-height col-header-height)) max-top))
+
+                            col-render-start 2
+                            col-render-end 4
+                            row-render-start 3
+                            row-render-end 5
                         ]
                         (js/console.log "Top:" top "Left:" left)
                         
@@ -59,8 +64,11 @@
                                                             [:div {:style {:position "absolute" :left scroll-x
                                                                 :width table-render-width :background-color "pink"}}
                                                                 (map (fn [%]
-                                                                    [:div {:style {:display "inline-block" :width col-width :height col-header-height}}
-                                                                        %
+                                                                    [:div {:style {:display "inline-block" :width col-width :height col-header-height 
+                                                                                :vertical-align "top"}}
+                                                                        (if (<= col-render-start % col-render-end)
+                                                                            (col-header-renderer % [table-row-no table-col-no])
+                                                                        )
                                                                     ]
                                                                 ) (range col-count))
                                                             ]
@@ -75,7 +83,10 @@
                                                                 :height table-render-height :width row-header-width :background-color "pink"}}
                                                             (map (fn [%] 
                                                                 [:div {:style {:height row-height}} 
-                                                                %]
+                                                                    (if (<= row-render-start % row-render-end)
+                                                                        (row-header-renderer % [table-row-no table-col-no])
+                                                                    )
+                                                                ]
                                                             ) (range row-count))]]
                                                 [:div {:style {:overflow "hidden"
                                                         :position "absolute" :left row-header-width :top col-header-height
@@ -84,11 +95,15 @@
                                                                 :height table-render-height :width table-render-width :background-color "bisque"}}
                                                                 (map (fn [rowno] 
                                                                     [:div {:style {:height row-height}} 
-                                                                        (map (fn [colno] 
-                                                                            [:div {:style {:display "inline-block" :height row-height :width col-width}} 
-                                                                                (str rowno "," colno)
-                                                                            ]
-                                                                        ) (range col-count))
+                                                                        (if (<= row-render-start rowno row-render-end)
+                                                                            (map (fn [colno] 
+                                                                                [:div {:style {:display "inline-block" :height row-height :width col-width :vertical-align "top"}} 
+                                                                                    (if (<= col-render-start colno col-render-end)
+                                                                                        (cell-renderer rowno colno [table-row-no table-col-no])
+                                                                                    )
+                                                                                ]
+                                                                            ) (range col-count))
+                                                                        )
                                                                     ]
                                                                 ) (range row-count))]
                                                         ]
@@ -113,10 +128,20 @@
        [table {
            :height 400, :width 600
            :row-header-width 50, :col-header-height 40
-           :row-count 30, :col-count 40
-           :row-height 20 :col-width 40
-           :table-count [2 2]
+           :row-count 15, :col-count 15
+           :row-height 50 :col-width 70
+           :table-count [3 3]
            :gutter [3 3]
+           :row-header-renderer (fn [rowno table]
+                                    [:div (str "R" rowno)]
+                                )
+           :col-header-renderer (fn [colno table]
+                                    [:div (str "C" colno)]
+                                )
+           :cell-renderer (fn [rowno colno table]
+                                    [:div (str "R" rowno "C" colno)]
+                            )
+           :row-col-corner-renderer nil
        }]
        [:div {:style {:padding 10}}
         [:button {:on-click #(swap! my-state update :height + 100)} "height+100"]
