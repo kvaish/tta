@@ -20,7 +20,8 @@
             [tta.component.settings.subs :as subs]
             [tta.component.settings.event :as event]
             [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
-            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]
+            [tta.dialog.tube-prefs.view :refer [tube-prefs]]))
 
 (defn form-cell [style error label widget]
   [:div (use-sub-style style :form-cell)
@@ -123,7 +124,7 @@
    (translate [:settings :tube-preference :label] "Tube preference")
    [app-comp/button {:icon ic/mark-tube
                      :label (translate [:action :edit :label] "Edit")
-                     :on-click #(js/console.log "todo: edit tube pref")}]]) ;;TODO:
+                     :on-click #(rf/dispatch [:tta.dialog.tube-prefs.event/open])}]]) 
 
 (defn form [style]
   [:div (use-sub-style style :form)
@@ -146,7 +147,10 @@
       [form style]]
      ;;dialogs
      (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
-       [edit-pyrometer])]))
+       [edit-pyrometer])
+     (if @(rf/subscribe [:tta.dialog.tube-prefs.subs/open?])
+       [tube-prefs])
+     ]))
 
 (defn settings []
   [app-view/layout-main

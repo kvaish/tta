@@ -1,6 +1,7 @@
 (ns tta.app.input
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
+            [re-frame.core :as rf]
             [cljs-react-material-ui.reagent :as ui]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [ht.util.interop :as i]
@@ -176,42 +177,42 @@
                               :right-action on-clear
                               :right-disabled? (not on-clear)}])
 
-(defn render-tubes [props ch ind]
+(defn render-tubes [props tube-prefs ind]
   [:div {:style {:position "absolute"
                  :left (str (* ind 100) "px")}}
 
    (let [{:keys [plant on-clear]} props
-         firing (get-in  plant [:config :firing])
-         label (case firing
-                 "side" (get-in plant [:config :sf-config :chambers ind :name])
-                 "top" (get-in plant [:config :tf-config :rows ind :name])
-                 "default")]
+         label (or
+                 (get-in plant [:config :sf-config :chambers ind :name])
+                 (get-in plant [:config :tf-config :rows ind :name]))]
      (tube-prefs-head label (-  (/ (:width props) 2) 100) on-clear))
 
-   (let [{:keys [width height container plant item-height on-select item-width]} props
-         tube-prefs (:tube-prefs ch)
-         firing (get-in  plant [:config :firing])
-         {:keys [start-tube end-tube]} (case firing
-                                         "side" (get-in plant [:config :sf-config :chambers ind])
-                                         "top" (get-in plant [:config :tf-config :rows ind :name]))
+   (let [{:keys [width height container plant item-height on-select pref-fn item-width]} props
+         {:keys [start-tube end-tube]} (or
+                                         (get-in plant [:config :sf-config :chambers ind])
+                                         (get-in plant [:config :tf-config :rows ind :name]))
          render-items-fn
          (fn [indexes show-item]
            (map (fn [i]
-                  [:div  (merge  (use-style (app-style/tube-list-row))
+                  [:div  (merge  (use-style (app-style/tube-list-row (pref-fn ind i)))
                                  {:style {:margin-top "10px"
                                           :display "inline-table"
                                           :height item-height
                                           :width (/ width 2)}})  
-                   [:span (merge (use-sub-style (app-style/tube-list-row) :label)
+                   [:span (merge (use-sub-style (app-style/tube-list-row (pref-fn ind i)) :label)
                                  {:style {:margin-top "10px"}})  
                     (if (> start-tube end-tube)
                       (- start-tube i)
-                      (- end-tube i ))]
+                      (- end-tube i ))] 
                    [:span 
-                    [app-comp/selector {:options ["imp" "pinched" "none"]
+                    [app-comp/selector {:options ["imp" "pin" "none"]
                                         :item-width 70
-                                        :on-select #(on-select i)
-                                        :selected (tube-prefs i)}]]])   
+                                        :label-fn #(case %
+                                                     "pin" "Pinched"
+                                                     "imp" "Important"
+                                                     "none" "none")
+                                        :on-select #(on-select ind i %)
+                                        :selected (or (tube-prefs  i) "none")}]]])   
                 indexes))]
 
      [app-scroll/lazy-list-box {:height height
@@ -224,7 +225,7 @@
   [props]
   [:div
    (let [{:keys [width height item-height item-width
-                 tube-prefs  on-clear on-select rows]} props
+                 q on-clear on-select rows]} props
          render-items-fn
          (fn [indexes show-item]
            (map-indexed (fn [ind ch]
