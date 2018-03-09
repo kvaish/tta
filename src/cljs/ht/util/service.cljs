@@ -20,9 +20,9 @@
 
 (defn init []
   (add-to-api-map
-   {:root (:portal-uri @config)
-    :api {:fetch-auth "/auth/token/fetch"
-          :logout "/auth/logout"}}))
+    {:root (:portal-uri @config)
+     :api {:fetch-auth "/auth/token/fetch"
+           :logout "/auth/logout"}}))
 
 (defn api-uri
   ([api-key]
@@ -52,21 +52,21 @@
         headers (as-> (case accept
                         :edn {"Accept" "application/edn"}
                         :json {"Accept" "application/json"}) $
-                  (if token?
-                    (assoc $ "Authorization" (str "Token " token))))]
+                      (if token?
+                        (assoc $ "Authorization" (str "Token " token))))]
     (go
       (let [{:keys [status body]}
             (<! (method
-                 uri
-                 (cond-> (merge {:query-params {}
-                                 :with-credentials? (not token?)
-                                 :headers headers}
-                                data)
-                   ;; add timestamp if get method with no cache
-                   (and (= method http/get)
-                        (not allow-cache?))
-                   (assoc-in [:query-params :timestamp]
-                             (.valueOf (gdate/DateTime.))))))]
+                  uri
+                  (cond-> (merge {:query-params {}
+                                  :with-credentials? (not token?)
+                                  :headers headers}
+                                 data)
+                          ;; add timestamp if get method with no cache
+                          (and (= method http/get)
+                               (not allow-cache?))
+                          (assoc-in [:query-params :timestamp]
+                                    (.valueOf (gdate/DateTime.))))))]
         (if (= 200 status)
           (do
             (dev-log ["success:" body])

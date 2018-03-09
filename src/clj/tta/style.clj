@@ -2,15 +2,7 @@
   (:require [garden.def :refer [defstyles]]
             [garden.units :refer [px]]
             [garden.color :as gc]
-            [ht.style :as ht]))
-
-(defn color
-  "get color suitable for use with stylefy and garden"
-  ([color-key]
-   (get ht/colors color-key))
-  ([color-key pct-lighten]
-   (-> (get ht/colors color-key)
-       (gc/lighten pct-lighten))))
+            [ht.style :as ht :refer [color]]))
 
 (defstyles app-styles
 

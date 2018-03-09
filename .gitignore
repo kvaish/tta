@@ -8,3 +8,4 @@
 /resources/public/data/app-info.json
 /package-lock.json
 .idea/
+/*.iml

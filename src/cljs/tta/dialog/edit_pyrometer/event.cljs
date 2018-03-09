@@ -72,10 +72,13 @@
  ::save-pyrometer
  (fn [db _]
    (let [data @(rf/subscribe [::subs/data])
+         can-submit? @(rf/subscribe [::subs/po-can-submit?])
          {:keys [index], pyro :data} (get-in db po-path)]
-     (-> db
-         (assoc-in data-path (assoc data index pyro))
-         (assoc-in po-path nil)))))
+     (if can-submit?
+       (-> db
+           (assoc-in data-path (assoc data index pyro))
+           (assoc-in po-path nil))
+       (update-in db po-path assoc :show-error? true)))))
 
 (rf/reg-event-db
  ::cancel-pyrometer-edit
@@ -104,7 +107,7 @@
  ::delete-pyrometer
  (fn [db [_ index]]
    (let [data @(rf/subscribe [::subs/data])
-         i (if-let [i @(rf/subscribe [::subs/index])]
+         i (if-let [i @(rf/subscribe [::subs/po-index])]
              (if (< i index) i
                  (if (= i index) nil (dec i))))
          data (vec (concat (take index data) (drop (inc index) data)))]

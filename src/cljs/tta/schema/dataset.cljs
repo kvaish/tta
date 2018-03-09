@@ -44,26 +44,53 @@
                              :schema ::summary
                              :array? true}}
 
-   ::top-fired {}
+   ::top-fired {:levels  {:name   "levels"
+                          :array? true
+                          :schema {:rows {:name   "rows"
+                                          :array? true
+                                          :schema {:sides {:name   "sides"
+                                                           :array? true
+                                                           :schema ::tf-side}}}}}
+                :burners {:name      "burners"
+                          :array?    true
+                          :array-dim 2 ;; burner-row x burner
+                          :schema    {:deg-open "degOpen"}}
 
-   ::side-fired {:chambers {:name   "chambers"
-                            :schema ::chamber
-                            :array? true}}
+                :wall-temps    {:east  {:name   "east"
+                                        :schema ::wall-temps}
+                                :west  {:name   "west"
+                                        :schema ::wall-temps}
+                                :north {:name   "north"
+                                        :schema ::wall-temps}
+                                :south {:name   "south"
+                                        :schema ::wall-temps}}
+                :ceiling-temps {:name   "ceilingTemp"
+                                :array? true
+                                :schema ::wall-temps}
+                :floor-temps   {:name   "floorTemps"
+                                :array? true
+                                :schema ::wall-temps}}
 
-   ::chamber {:sides {:name   "sides"
-                      :schema ::side
+   ::tf-side {:tubes {:name   "tubes"
+                      :schema ::tube
                       :array? true}}
 
-   ::side {:tubes      {:name   "tubes"
-                        :schema ::tube
-                        :array? true}
-           :burners    {:name      "burners"
-                        :schema    ::burner
-                        :array?    true
-                        :array-dim 2}
-           :wall-temps {:name   "wallTemps"
-                        :schema ::wall-temps
-                        :array? true}}
+   ::side-fired {:chambers {:name   "chambers"
+                            :array? true
+                            :schema {:sides {:name   "sides"
+                                             :schema ::sf-side
+                                             :array? true}}}}
+
+   ::sf-side {:tubes      {:name   "tubes"
+                           :schema ::tube
+                           :array? true}
+              :burners    {:name      "burners"
+                           :array?    true
+                           :array-dim 2 ;; row x col
+                           :schema    {:state "state"}}
+              :wall-temps {:name   "wallTemps"
+                           :schema ::wall-temps
+                           :array? true}}
 
    ::tube {:gold-cup-temp         "goldCupTemp"
            :raw-temp              "rawTemp"
@@ -72,8 +99,6 @@
            :emissivity-calculated "emissivityCalculated"
            :emissivity-override   "emissivityOverride"
            :pinched?              "isPinched"}
-
-   ::burner {:state "state"}
 
    ::wall-temps {:avg   "avg"
                  :temps {:name    "temps"

@@ -27,3 +27,8 @@
  :<- [::dialog]
  (fn [dialog [_ id]]
    (get-in dialog [:field id])))
+
+(rf/reg-sub
+ ::tube-prefs
+ (fn [db]
+   (get-in db [:plant :settings :sf-settings :chambers])))

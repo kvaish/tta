@@ -2,9 +2,8 @@
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
-            [ht.style :as ht]
-            [ht.app.style :as ht-style
-             :refer [color color-hex color-rgba vendors]]
+            [ht.style :as ht :refer [color color-hex color-rgba]]
+            [ht.app.style :as ht-style :refer [vendors]]
             [tta.app.style :as app-style]))
 
 (def header
@@ -30,13 +29,18 @@
                ::stylefy/vendors     vendors
                ::stylefy/auto-prefix #{:flex}}
       :right  {:font-size "12px"
-               :padding   "24px 30px 0 12px"}
+               :padding   "24px 15px 0 12px"}
       :link {:text-decoration "none"
-             :color (color :white)
-             :margin-left "30px"}
-      :link-icon {:margin-right "5px"}
-      :icon-only {:font-size "18px"
-                  :width "30px"}}}))
+             :cursor "pointer"
+             :display "inline-block"
+             :height "24px"
+             :padding "0 15px 0 0"
+             :margin-left "15px"}
+      :link-label {:color (color :white)
+                   :font-size "12px"
+                   :line-height "18px"
+                   :display "inline-block"
+                   :vertical-align "top"}}}))
 
 (def sub-header
   (let [{h :sub-head-row-height} ht/root-layout
