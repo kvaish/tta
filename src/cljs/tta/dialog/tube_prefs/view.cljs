@@ -53,8 +53,8 @@
         (swap! my-container  assoc
                :width (i/oget-in this [:refs :container :offsetWidth])
                :height 400))
-      :component-did-update
-      #(render-tube-prefs {
+     #_ :component-did-update
+      #_#(render-tube-prefs {
                            :item-width 250
                            :on-select set-tube-pref
                            :pref-fn pref
