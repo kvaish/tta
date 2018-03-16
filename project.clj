@@ -46,7 +46,8 @@
   :figwheel {:css-dirs ["resources/public/css"]
              :server-port 3450}
 
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
+                 :timeout 120000}
 
   :aliases {"build" ["with-profile" "prd,user"
                      ["do"
