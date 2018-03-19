@@ -325,7 +325,9 @@
                           :pos-f wf
                           :on-scroll #(swap! state update-l %)}])]))})))
 
-(defn- show-list-item [state index]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#_(defn- show-list-item [state index]
   (let [{:keys [scroll-to top height item-height]} @state
         item-top (* index item-height)
         item-bottom (+ item-top item-height)]
@@ -334,10 +336,11 @@
       (if (> item-bottom (+ top height))
         (scroll-to {:top (- item-bottom height), :left 0})))))
 
-(defn lazy-list-box
-  "[{:keys [width height item-count item-height render-items-fn]}]
+;; PKPA: deprecated; use lazy-rows instead; TODO: delete
+#_(defn lazy-list-box
+  "[{:keys [width height item-count item-height items-render-fn]}]
   Good for showing long list of dom heavy items. It renders only those visible.  
-  **render-items-fn**: (fn [index-list show-item])  
+  **items-render-fn**: (fn [index-list show-item])  
   It should return a sequence of hiccups , for each index in **index-list**.
   You can scroll to bring an item into view by calling the **show-item**
   function which takes a single argument *item-index*."
@@ -345,11 +348,11 @@
   (let [state (atom {})
         render-fn
         (fn [{:keys [top]} scroll-to]
-          (let [{:keys [height item-height item-count render-items-fn]}
+          (let [{:keys [height item-height item-count items-render-fn]}
                 (swap! state assoc :top top, :scroll-to scroll-to)
                 from (quot top item-height)
                 to (min item-count (js/Math.ceil (/ (+ top height) item-height)))
-                items (render-items-fn (range from to)
+                items (items-render-fn (range from to)
                                        (partial show-list-item state))]
             (doall
              (map (fn [item i]
@@ -370,7 +373,9 @@
           :scroll-width width, :scroll-height scroll-height
           :render-fn render-fn}]))))
 
-(defn- show-list-col [state index]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#_(defn- show-list-col [state index]
   (let [{:keys [scroll-to top left height width item-width item-height]} @state
         item-left (* index item-width)
         item-right (+ item-left item-width)]
@@ -379,16 +384,17 @@
       (if (> item-right (+ left width))
         (scroll-to {:left (- item-right width), :top 0})))))
 
-(defn- lazy-list-cols
+;; PKPA: deprecated; use lazy-cols instead; TODO: delete
+#_(defn lazy-list-cols
   [props]
   (let [state (atom {})
         render-fn
         (fn [{:keys [top left]} scroll-to]
-          (let [{:keys [width item-width item-count render-items-fn]}
+          (let [{:keys [width item-width item-count items-render-fn]}
                 (swap! state assoc :top top, :left left,  :scroll-to scroll-to)
                 from (quot left item-width)
                 to (min item-count (js/Math.ceil (/ (+ left width) item-width)))
-                items (render-items-fn (range from to)
+                items (items-render-fn (range from to)
                                        (partial show-list-col state))]
             (doall
              (map (fn [item i]
@@ -410,15 +416,107 @@
           :scroll-width scroll-width, :scroll-height height
           :render-fn render-fn}]))))
 
-(defn- show-grid-item [state row col]
-  ;;TODO:
-  )
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- lazy-grid-box
-  ""
+(defn- show-grid-cell [state row col]
+  (let [{:keys [scroll-to top left width height cell-width cell-height]} @state
+        cell-top (* row cell-height)
+        cell-bottom (+ cell-top cell-height)
+        cell-left (* col cell-width)
+        cell-right (+ cell-left cell-width)
+        right (+ left width)
+        bottom (+ top height)
+        left (if (> left cell-left) cell-left
+                 (if (< right cell-right) (- cell-right width) left))
+        top (if (> top cell-top) cell-top
+                (if (< bottom cell-bottom) (- cell-bottom height) top))]
+    (scroll-to {:top top, :left left})))
+
+(defn lazy-grid
+  "[{:keys [width height cell-width cell-height
+            row-count col-count cells-render-fn]}]  
+  Good for showing long list of long list of dom heavy items arranged in
+  rows and columns with both horizontal and vertical scrollbars.
+  It renders only those visible.  
+  **cells-render-fn**: (fn [row-list col-list show-cell])  
+  It should return a 2D sequence of sequence of hiccups arranged as rows of cols,
+  with one for each index in **row-list** and **col-list**.
+  You can scroll to bring an item into view by calling the **show-cell**
+  function which takes two arguments *row* and *col*."
   [props]
   ;;TODO:
-  )
+  (let [state (atom {})
+        render-fn
+        (fn [{:keys [top left]} scroll-to]
+          (let [{:keys [width height cell-width cell-height
+                        row-count col-count cells-render-fn]}
+                (swap! state assoc :top top, :left left, :scroll-to scroll-to)
+                from-row (quot top cell-height)
+                to-row (min row-count (js/Math.ceil (/ (+ top height) cell-height)))
+                from-col (quot left cell-width)
+                to-col (min col-count (js/Math.ceil (/ (+ left width) cell-width)))
+                cells (cells-render-fn (range from-row to-row)
+                                       (range from-col to-col)
+                                       (partial show-grid-cell state))]
+            (doall
+             (mapcat (fn [row-cells i]
+                       (let [row (+ from-row i)]
+                         (map (fn [cell j]
+                                (let [col (+ from-col j)]
+                                  [:span {:key (str row "," col)
+                                          :style {:display "block"
+                                                  :margin "0", :padding "0"
+                                                  :position "absolute"
+                                                  :top (* cell-height row)
+                                                  :left (* cell-width col)}}
+                                   cell]))
+                              row-cells (range))))
+                     cells (range)))))]
+    (fn [{:keys [width height cell-width cell-height
+                row-count col-count] :as props}]
+      (let [scroll-height (* cell-height row-count)
+            scroll-width (* cell-width col-count)]
+        (swap! state merge props)
+        [lazy-scroll-box
+         {:width width, :height height
+          :scroll-width scroll-width, :scroll-height scroll-height
+          :render-fn render-fn}]))))
+
+(defn lazy-rows
+  "[{:keys [width height item-count item-height items-render-fn]}]  
+  Good for showing long list of dom heavy items arranged in rows with
+  a vertical scrollbar. It renders only those visible.  
+  **items-render-fn**: (fn [index-list show-item])  
+  It should return a sequence of hiccups , for each index in **index-list**.
+  You can scroll to bring an item into view by calling the **show-item**
+  function which takes a single argument *item-index*."
+  [{:keys [width height item-count item-height items-render-fn]}]
+  [lazy-grid {:width width, :height height
+              :cell-width width, :cell-height item-height
+              :row-count item-count, :col-count 1
+              :cells-render-fn
+              (fn [row-list col-list show-cell]
+                (let [show-item #(show-cell % 0)]
+                  (->> (items-render-fn row-list show-item)
+                       (map list))))}])
+
+(defn lazy-cols
+  "[{:keys [width height item-count item-width items-render-fn]}]  
+  Good for showing long list of dom heavy items arranged in columns with
+  a horizontal scrollbar. It renders only those visible.  
+  **items-render-fn**: (fn [index-list show-item])  
+  It should return a sequence of hiccups , for each index in **index-list**.
+  You can scroll to bring an item into view by calling the **show-item**
+  function which takes a single argument *item-index*."
+  [{:keys [width height item-count item-width items-render-fn]}]
+  [lazy-grid {:width width, :height height
+              :cell-width item-width, :cell-height height
+              :row-count 1, :col-count item-count
+              :cells-render-fn
+              (fn [row-list col-list show-cell]
+                (let [show-item #(show-cell 0 %)]
+                  (list (items-render-fn col-list show-item))))}]) []
+
 
 (defn table-grid [{:keys [
     height, width,

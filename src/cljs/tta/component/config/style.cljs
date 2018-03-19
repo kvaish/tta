@@ -9,7 +9,7 @@
 
 (defn body [width height]
   (let [fs-h (- height 40)
-        fs-w (* (- width 85) 0.6)
+        fs-w (* (- width 85) 0.5)
         f-w (- fs-w 5)
         c-w-1 (- f-w 5)
         c-w-2 (* 0.5 (- f-w 5))

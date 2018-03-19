@@ -73,7 +73,7 @@
 
 (defn sf-dual-chamber? [style]
   (let [dual? @(rf/subscribe [::subs/sf-dual-chamber?])]
-    [form-cell-4 style nil
+    [form-cell-2 style nil
      (translate [:config :dual-chamber? :label] "Dual chamber?")
      [app-comp/toggle
       {:value dual?
@@ -81,7 +81,7 @@
 
 (defn sf-dual-nozzle? [style]
   (let [dual? @(rf/subscribe [::subs/sf-dual-nozzle?])]
-    [form-cell-4 style nil
+    [form-cell-2 style nil
      (translate [:config :dual-nozzle? :label] "Dual nozzle?")
      [app-comp/toggle
       {:value dual?
@@ -103,45 +103,45 @@
 
 (defn sf-tube-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/sf-tube-count-field)]
-    [form-cell-4 style error
+    [form-cell-1 style error
      (translate [:config :tube-count :label] "No of tubes")
-     [:div
+     [:span
       [app-comp/text-input
        {:value value, :valid? valid?, :align "center"
         :on-change #(rf/dispatch [::event/set-sf-tube-count %])}]]]))
 
 (defn sf-burner-row-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/sf-burner-row-count-field)]
-    [form-cell-4 style error
+    [form-cell-2 style error
      (translate [:config :burner-row-count :label] "No of burner rows")
-     [:div
+     [:span
       [app-comp/text-input
        {:value value, :valid? valid?, :align "center"
         :on-change #(rf/dispatch [::event/set-sf-burner-row-count %])}]]]))
 
 (defn sf-burner-count-per-row [style]
   (let [{:keys [value error valid?]} (query-id ::subs/sf-burner-count-per-row-field)]
-    [form-cell-4 style error
+    [form-cell-2 style error
      (translate [:config :burner-count-per-row :label] "No of burners per row")
-     [:div
+     [:span
       [app-comp/text-input
        {:value value, :valid? valid?, :align "center"
         :on-change #(rf/dispatch [::event/set-sf-burner-count-per-row %])}]]]))
 
 (defn sf-peep-door-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/sf-pd-count-field)]
-    [form-cell-4 style error
+    [form-cell-1 style error
      (translate [:config :peep-door-count :label] "No of peep doors")
-     [:div
+     [:span
       [app-comp/text-input
        {:value value, :valid? valid?, :align "center"
         :on-change #(rf/dispatch [::event/set-sf-pd-count %])}]]]))
 
 (defn sf-section-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/sf-section-count-field)]
-    [form-cell-4 style error
+    [form-cell-2 style error
      (translate [:config :section-count :label] "No of sections")
-     [:div
+     [:span
       [app-comp/text-input
        {:value value, :valid? valid?, :align "center"
         :on-change #(rf/dispatch [::event/set-sf-section-count %])}]]]))
@@ -154,7 +154,7 @@
 
 (defn sf-peep-doors [style]
   (if-let [n @(rf/subscribe [::subs/sf-pd-count-per-section])]
-    [form-cell-4x3 style
+    [form-cell-1 style
      (translate [:config :peep-door-tube-counts :label]
                 "No of tubes in each peep door")
      (map #(with-meta (vector sf-peep-door-tube-count style %) {:key %})
@@ -167,7 +167,7 @@
 
 (defn sf-chamber-name [style index]
   (let [{:keys [value error valid?]} (query-fn subs/sf-chamber-name-field index)]
-    [form-cell-2 style error
+    [form-cell-1 style error
      (translate [:config :chamber-name :label] "Chamber name")
      [app-comp/text-input
       {:value value, :valid? valid?, :width 150
@@ -175,7 +175,7 @@
 
 (defn sf-side-name [style ch-index s-index]
   (let [{:keys [value error valid?]} (query-fn subs/sf-side-name-field ch-index s-index)]
-    [form-cell-4 style error
+    [form-cell-2 style error
      (str (translate [:config :side-name :label] "Side name") " #" (inc s-index))
      [app-comp/text-input
       {:value value, :valid? valid?, :width 100
@@ -186,7 +186,7 @@
         sel @(rf/subscribe [::subs/sf-tube-numbers-selection index])
         selected (some #(if (= (:id %) sel) %) options)]
     (if-not (empty? options)
-      [form-cell-4 style nil
+      [form-cell-2 style nil
        (translate [:config :tube-numbers :label] "Tube numbers")
        [app-comp/dropdown-selector
         {:items options, :selected selected
@@ -199,7 +199,7 @@
         sel @(rf/subscribe [::subs/sf-burner-numbers-selection index])
         selected (some #(if (= (:id %) sel) %) options)]
     (if-not (empty? options)
-      [form-cell-4 style nil
+      [form-cell-2 style nil
        (translate [:config :burner-numbers :label] "Burner numbers")
        [app-comp/dropdown-selector
         {:items options, :selected selected
@@ -211,7 +211,7 @@
   (let [n (if @(rf/subscribe [::subs/sf-dual-chamber?]) 2 1)]
     (->> (range n)
          (map (fn [index]
-                [:div (use-sub-style style :form-cell-2)
+                [:div (use-sub-style style :form-cell-1)
                  [:div (use-sub-style style :form-heading-label)
                   "Chamber #" (inc index)]
                  [sf-chamber-name style index]
@@ -225,8 +225,8 @@
   [:div
    [:div
     [sf-dual-chamber? style]
-    [sf-dual-nozzle? style]
     [sf-whs-placement style]]
+    [sf-dual-nozzle? style]
    [:div (use-sub-style style :form-heading-label)
     (translate [:config :chamber-configuration :label] "Chamber configuration")]
    [:div
@@ -255,7 +255,7 @@
 
 (defn tf-tube-row-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/tf-tube-row-count-field)]
-    [form-cell-2 style error
+    [form-cell-1 style error
      (translate [:config :tube-row-count :label]
                 "No of tube rows")
      [app-comp/text-input
@@ -264,7 +264,7 @@
 
 (defn tf-tube-count-per-row [style]
   (let [{:keys [value error valid?]} (query-id ::subs/tf-tube-count-per-row-field)]
-    [form-cell-4 style error
+    [form-cell-1 style error
      (translate [:config :tube-count-per-row :label] "No of tubes per row")
      [app-comp/text-input
       {:value value, :valid? valid?, :align "center"
@@ -284,7 +284,7 @@
   (let [rn @(rf/subscribe [::subs/tf-tube-row-count])
         tn @(rf/subscribe [::subs/tf-tube-count-per-row])]
     (if (and rn tn)
-      [form-cell-4x3 style
+      [form-cell-1 style
        (translate [:config :tube-numbers :label] "Tube numbers")
        (map #(with-meta (vector tf-tube-numbers-selection %) {:key %})
             (range rn))])))
@@ -293,7 +293,7 @@
 
 (defn tf-burner-count-per-row [style]
   (let [{:keys [value error valid?]} (query-id ::subs/tf-burner-count-per-row-field)]
-    [form-cell-4 style error
+    [form-cell-1 style error
      (translate [:config :burner-count-per-row :label] "No of burners per row")
      [app-comp/text-input
       {:value value, :valid? valid?, :align "center"
@@ -313,7 +313,7 @@
   (let [rn @(rf/subscribe [::subs/tf-burner-row-count])
         bn @(rf/subscribe [::subs/tf-burner-count-per-row])]
     (if (and rn bn)
-      [form-cell-4x3 style
+      [form-cell-1 style
        (translate [:config :burner-numbers :label] "Burner numbers")
        (map #(with-meta (vector tf-burner-numbers-selection %) {:key %})
             (range rn))])))
@@ -322,7 +322,7 @@
 
 (defn tf-section-count [style]
   (let [{:keys [value error valid?]} (query-id ::subs/tf-section-count-field)]
-    [form-cell-2 style error
+    [form-cell-1 style error
      (translate [:config :section-count :label]
                 "No of sections")
      [app-comp/text-input
@@ -370,7 +370,7 @@
 
 (defn tf-toggle-level [style {:keys [key label]}]
   (let [chk? @(rf/subscribe [::subs/tf-measure-level? key])]
-    [form-cell-4 style nil label
+    [form-cell-1 style nil label
      [app-comp/toggle
       {:value chk?
        :on-toggle #(rf/dispatch [::event/set-tf-measure-level? key %])}]]))
@@ -392,23 +392,31 @@
   [:div
    [tf-burner-first style]
    [tf-tube-row-count style]
-   [tf-section-count style]
-   [:div
-    [tf-tube-count-per-row style]
-    [tf-tube-numbers style]]
-   [:div
-    [tf-burner-count-per-row style]
-    [tf-burner-numbers style]]
-   [tf-section-tubes style]
+   (if @(rf/subscribe [::subs/tf-tube-row-count])
+     [:div
+      [:div (use-sub-style style :form-heading-label)
+       (translate [:config :tube-rows :label] "Tubes rows")]
+      [tf-tube-count-per-row style]
+      [tf-tube-numbers style]
+      [:div (use-sub-style style :form-heading-label)
+       (translate [:config :burner-rows :label] "Burner rows")]
+      [tf-burner-count-per-row style]
+      [tf-burner-numbers style]
+      [:div (use-sub-style style :form-heading-label)
+       (translate [:config :sections :label] "Sections")]
+      [tf-section-count style]
+      [tf-section-tubes style]])
    [tf-section-burners style]
    [tf-sections-validity style]
+   [:div (use-sub-style style :form-heading-label)
+    (translate [:config :measure-levels :label] "Measurement levels")]
    [tf-measure-levels style]])
 
 ;;; Reformer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn reformer-name [style]
   (let [{:keys [value error valid?]} (query-fn subs/reformer-name-field)]
-    [form-cell-2 style error
+    [form-cell-1 style error
      (translate [:config :name :label] "Reformer name")
      [app-comp/text-input {:valid? valid?
                            :value value
@@ -419,7 +427,7 @@
   (let [{:keys [value error valid?]} (query-fn subs/firing-field)
         options @(rf/subscribe [::subs/firing-options])
         selected (some #(if (= (:id %) value) %) options)]
-    [form-cell-2 style error
+    [form-cell-1 style error
      (translate [:config :type :label] "Reformer type")
      [app-comp/dropdown-selector
       {:valid?    valid?
@@ -431,8 +439,10 @@
 
 (defn form [style]
   [:div
-   [reformer-name style]
+   [:div (use-sub-style style :form-heading-label)
+    (translate [:config :reformer :label] "Reformer configuration")]
    [firing-type style]
+   [reformer-name style]
    ;; firing specific reformer form
    (case @(rf/subscribe [::subs/firing])
      "top" [tf-form style]
@@ -441,7 +451,7 @@
      nil)])
 
 (defn body [{:keys [width height]}]
-  (let [w (* (- width 85) 0.4)
+  (let [w (* (- width 85) 0.5)
         h (- height 40)
         style (style/body width height)
         data @(rf/subscribe [::subs/data])]
