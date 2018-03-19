@@ -14,9 +14,9 @@
             [ht.app.comp :as ht-comp]
             [tta.icon-set]
             [tta.comp-set]
+            [tta.table-grid]
             [tta.scroll]
             [tta.ref-sketch]
-            [tta.table]))
             [tta.tube-list]
             [tta.tube-prefs]
             [tta.tab]))
@@ -35,7 +35,7 @@
        :tta/comps [tta.comp-set/comp-set]
        :tta/scroll [tta.scroll/scroll-test]
        :tta/ref-sketch [tta.ref-sketch/ref-sketch]
-       :tta/table [tta.table/table-test]
+       :tta/table [tta.table-grid/table-grid-test]
        :tta/tube-list [tta.tube-list/tube-list]
        :tta/tube-prefs [tta.tube-prefs/tube-prefs]
        :tta/tab [tta.tab/tab]
