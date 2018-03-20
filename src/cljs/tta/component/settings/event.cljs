@@ -2,6 +2,8 @@
 (ns tta.component.settings.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [day8.re-frame.forward-events-fx]
+            [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.util.common :as au :refer [make-field missing-field
@@ -9,6 +11,7 @@
                                             set-field-number
                                             set-field-temperature
                                             validate-field parse-value]]
+            [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.component.settings.subs :as subs]))
 
@@ -40,12 +43,60 @@
      (assoc-in db data-path (assoc-in data path value)))))
 
 (rf/reg-event-fx
+ ::sync-after-save
+ [(inject-cofx ::inject/sub [::app-subs/plant])]
+ (fn [{:keys [db ::app-subs/plant]} [_ [eid]]]
+   (cond-> {:forward-events {:unregister ::sync-after-save}}
+     (= eid ::app-event/fetch-plant-success)
+     (assoc :db (assoc-in db data-path (:settings plant))))))
+
+(defn archive-std-temp [settings old-settings]
+  (let [std-temp (select-keys old-settings [:target-temp :design-temp])]
+    (if (= (select-keys settings [:target-temp :design-temp]) std-temp)
+      settings ; no archiving
+      (update settings :std-temp-history
+              #(conj (or % []) {:target (:target-temp std-temp)
+                                :design (:design-temp std-temp)})))))
+
+(defn get-pinch-indices [settings]
+  (->> (or (get-in settings [:tf-settings :tube-rows])
+           (get-in settings [:sf-settings :chambers]))
+       (mapv (fn [{:keys [tube-prefs]}]
+               (vec (keep-indexed #(if (= "pin" %2) %1) tube-prefs))))))
+
+(defn archive-pinch [settings old-settings]
+  (let [tps (get-pinch-indices settings)
+        otps (get-pinch-indices old-settings)]
+    (if (= tps otps)
+      settings
+      (update settings :pinch-history
+              #(conj (or % []) {:tubes otps})))))
+
+(defn archive-settings [settings old-settings]
+  (if (empty? old-settings)
+    settings ;; no archiving on first time edit
+    (-> settings
+        (archive-std-temp old-settings)
+        (archive-pinch old-settings))))
+
+(rf/reg-event-fx
  ::upload
- (fn [{:keys [db]} _]
+ [(inject-cofx ::inject/sub [::app-subs/client])
+  (inject-cofx ::inject/sub [::app-subs/plant])]
+ (fn [{:keys [db ::app-subs/client ::app-subs/plant]} _]
    (merge (when @(rf/subscribe [::subs/can-submit?])
-            ;;TODO: raise save fx with busy screen and then show confirmation
-            (js/console.log "todo: upload settings")
-            {})
+            ;; raise save fx with busy screen and then show confirmation
+            {:forward-events {:register ::sync-after-save
+                              :events #{::app-event/fetch-plant-success
+                                        ::ht-event/service-failure}
+                              :dispatch-to [::sync-after-save]}
+             :dispatch [::ht-event/set-busy? true]
+             :service/update-plant-settings
+             {:client-id (:id client)
+              :plant-id (:id plant)
+              :change-id (:change-id plant)
+              :settings (archive-settings (get-in db data-path) (:settings plant))
+              :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db

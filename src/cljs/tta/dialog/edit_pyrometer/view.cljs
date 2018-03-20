@@ -8,6 +8,7 @@
             [cljs-react-material-ui.core :as ui-core]
             [cljs-time.core :as t]
             [cljs-time.format :as tf]
+            [cljs-time.coerce :as tc]
             [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
@@ -15,6 +16,7 @@
             [tta.app.icon :as ic]
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [scroll-box]]
+            [tta.app.calendar :refer [date-picker]]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
@@ -64,12 +66,27 @@
                                  {:max max, :min min, :precision precision}])
        :value value, :valid? (if show-err? valid? true)}])))
 
+(defn to-date-map [date]
+  (let [d (tc/from-date date)]
+    {:year (t/year d)
+     :month (t/month d)
+     :day (t/day d)}))
+
+(defn from-date-map [date]
+  (let [{:keys [year month day]} date]
+    (-> (t/local-date year month day)
+        (t/from-utc-time-zone)
+        (tc/to-date))))
+
 (defmethod prop-field :date [{:keys [label path]}]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
         show-err? @(rf/subscribe [::subs/po-show-error?])]
     (form-field
      label (if show-err? error)
-     [:span "!!!"])))
+     [date-picker {:date (to-date-map value)
+                   :valid? valid?
+                   :on-select #(rf/dispatch [::event/set-po-field path
+                                             (from-date-map %) true])}])))
 
 (defn make-props []
   {:name {:type :text, :wide? true
@@ -79,12 +96,12 @@
                                      "Serial number")}
    :wavelength {:type :decimal, :format #(str % " µm"), :precision 2
                 :label (translate [:pyrometer :wavelength :label] "Wavelength")}
-   :date-of-calibration {:type :date, :format format-date
-                         :label (translate [:pyrometer :date-of-calibration :label]
-                                           "Date of calibration")}
    :tube-emissivity {:type :decimal, :min 0, :max 1, :precision 2
                      :label (translate [:pyrometer :tube-emissivity :label]
-                                       "Tube emissivity")}})
+                                       "Tube emissivity")}
+   :date-of-calibration {:type :date, :format format-date
+                         :label (translate [:pyrometer :date-of-calibration :label]
+                                           "Date of calibration")}})
 
 (defn item [pyro index]
   (let [props (make-props)]
@@ -128,7 +145,7 @@
              {:icon ic/cancel
               :on-click #(rf/dispatch [::event/cancel-pyrometer-edit])}]]]
           (->> [[:name :serial-number]
-                [:wavelength :date-of-calibration :tube-emissivity]]
+                [:wavelength :tube-emissivity :date-of-calibration]]
                (map (fn [ks]
                       (->> ks
                            (map #(vector prop-field

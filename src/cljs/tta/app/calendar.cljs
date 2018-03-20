@@ -403,10 +403,10 @@
         (swap! mystate assoc :date date))
 
       :reagent-render
-      (fn []
+      (fn [{:keys [on-select]}]
         [:div {:style {:display "inline-block" :vertical-align "top"}}
          [app-comp/action-input-box {:disabled? false
-                                     :width "150px"
+                                     :width 100
                                      :label (get-label (:date @mystate))
                                      :action #(swap! mystate assoc :open? true)
                                      :right-icon ic/dropdown
@@ -421,11 +421,12 @@
                                  (fn [{:keys [start]}]
                                    ;; (js/console.log start)
                                    (swap! mystate assoc :date start)
-                                   (swap! mystate assoc :open? false))
+                                   (swap! mystate assoc :open? false)
+                                   (on-select start))
                                  :selection "date"}]])])})))
 
 (defn date-range-picker [{:keys [start end]}]
-  (let [mystate (r/atom {})
+  (let [state (r/atom {})
         get-label (fn [{:keys [start end]}]
                     (str (:day start)
                          " " (if (:month start)
@@ -437,40 +438,43 @@
     (r/create-class
      {:component-did-mount
       (fn [this]
-        (swap! mystate assoc :anchor (dom/dom-node this))
-        (swap! mystate assoc :open? false)
-        (swap! mystate assoc :range {:start start :end end}))
+        (swap! state assoc :anchor (dom/dom-node this))
+        (swap! state assoc :open? false)
+        (swap! state assoc :range {:start start :end end}))
 
       :reagent-render
-      (fn []
+      (fn [{:keys [on-select]}]
         [:div {:style {:display "inline-block"
                        :vertical-align "top"}}
          [app-comp/action-input-box
           {:disabled? false
            :width "200px"
-           :label (get-label (:range @mystate))
-           :action #(swap! mystate assoc :open? true)
+           :label (get-label (:range @state))
+           :action #(swap! state assoc :open? true)
            :left-icon ic/nav-left
            :left-action (fn [_]
-                          (swap! mystate update-in [:range :start]
+                          (swap! state update-in [:range :start]
                                  add-days {:days 0 :months 0 :years 0})
-                          (swap! mystate update-in [:range :end]
-                                 add-days {:days 0 :months 0 :years 0}))
+                          (swap! state update-in [:range :end]
+                                 add-days {:days 0 :months 0 :years 0})
+                          (on-select (:range @state)))
            :right-icon ic/nav-right
            :right-action (fn [_]
-                           (swap! mystate update-in [:range :start]
+                           (swap! state update-in [:range :start]
                                   add-days {:days 2 :months 0 :years 0})
-                           (swap! mystate update-in [:range :end]
-                                  add-days {:days 2 :months 0 :years 0}))}]
-         (if (:open? @mystate)
+                           (swap! state update-in [:range :end]
+                                  add-days {:days 2 :months 0 :years 0})
+                           (on-select (:range @state)))}]
+         (if (:open? @state)
            [app-comp/popover {:open true
-                              :on-request-close #(swap! mystate assoc :open? false)
-                              :anchor-el (:anchor @mystate)
+                              :on-request-close #(swap! state assoc :open? false)
+                              :anchor-el (:anchor @state)
                               :anchor-origin {:horizontal "right", :vertical "bottom"}
                               :target-origin {:horizontal "right", :vertical "top"}}
             [calendar-component {:selection-complete-event
                                  (fn [r]
                                    ;; (js/console.log r)
-                                   (swap! mystate assoc :range r)
-                                   (swap! mystate assoc :open? false))
+                                   (swap! state assoc :range r)
+                                   (swap! state assoc :open? false)
+                                   (on-select r))
                                  :selection "range"}]])])})))

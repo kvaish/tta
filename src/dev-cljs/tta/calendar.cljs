@@ -1,13 +1,24 @@
 (ns tta.calendar
-  (:require [tta.app.calendar :refer [date-picker
+  (:require [reagent.core :as r]
+            [tta.app.calendar :refer [date-picker
                                       date-range-picker
                                       calendar-component]]))
 
+(defonce state (r/atom
+                {:start {:day 2, :month 1, :year 2018}
+                 :end {:day 30, :month 4, :year 2018}}))
+
 (defn datepickers-test []
   [:div
-   [date-picker {:date nil}]
-   [date-range-picker {:start nil
-                       :end nil}]])
+   [date-picker {:date (:start @state)
+                 :max {:day 20, :month 3, :year 2018}
+                 :min {:day 1, :month 1, :year 2018}
+                 :on-select #(swap! state assoc :start %)}]
+   [date-range-picker {:start (:start @state)
+                       :end (:end @state)
+                       :on-select #(swap! state assoc
+                                          :start (:start %)
+                                          :end (:end %))}]])
 
 (defn calendar-test []
   [:div
