@@ -44,7 +44,8 @@
  (fn [{:keys [db]} _]
    (merge (when @(rf/subscribe [::subs/can-submit?])
             ;;TODO: raise save fx with busy screen and then show confirmation
-            (js/console.log "todo: upload settings"))
+            (js/console.log "todo: upload settings")
+            {})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db
@@ -96,3 +97,8 @@
          missing? (not (some #(= pid (:id %)) pyrometers))]
      {:db (assoc-in db data-path (assoc data :pyrometers pyrometers))
       :dispatch-n (list (if missing? [::set-field [:pyrometer-id] nil true]))})))
+
+(rf/reg-event-db
+ ::set-tube-prefs
+ (fn [db [_ tube-prefs]]
+   (js/console.log tube-prefs) db))

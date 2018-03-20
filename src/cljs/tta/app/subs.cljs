@@ -39,3 +39,13 @@
  ::temp-unit
  :<- [::plant]
  (fn [plant _] (get-in plant [:settings :temp-unit])))
+
+(rf/reg-sub
+ ::config?
+ :<- [::plant]
+ (fn [plant _]
+   (let [{:keys [config]} plant]
+     (case (:firing config)
+       "top" (some? (not-empty (:tf-config config)))
+       "side" (some? (not-empty (:sf-config config)))
+       false))))

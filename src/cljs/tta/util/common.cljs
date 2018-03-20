@@ -1,7 +1,7 @@
 (ns tta.util.common
   (:require [clojure.string :as str]
             [re-frame.core :as rf]
-            [cljsjs.react-motion]
+            [cljsjs.react-motion] ;; required to ensure load
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
             [reagent.core :as r]))
@@ -60,13 +60,12 @@
 
 (defn make-field [value]
   {:valid? true
-   :error nil
    :value value})
 
 (defn missing-field []
   {:value nil, :valid? false
-   :error (translate [:validation :hint :required]
-                     "* Required field")})
+   :error #(translate [:validation :hint :required]
+                      "* Required field")})
 
 ;; validation mulit-method (fn validate [field params])
 ;; each one will check further only if :valid? is true, otherwise skip it
@@ -81,8 +80,8 @@
   [{:keys [value] :as field} _]
   (if (not (re-matches #"\d+" value))
     (assoc field
-           :error (translate [:validation :hint :number]
-                             "Please enter a number only")
+           :error #(translate [:validation :hint :number]
+                              "Please enter a number only")
            :valid? false)
     ;; pass through
     field))
@@ -96,8 +95,8 @@
                            #"(\d+(\.\d*)?)|(\.\d+)")
                          value))
       (assoc field
-             :error (translate [:validation :hint :decimal]
-                               "Please enter a decimal number only")
+             :error #(translate [:validation :hint :decimal]
+                                "Please enter a decimal number only")
              :valid? false)
       ;; pass through
       field)))
@@ -106,9 +105,9 @@
   [{:keys [value] :as field} {:keys [max]}]
   (if (> value max)
     (assoc field
-           :error (translate [:validation :hint :max-number]
-                             "Please enter a number smaller than {max}"
-                             {:max max})
+           :error #(translate [:validation :hint :max-number]
+                              "Please enter a number ≤ {max}"
+                              {:max max})
            :valid? false)
     ;; pass through
     field))
@@ -117,9 +116,9 @@
   [{:keys [value] :as field} {:keys [min]}]
   (if (< value min)
     (assoc field
-           :error (translate [:validation :hint :min-number]
-                             "Please enter a number greater than {min}"
-                             {:min min})
+           :error #(translate [:validation :hint :min-number]
+                              "Please enter a number ≥ {min}"
+                              {:min min})
            :valid? false)
     ;; pass through
     field))
@@ -181,23 +180,25 @@
       f? (update-in form-path assoc-in path field)
       d? (assoc-in data-path (assoc-in data path value)))))
 
-(defn set-field-number [db path value data data-path form-path required?
-                        {:keys [max min]}]
-  (let [[d? value f? field]
-        (if-let [value (not-empty value)]
-          ;; has value, check and update
-          (let [f (validate-field (make-field value) {:type :number})
-                v (parse-value f {:type :number})
-                f2 (validate-field v
-                                   (if max {:type :max-number, :max max})
-                                   (if min {:type :min-number, :min min}))]
-            ;; update data when valid and block typing when invalid number
-            [(:valid? f2) (:value v) (:valid? f) (assoc f2 :value value)])
-          ;; blank!
-          (treat-blank required?))]
-    (cond-> db
-      f? (update-in form-path assoc-in path field)
-      d? (assoc-in data-path (assoc-in data path value)))))
+(defn set-field-number
+  ([db path value data data-path form-path required?]
+   (set-field-number db path value data data-path form-path required? nil))
+  ([db path value data data-path form-path required? {:keys [max min]}]
+   (let [[d? value f? field]
+         (if-let [value (not-empty value)]
+           ;; has value, check and update
+           (let [f (validate-field (make-field value) {:type :number})
+                 v (parse-value f {:type :number})
+                 f2 (validate-field v
+                                    (if max {:type :max-number, :max max})
+                                    (if min {:type :min-number, :min min}))]
+             ;; update data when valid and block typing when invalid number
+             [(:valid? f2) (:value v) (:valid? f) (assoc f2 :value value)])
+           ;; blank!
+           (treat-blank required?))]
+     (cond-> db
+       f? (update-in form-path assoc-in path field)
+       d? (assoc-in data-path (assoc-in data path value))))))
 
 (defn set-field-decimal [db path value data data-path form-path required?
                          {:keys [max min precision]}]

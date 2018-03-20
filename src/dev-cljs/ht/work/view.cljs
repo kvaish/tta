@@ -18,7 +18,8 @@
             [tta.ref-sketch]
             [tta.tube-list]
             [tta.tube-prefs]
-            [tta.tab]))
+            [tta.tab]
+            [tta.wall-list]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -37,5 +38,6 @@
        :tta/tube-list [tta.tube-list/tube-list]
        :tta/tube-prefs [tta.tube-prefs/tube-prefs]
        :tta/tab [tta.tab/tab]
+       :tta/wall-list [tta.wall-list/wall-list]
        ;; default
        [:p "empty workspace"])]))

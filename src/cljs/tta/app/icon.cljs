@@ -158,3 +158,12 @@ m4,0 v-12 m4,0 v12"}]]))
    [icon props
     [:path {:d "M7,9 h3 v-3 h7 v12 h-10 v-9 l3,-3"}]
     [:path {:d "M10,11 l5,5 m0,-5 l-5,5"}]]))
+
+(defn license
+  ([] (license nil))
+  ([props]
+   [icon props
+    [:path {:d "M3,3 h15 v3 M3,3 v18 h8"}]
+    [:path {:d "M5,10 h5 m-5,3 h5 m-5,3 h5"}]
+    [:circle {:cx "17" :cy "12" :r "5"}]
+    [:path {:d "M17,12 m-3,4 l-1,7 l4,-3 l4,3 l-1,-7"}]]))

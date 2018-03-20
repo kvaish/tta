@@ -1,4 +1,4 @@
-(defproject tta "1.0.0.D.1"
+(defproject tta "1.0.0.D.2"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.64"] ;;  "1.9.946"
                  [org.clojure/core.async "0.4.474"] ;; "0.3.465"
@@ -7,7 +7,8 @@
                                cljsjs/react-dom
                                cljsjs/react-dom-server]]
                  [re-frame "0.10.5"] ;; "0.10.2"
-                 ;; [cljsjs/material-ui "1.0.0-beta.33-0"] ;; "0.19.2-0"
+                 [re-frame-utils "0.1.0"]
+                 [day8.re-frame/forward-events-fx "0.0.5"]
                  [cljsjs/material-ui "0.19.2-0"]
                  [cljs-react-material-ui "0.2.50"
                   :exclusions [org.clojure/clojure
@@ -45,7 +46,8 @@
   :figwheel {:css-dirs ["resources/public/css"]
              :server-port 3450}
 
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
+                 :timeout 120000}
 
   :aliases {"build" ["with-profile" "prd,user"
                      ["do"

@@ -27,7 +27,8 @@
        [:span (use-sub-style style :sub-title) sub-title]]
       (into [:div (use-sub-style style :head-right)] actions)]
      [:div (use-sub-style style :body)
-      [body body-size]]]))
+      (if body
+        [body body-size])]]))
 
 (defn vertical-line [{:keys [height]}]
   [:div (use-style (style/vertical-line height))])

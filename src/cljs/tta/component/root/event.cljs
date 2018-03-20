@@ -10,7 +10,9 @@
   {:dataset-creator {}
    :dataset-analyzer {}
    :trendline {}
-   :config {}
+   :config {:event/init [:tta.component.config.event/init]
+            :subs/warn-on-close? [:tta.component.config.subs/warn-on-close?]
+            :event/close [:tta.component.config.event/close]}
    :settings {:event/init [:tta.component.settings.event/init]
               :subs/warn-on-close? [:tta.component.settings.subs/warn-on-close?]
               :event/close [:tta.component.settings.event/close]}

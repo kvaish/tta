@@ -27,13 +27,15 @@
   [:div (use-sub-style style :form-cell)
    [:span (use-sub-style style :form-label) label]
    widget
-   [:span (use-sub-style style :form-error) error]])
+   [:span (use-sub-style style :form-error)
+    (if (fn? error) (error) error)]])
 
 (defn form-cell-2 [style error label widget]
   [:div (use-sub-style style :form-cell-2)
    [:span (use-sub-style style :form-label) label]
    widget
-   [:span (use-sub-style style :form-error) error]])
+   [:span (use-sub-style style :form-error)
+    (if (fn? error) (error) error)]])
 
 (defn show-error? [] @(rf/subscribe [::subs/show-error?]))
 
@@ -152,17 +154,26 @@
        [tube-prefs])
      ]))
 
+(defn no-config [{:keys [width height]}]
+  [:div {:style {:width width, :height height}}
+   [:div (use-style style/no-config)
+    "Missing configuration!"]])
+
 (defn settings []
-  [app-view/layout-main
-   (translate [:settings :title :text] "Settings")
-   (translate [:settings :title :sub-text] "Reformer preferences")
-   [[app-comp/button {:disabled? (if (show-error?)
-                                   (not @(rf/subscribe [::subs/can-submit?]))
-                                   (not @(rf/subscribe [::subs/dirty?])))
-                      :icon ic/upload
-                      :label (translate [:action :upload :label] "Upload")
-                      :on-click #(rf/dispatch [::event/upload])}]
-    [app-comp/button {:icon ic/cancel
-                      :label (translate [:action :cancel :label] "Cancel")
-                      :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
-   body])
+  (let [config? @(rf/subscribe [::app-subs/config?])]
+    [app-view/layout-main
+     (translate [:settings :title :text] "Settings")
+     (translate [:settings :title :sub-text] "Reformer preferences")
+     [(if config?
+        [app-comp/button {:disabled? (if (show-error?)
+                                       (not @(rf/subscribe [::subs/can-submit?]))
+                                       (not @(rf/subscribe [::subs/dirty?])))
+                          :icon ic/upload
+                          :label (translate [:action :upload :label] "Upload")
+                          :on-click #(rf/dispatch [::event/upload])}])
+      [app-comp/button {:icon ic/cancel
+                        :label (translate [:action :cancel :label] "Cancel")
+                        :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
+     (if config?
+       body
+       no-config)]))

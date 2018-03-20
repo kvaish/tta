@@ -20,7 +20,7 @@
    (reduce #(conj %1 (:tube-prefs %2))
            []
            (or (get-in settings [:sf-settings :chambers])
-               (get-in settings [:tf-settings :rows])))))
+               (get-in settings [:tf-settings :tube-rows])))))
 
 (rf/reg-sub
  ::data

@@ -17,8 +17,15 @@
  ::close
  (fn [db [_ options]]
    (update-in db dlg-path merge {:data nil}
-                options {:open? false})
-   ))
+              options {:open? false})))
+
+(rf/reg-event-fx
+ ::submit
+ (fn [_  _]
+   (let [data @(rf/subscribe [::subs/data])]
+     {:dispatch-n (list
+                   [:tta.component.settings.event/set-tube-prefs data]
+                   [::close])})))
 
 (rf/reg-event-db
  ::set-field
@@ -32,6 +39,13 @@
  ::set-data
  (fn [db [_ data]]
    (assoc-in db [:dialog :tube-prefs :data] data)))
+
+(rf/reg-event-db
+ ::clear-tube-prefs
+ (fn [db [_ i]]
+   (let [c (count (get-in db [:dialog :tube-prefs :data i]))] 
+     (assoc-in db [:dialog :tube-prefs :data i]
+               (vec (take c (repeat nil)))))))
 
 (rf/reg-event-db
  ::set-options

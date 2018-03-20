@@ -82,26 +82,28 @@
 
 (rf/reg-sub
  ::warn-on-close?
+ :<- [::app-subs/config?]
  :<- [::dirty?]
  :<- [::valid?]
  :<- [:tta.dialog.edit-pyrometer.subs/warn-on-close?]
- (fn [[dirty? valid? pyro-warn?] _]
-   (or dirty? (not valid?)
-       pyro-warn?)))
+ (fn [[config? dirty? valid? pyro-warn?] _]
+   (if config?
+     (or dirty? (not valid?)
+         pyro-warn?))))
 
 (rf/reg-sub
  ::has-gold-cup-emissivity?
  :<- [::data]
  (fn [data _]
    (some :gold-cup-emissivity (or (get-in data [:sf-settings :chambers])
-                                (get-in data [:tf-settings :rows])))))
+                                (get-in data [:tf-settings :tube-rows])))))
 
 (rf/reg-sub
  ::has-custom-emissivity?
  :<- [::data]
  (fn [data _]
    (some :custom-emissivity (or (get-in data [:sf-settings :chambers])
-                               (get-in data [:tf-settings :rows])))))
+                               (get-in data [:tf-settings :tube-rows])))))
 
 (rf/reg-sub
  ::emissivity-types

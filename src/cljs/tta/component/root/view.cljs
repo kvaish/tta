@@ -18,11 +18,12 @@
             [tta.component.root.style :as style]
             [tta.component.root.subs :as subs]
             [tta.component.root.event :as event]
-            [tta.component.home.view :refer [home]]
-            [tta.component.settings.view :refer [settings]]
             [tta.dialog.user-agreement.view :refer [user-agreement]]
             [tta.dialog.choose-client.view :refer [choose-client]]
-            [tta.dialog.choose-plant.view :refer [choose-plant]]))
+            [tta.dialog.choose-plant.view :refer [choose-plant]]
+            [tta.component.home.view :refer [home]]
+            [tta.component.config.view :refer [config]]
+            [tta.component.settings.view :refer [settings]]))
 
 ;;; language-menu ;;;
 
@@ -54,7 +55,11 @@
 
 (defn fa-icon [class]
   (r/as-element
-   [ui/font-icon {:class-name class}]))
+    [ui/font-icon {:class-name class}]))
+
+(defn svg-icon [src]
+  (r/as-element
+    [:img {:src src}]))
 
 (defn as-left-icon [icon]
   (r/as-element [:span [icon {:style {:position "absolute"}}]]))
@@ -105,8 +110,11 @@
   (let [anchor-el (:settings @(:anchors props))
         content-id @(rf/subscribe [::subs/active-content])
         allow-content? @(rf/subscribe [::subs/content-allowed? content-id])
-        context-menu (not-empty (if allow-content?
-                                  (get-in settings-menu-data [:middle content-id])))]
+        context-menu (let [f (if allow-content?
+                               (get-in settings-menu-data [:middle content-id]))]
+                       (->> (if (fn? f) (f) f)
+                            (remove nil?)
+                            (not-empty)))]
     [app-comp/popover
      {:open @(rf/subscribe [::subs/menu-open? :settings])
       :desktop true
@@ -114,9 +122,9 @@
       ;; :style {:position "fixed" :top 10000}
       :anchor-el anchor-el
       :anchor-origin {:horizontal "right"
-                               :vertical "bottom"}
+                      :vertical "bottom"}
       :target-origin {:horizontal "right"
-                               :vertical "top"}
+                      :vertical "top"}
       :on-request-close #(rf/dispatch [::event/set-menu-open? :settings false])}
      [ui/menu
       ;; top section
@@ -125,9 +133,9 @@
       ;; middle (context) section
       (if context-menu
         (list
-         [ui/divider {:key :div-middle}]
-         (settings-sub-menu {:key :middle-sub-menu
-                             :menu-items context-menu})))
+          [ui/divider {:key :div-middle}]
+          (settings-sub-menu {:key :middle-sub-menu
+                              :menu-items context-menu})))
 
       ;; bottom section
       [ui/divider]
@@ -176,8 +184,9 @@
                    :font-size "18px"}} "True"]
    [:span {:style {:font-weight "300"
                    :font-size "18px"}} "Temp"]
-   [:span {:style {:font-size "12px"
-                   :vertical-align "text-top"}} "™"]])
+   [:span {:style {:font-size "8px"
+                   :font-weight 700
+                   :vertical-align "text-top"}} "TM"]])
 
 (defn hot-links []
   [:div (use-style style/hot-links)
@@ -185,25 +194,25 @@
      (if (= :home active-content)
        [:span]
        (doall
-        (map
-         (fn [[id label target]]
-           (let [target (or target id)
-                 active? (= target active-content)]
-             ^{:key id}
-             [:a
-              (merge (use-sub-style style/hot-links
-                                    (if active? :active-link :link))
-                     {:href "#"
-                      :on-click (if-not active?
-                                  #(rf/dispatch [::event/activate-content target]))})
-              label]))
-         [[:home
-           (translate [:quick-launch :home :label] "Home")]
-          [:dataset
-           (translate [:quick-launch :dataset :label] "Dataset")
-           @(rf/subscribe [::subs/active-dataset-action])]
-          [:trendline
-           (translate [:quick-launch :trendline :label] "Trendline")]]))))])
+         (map
+           (fn [[id label target]]
+             (let [target (or target id)
+                   active? (= target active-content)]
+               ^{:key id}
+               [:a
+                (merge (use-sub-style style/hot-links
+                                      (if active? :active-link :link))
+                       {:href "#"
+                        :on-click (if-not active?
+                                    #(rf/dispatch [::event/activate-content target]))})
+                label]))
+           [[:home
+             (translate [:quick-launch :home :label] "Home")]
+            [:dataset
+             (translate [:quick-launch :dataset :label] "Dataset")
+             @(rf/subscribe [::subs/active-dataset-action])]
+            [:trendline
+             (translate [:quick-launch :trendline :label] "Trendline")]]))))])
 
 (defn messages [] ;; TODO: define comp for message and warning
   [:div (use-style style/messages)])
@@ -258,11 +267,11 @@
          :dataset-analyzer [:div "dataset-analyzer"]
          :trendline        [:div "trendline"]
          ;; secondary
-         :config           [:div "config"]
-         :settings         [settings]
-         :gold-cup         [:div "goldcup"]
-         :config-history   [:div "config-history"]
-         :logs             [:div "logs"])
+         :config            [config]
+         :settings          [settings]
+         :goldcup           [:div "goldcup"]
+         :config-history    [:div "config-history"]
+         :logs              [:div "logs"])
        ;; have no rights!!
        [no-access])]))
 

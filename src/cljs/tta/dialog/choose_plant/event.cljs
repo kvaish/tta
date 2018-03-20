@@ -2,15 +2,17 @@
 (ns tta.dialog.choose-plant.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [day8.re-frame.forward-events-fx]
+            [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::open
- (fn [db [_ options]]
-   (let [options (update-in options [:data :client]
-                            #(or % @(rf/subscribe [:tta.app.subs/client])))]
-     (update-in db [:dialog :choose-plant] merge options {:open? true}))))
+ [(inject-cofx ::inject/sub [:tta.app.subs/client])]
+ (fn [{:keys [db tta.app.subs/client]} [_ options]]
+   (let [options (update-in options [:data :client] #(or % client))]
+     {:db (update-in db [:dialog :choose-plant] merge options {:open? true})})))
 
 (rf/reg-event-db
  ::close
@@ -53,10 +55,11 @@
 
 (rf/reg-event-fx
  ::select-plant
- (fn [{:keys [db]} [_ plant]]
+ [(inject-cofx ::inject/sub [:ht.app.subs/auth-claims])
+  (inject-cofx ::inject/sub [:tta.app.subs/user])]
+ (fn [{:keys [db ht.app.subs/auth-claims tta.app.subs/user]} [_ plant]]
    (let [client (get-in db [:dialog :choose-plant :data :client])
-         {:keys [id]} @(rf/subscribe [:ht.app.subs/auth-claims])
-         user @(rf/subscribe [:tta.app.subs/user])
+         {:keys [id]} auth-claims
          new? (nil? user)
          user (assoc user :id id
                      :client-id (:id client)
@@ -71,4 +74,14 @@
 (rf/reg-event-fx
  ::configure-plant
  (fn [_ [_ plant]]
-   (js/alert (str "Configure plant: " (:name plant) ". Not implemented!"))))
+   {:dispatch [::select-plant plant]
+    :forward-events {:register ::configure
+                     :events #{:tta.app.event/fetch-plant-success
+                               :ht.app.event/service-failure}
+                     :dispatch-to [::open-configure-plant]}}))
+
+(rf/reg-event-fx
+ ::open-configure-plant
+ (fn [_ _]
+   {:dispatch-n (list [:tta.component.root.event/activate-content :config])
+    :forward-events {:unregister ::configure}}))
