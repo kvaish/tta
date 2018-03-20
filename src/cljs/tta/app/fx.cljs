@@ -1,5 +1,6 @@
 (ns tta.app.fx
-  (:require [re-frame.core :as rf]
+  (:require [clojure.string :as str]
+            [re-frame.core :as rf]
             [ht.app.event :as ht-event]
             [tta.util.service :as svc]
             [tta.app.event :as event]
@@ -46,3 +47,45 @@
      :plant-id plant-id
      :evt-success [::event/fetch-plant-success]
      :evt-failure [::ht-event/service-failure true]})))
+
+(rf/reg-fx
+ :service/save-client
+ (fn [{:keys [client new? evt-success evt-failure]}]
+   (svc/save-client
+    {:client client
+     :new? new?
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/create-plant
+ (fn [{:keys [client-id plant evt-success evt-failure]}]
+   (svc/create-plant
+    {:client-id client-id
+     :plant plant
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/update-plant-config
+ (fn [{:keys [client-id plant-id change-id config
+             evt-success evt-failure]}]
+   (svc/update-plant-config
+    {:client-id client-id
+     :plant-id plant-id
+     :update-config {:change-id change-id
+                     :config config}
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/update-plant-settings
+ (fn [{:keys [client-id plant-id change-id settings
+             evt-success evt-failure]}]
+   (svc/update-plant-settings
+    {:client-id client-id
+     :plant-id plant-id
+     :update-settings {:change-id change-id
+                       :settings settings}
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))

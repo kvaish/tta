@@ -18,7 +18,12 @@
           :search-clients "/api/client"
           :fetch-plant "/api/client/:client-id/plant/:plant-id"
           :fetch-client-plants "/api/client/:client-id/plant"
-          :fetch-client-settings "/"}}))
+          :fetch-client-settings "/"
+          :create-client "/api/client"
+          :update-client "/api/client/:client-id"
+          :create-plant "/api/client/:client-id/plant"
+          :update-plant-config "/api/client/:client-id/plant/:plant-id/config"
+          :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"}}))
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -81,4 +86,45 @@
         :on-success (dispatch-many evt-success :sap-plant)
         :evt-failure evt-failure}))
 
+(defn save-client [{:keys [client new?
+                           evt-success evt-failure]}]
+  (run (merge {:data {:json-params (to-api :client client)}
+               :evt-failure evt-failure}
+              (if new?
+                {:method http/post
+                 :api-key :create-client
+                 :on-success (dispatch-one evt-success :res/create)}
+                {:method http/put
+                 :api-key :update-client
+                 :api-params {:client-id (:id client)}
+                 :on-success (dispatch-one evt-success :res/update)}))))
 
+(defn create-plant [{:keys [plant
+                            client-id
+                            evt-success evt-failure]}]
+  (run {:method http/post
+        :api-key :create-plant
+        :api-params {:client-id client-id}
+        :data {:json-params (to-api :plant plant)}
+        :on-success (dispatch-one evt-success :res/create)
+        :evt-failure evt-failure}))
+
+(defn update-plant-config [{:keys [update-config
+                                   client-id plant-id
+                                   evt-success evt-failure]}]
+  (run {:method http/put
+        :api-key :update-plant-config
+        :api-params {:client-id client-id, :plant-id plant-id}
+        :data {:json-params (to-api :plant/update-config update-config)}
+        :on-success (dispatch-one evt-success :res/update)
+        :evt-failure evt-failure}))
+
+(defn update-plant-settings [{:keys [update-settings
+                                     client-id plant-id
+                                     evt-success evt-failure]}]
+  (run {:method http/put
+        :api-key :update-plant-settings
+        :api-params {:client-id client-id, :plant-id plant-id}
+        :data {:json-params (to-api :plant/update-settings update-settings)}
+        :on-success (dispatch-one evt-success :res/update)
+        :evt-failure evt-failure}))

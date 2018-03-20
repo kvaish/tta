@@ -1,32 +1,35 @@
-(defproject tta "1.0.0.D.1"
+(defproject tta "1.0.0.D.2"
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.9.946"]
-                 [org.clojure/core.async "0.3.465"]
+                 [org.clojure/clojurescript "1.10.64"] ;;  "1.9.946"
+                 [org.clojure/core.async "0.4.474"] ;; "0.3.465"
                  [reagent "0.7.0"
                   :exclusions [cljsjs/react
                                cljsjs/react-dom
                                cljsjs/react-dom-server]]
-                 [re-frame "0.10.2"]
+                 [re-frame "0.10.5"] ;; "0.10.2"
+                 [re-frame-utils "0.1.0"]
+                 [day8.re-frame/forward-events-fx "0.0.5"]
                  [cljsjs/material-ui "0.19.2-0"]
                  [cljs-react-material-ui "0.2.50"
                   :exclusions [org.clojure/clojure
                                cljsjs/material-ui]]
-                 [cljsjs/react "16.1.1-0"]
-                 [cljsjs/react-dom "16.1.1-0"]
-                 [cljsjs/react-dom-server "16.1.1-0"]
-                 [garden "1.3.3"]
-                 [stylefy "1.1.0"
+                 [cljsjs/react "16.2.0-3"] ;; "16.1.1-0"
+                 [cljsjs/react-dom "16.2.0-3"] ;; "16.1.1-0"
+                 [cljsjs/react-dom-server "16.2.0-3"] ;; "16.1.1-0"
+                 [garden "1.3.4"] ;; "1.3.3"
+                 [stylefy "1.2.0" ;; "1.1.0"
                   :exclusions [garden]]
                  [cljs-http "0.1.44"
                   :exclusions [com.cognitect/transit-cljs]]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljsjs/d3 "4.12.0-0"]
+                 [cljsjs/react-motion "0.5.0-0"]
                  [cljsjs/filesaverjs "1.3.3-0"]
                  [com.cognitect/transit-cljs "0.8.243"]
-                 [figwheel-sidecar "0.5.14"
+                 [figwheel-sidecar "0.5.15" ;; "0.5.14"
                   :exclusions [org.clojure/tools.nrepl]]]
 
-  :plugins [[lein-figwheel "0.5.14"
+  :plugins [[lein-figwheel "0.5.15" ;; "0.5.14"
              :exclusions [org.clojure/clojure]]
             [lein-cljsbuild "1.1.7"]
             [lein-garden "0.3.0"
@@ -43,21 +46,26 @@
   :figwheel {:css-dirs ["resources/public/css"]
              :server-port 3450}
 
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
+                 :timeout 120000}
 
   :aliases {"build" ["with-profile" "prd,user"
                      ["do"
                       ["clean"]
                       ["run" "-m" "ht.exports"]
                       ["garden" "once"]
-                      ["cljsbuild" "once" "min"]]]}
+                      ["cljsbuild" "once" "min"]]]
+            "start" ["do"
+                     ["clean"]
+                     ["garden" "once"]
+                     ["repl"]]}
 
   :source-paths ["src/clj" "src/cljc"]
 
   :profiles
   {:dev
-   {:dependencies [[binaryage/devtools "0.9.8"]
-                   [re-frisk "0.5.2"
+   {:dependencies [[binaryage/devtools "0.9.9"] ;; "0.9.8"
+                   [re-frisk "0.5.3" ;; "0.5.2"
                     :exclusions [org.clojure/clojure]]
                    [com.cemerick/piggieback "0.2.2"]
                    [org.clojure/data.json "0.2.6"

@@ -4,19 +4,29 @@
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.util.interop :as i]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.app.icon :as ic]
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.component.home.style :as style]
             [tta.component.home.subs :as subs]
-            [tta.component.home.event :as event]
-            [ht.util.interop :as i]))
+            [tta.component.home.event :as event]))
+
+(defn as-left-icon [icon]
+  (r/as-element [:span [icon {:style {:position "absolute"}}]]))
 
 ;; context menu to be shown in settings menu
-(def context-menu [])
+(defn context-menu []
+  (let [topsoe? @(rf/subscribe [::ht-subs/topsoe?])]
+    [(if-not topsoe?
+       {:id :license
+        :icon (as-left-icon ic/license)
+        :label-fn #(translate [:home :menu :license] "License")
+        :event-id ::event/show-license})]))
 
 (defn card [props]
   (let [{:keys [id primary? access on-select title buttons icon desc]} props

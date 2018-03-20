@@ -17,7 +17,10 @@
             [tta.scroll]
             [tta.ref-sketch]
             [tta.calendar]
-            [tta.datepickers]))
+            [tta.tube-list]
+            [tta.tube-prefs]
+            [tta.tab]
+            [tta.wall-list]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -34,6 +37,10 @@
        :tta/scroll [tta.scroll/scroll-test]
        :tta/ref-sketch [tta.ref-sketch/ref-sketch]
        :tta/calendar [tta.calendar/calendar-test]
-       :tta/datepickers [tta.datepickers/datepickers-test]
+       :tta/datepickers [tta.calendar/datepickers-test]
+       :tta/tube-list [tta.tube-list/tube-list]
+       :tta/tube-prefs [tta.tube-prefs/tube-prefs]
+       :tta/tab [tta.tab/tab]
+       :tta/wall-list [tta.wall-list/wall-list]
        ;; default
        [:p "empty workspace"])]))

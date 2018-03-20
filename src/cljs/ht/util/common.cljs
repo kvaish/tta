@@ -88,7 +88,7 @@ none matched, returns nil."
 
 (defn get-control-pos [e]
   (let [cpos (if-let [ts (i/oget e :touches)]
-               (first ts)
+               (i/ocall ts :item 0)
                e)]
     {:page-x (i/oget cpos :pageX)
      :page-y (i/oget cpos :pageY)}))
@@ -125,3 +125,26 @@ none matched, returns nil."
                      (js/saveAs blob filename)
                      (put! ret-chan :success))))
     ret-chan))
+
+(defn tooltip-pos
+  "checks where to put the tooltip around the anchor and
+  returns tooltip position (x,y,top?,left?)  
+  view top-left: vx xy (default: 0 0)  
+  anchor rectangle: ax, ay, aw, ah  
+  tooltip size: tw, th  
+  align anchor and tooltip by x offset: adx, tdx  
+  vertical margin between anchor and tooltip: tym  
+  defaults: adx: middle of anchor, tdx: adx, tym: 0"
+  [{:keys [vx vy
+           ax ay aw ah adx
+           tw th tdx tym]
+    :or {tym 0, vx 0, vy 0}}]
+  (let [adx (or adx (/ aw 2))
+        tdx (or tdx adx)
+        x (- (+ ax aw tdx) adx tw)
+        [x left?] (if (<= vx x) [x true]
+                      [(- (+ ax adx) tdx) false])
+        y (- ay tym th)
+        [y top?] (if (<= vy y) [y true]
+                     [(+ ay ah tym) false])]
+    {:x x, :y y, :top? top?, :left? left?}))

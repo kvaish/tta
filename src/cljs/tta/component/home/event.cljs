@@ -5,6 +5,12 @@
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]))
 
+(rf/reg-event-fx
+ ::show-license
+ (fn [_ _]
+   {:dispatch [:tta.dialog.user-agreement.event/open
+               {:then {:on-decline [::ht-event/exit]}}]}))
+
 (rf/reg-event-db
  ::nav-data-entry
  (fn [db _]
