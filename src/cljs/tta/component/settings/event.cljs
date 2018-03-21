@@ -152,4 +152,12 @@
 (rf/reg-event-db
  ::set-tube-prefs
  (fn [db [_ tube-prefs]]
-   (js/console.log tube-prefs) db))
+   (let [firing (get-in @(rf/subscribe [:tta.app.subs/plant]) [:config :firing])
+         old-prefs (or (get-in db (conj data-path :sf-settings :chambers))
+                       (get-in db (conj data-path :tf-settings :tube-rows)))
+         new-prefs (mapv (fn [col1 col2]
+                           (assoc-in col1 [:tube-prefs] col2)) old-prefs tube-prefs)]
+     (assoc-in db (case firing
+                    "side" (conj data-path :sf-settings :chambers)
+                    "top" (conj data-path :tf-settings :tube-rows))
+               new-prefs))))

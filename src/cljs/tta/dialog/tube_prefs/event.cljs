@@ -43,10 +43,11 @@
 (rf/reg-event-db
  ::clear-tube-prefs
  (fn [db [_ i]]
-   (let [c (count (get-in db [:dialog :tube-prefs :data i]))] 
-     (assoc-in db [:dialog :tube-prefs :data i]
-               (vec (take c (repeat nil)))))))
-
+   (let [tube-prefs @(rf/subscribe [:tta.dialog.tube-prefs.subs/data])
+         c (count (get-in db [:dialog :tube-prefs :data i]))] 
+     (assoc-in db [:dialog :tube-prefs :data]
+               (assoc tube-prefs i 
+                      (vec (take c (repeat nil))))))))
 (rf/reg-event-db
  ::set-options
  (fn [db [_ options]]

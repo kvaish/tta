@@ -36,12 +36,9 @@
 
 (rf/reg-sub
  ::field
- :<- [::src-data]
  :<- [::data]
- (fn [[src-data data] [_ path]]
-   (or(get-in data path)
-    (get-in src-data  path))))
-
+ (fn [data [_ path]]
+   (get-in data path)))
 
 (rf/reg-sub
  ::dirty?
