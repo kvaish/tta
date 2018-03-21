@@ -118,7 +118,7 @@
      (translate [:settings :min-tubes% :label] "Minimum % of tubes to measure")
      [app-comp/text-input
       {:on-change #(rf/dispatch [::event/set-number [:min-tubes%] %
-                                 true {:max 100, :min 20}])
+                                 true {:max 100, :min 1}])
        :value value, :valid? valid?}]]))
 
 (defn tube-pref [style]

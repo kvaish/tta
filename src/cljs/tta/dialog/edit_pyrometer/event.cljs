@@ -2,16 +2,18 @@
 (ns tta.dialog.edit-pyrometer.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [cljs-time.core :as t]
+            [cljs-time.coerce :as tc]
+            [ht.util.interop :as i]
             [ht.app.subs :refer [translate]]
+            [ht.app.event :as ht-event]
             [tta.util.common :as au :refer [make-field missing-field
                                             set-field
                                             set-field-text
                                             set-field-decimal
                                             validate-field parse-value]]
-            [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
-            [tta.dialog.edit-pyrometer.subs :as subs]
-            [ht.util.interop :as i]))
+            [tta.dialog.edit-pyrometer.subs :as subs]))
 
 (defonce ^:const dlg-path [:dialog :edit-pyrometer])
 (defonce ^:const data-path (conj dlg-path :data))
@@ -76,7 +78,7 @@
          {:keys [index], pyro :data} (get-in db po-path)]
      (if can-submit?
        (-> db
-           (assoc-in data-path (assoc data index pyro))
+           (assoc-in data-path (assoc (or data []) index pyro))
            (assoc-in po-path nil))
        (update-in db po-path assoc :show-error? true)))))
 
@@ -96,10 +98,12 @@
    (let [data @(rf/subscribe [::subs/data])
          id (str (i/ocall (js/Date.) :valueOf))]
      (assoc-in db po-path {:index (count data)
-                           :data {:id id}
+                           :data {:id id
+                                  :date-of-calibration (tc/to-date
+                                                        (t/from-utc-time-zone
+                                                         (t/today)))}
                            :form {:serial-number (missing-field)
                                   :tube-emissivity (missing-field)
-                                  :date-of-calibration (missing-field)
                                   :wavelength (missing-field)
                                   :name (missing-field)}}))))
 
