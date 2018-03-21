@@ -43,8 +43,9 @@
                                           :height height
                                           :start-tube start-tube
                                           :end-tube end-tube  
-                                          :on-clear #(rf/dispatch [::event/clear-tube-prefs i]) 
-                                          :selected-fn (fn [%1 %2] @(rf/subscribe
+                                          :on-clear #(rf/dispatch
+                                                      [::event/clear-tube-prefs i]) 
+                                          :selected-fn (fn [%1] @(rf/subscribe
                                                                     [::subs/field
                                                                      (conj [] i %1)]))
                                           :on-select #(rf/dispatch
