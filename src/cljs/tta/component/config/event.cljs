@@ -37,12 +37,12 @@
                       :events #{::set-tf-burner-first?
                                 ::set-tf-tube-row-count}
                       :dispatch-to [::set-tf-burner-row-count]}
-                     {:register ::tf-sections
+                     #_{:register ::tf-sections
                       :events #{::set-tf-tube-count-per-row
                                 ::set-tf-burner-count-per-row
                                 ::set-tf-section-count}
                       :dispatch-to [::set-tf-sections]}
-                     {:register ::tf-sections-validity
+                     #_{:register ::tf-sections-validity
                       :events #{::set-tf-sections
                                 ::set-tf-section-tube-count
                                 ::set-tf-section-burner-count}
@@ -71,8 +71,8 @@
  (fn [{:keys [db]} _]
    {:db (assoc-in db comp-path nil)
     :forward-events (list {:unregister ::tf-burner-row}
-                          {:unregister ::tf-sections}
-                          {:unregister ::tf-sections-validity}
+                         ;{:unregister ::tf-sections}
+                         ;{:unregister ::tf-sections-validity}
                           {:unregister ::tf-measure-levels-validity}
                           {:unregister ::sf-peep-doors}
                           {:unregister ::sf-chamber-validity})}))
@@ -238,7 +238,7 @@
                               :tf-config
                               {:tube-rows [{:tube-count (missing-field)}]
                                :burner-rows [{:burner-count (missing-field)}]
-                               :section-count (missing-field)
+                               ;:section-count (missing-field)
                                :tube-row-count (missing-field)})))
           (= firing "side")
           (update-in form-path
@@ -404,28 +404,28 @@
    {:db (set-tf-numbers-selection db data :burner
                                   row-index sel-id tf-burner-numbers-options)}))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  ::set-tf-section-count
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ section-count]]
    {:db (set-field-number db [:tf-config :section-count]
                           section-count data data-path form-path true)}))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  ::set-tf-section-tube-count
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ section-index tube-count]]
    {:db (set-field-number db [:tf-config :sections section-index :tube-count]
                           tube-count data data-path form-path true)}))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  ::set-tf-section-burner-count
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ section-index burner-count]]
    {:db (set-field-number db [:tf-config :sections section-index :burner-count]
                           burner-count data data-path form-path true)}))
 
-(defn update-tf-sections [db data section-count total-count count-key]
+#_(defn update-tf-sections [db data section-count total-count count-key]
   (let [count-vals (distribute total-count section-count)]
     (-> db
         (update-in (conj data-path :tf-config :sections)
@@ -439,7 +439,7 @@
                        (mapv #(assoc % count-key nil) sections)
                        (vec (repeat section-count {}))))))))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  ::set-tf-sections
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ [eid]]]
@@ -462,7 +462,7 @@
                  (#{::set-tf-burner-count-per-row ::set-tf-section-count} eid))
             (update-tf-sections data sn bn :burner-count))})))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  ::validate-tf-sections
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} _]
