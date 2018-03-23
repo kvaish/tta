@@ -119,7 +119,7 @@
                :attr {:x x, :y y, :width w, :height h
                       :stroke "black", :stroke-width "5px"}}
               ;; section label
-              {:tag :text, :class :s-label
+              #_{:tag :text, :class :s-label
                :attr (label-attr (- x 6) (+ y 6) true "end")
                :text #(str (get-in % [:tf-config :section-count]) " Sections")}
               ;; wall label

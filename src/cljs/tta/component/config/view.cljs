@@ -329,10 +329,9 @@
        :on-change #(rf/dispatch [::event/set-tf-wall-name side %])}]]))
 
 (defn tf-side-names [style]
-  (let [sides [:east :west :north :south]
-        {:keys [value error valid?]} (query-id ::subs/tf-wall-name-field :east)]
-    [form-cell-1 style nil
-     (map #(with-meta (vector tf-wall-name style %) {:key %}) sides)]))
+  (let [sides [:east :west :north :south]] 
+    (doall
+     (map #(with-meta (vector tf-wall-name style %) {:key %}) sides))))
 
 ;; TF SECTIONS
 
@@ -415,8 +414,8 @@
       [tf-tube-count-per-row style]
       [tf-tube-numbers style]
       [:div (use-sub-style style :form-heading-label)
-       (translate [:config :wall-names :label] "Wall Names")
-       [tf-side-names style]]
+       (translate [:config :wall-names :label] "Wall Names")]
+      (tf-side-names style)
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :burner-rows :label] "Burner rows")]
       [tf-burner-count-per-row style]
