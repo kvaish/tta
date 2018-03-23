@@ -91,7 +91,9 @@
    (let [emissivity @(rf/subscribe [::subs/field [:fill-all]])
          level @(rf/subscribe [::subs/selected-level-index])
          tube-count (get-in config-data [0 :tube-count])
-         side-data (vec (repeat 2 (vec (repeat tube-count (js/Number (:value emissivity))))))
+         side-data (case firing
+                     "side" (vec (repeat 2 (vec (repeat tube-count (js/Number (:value emissivity))))))
+                     "top" (vec (repeat 3 (vec (repeat 2 (vec (repeat tube-count (js/Number (:value emissivity)))))))))
          form-data (vec (repeat 2 (vec (repeat tube-count  {:valid? true
                                                             :value (js/Number(:value emissivity))}))))]
      (-> db
