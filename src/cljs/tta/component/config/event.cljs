@@ -38,15 +38,15 @@
                                 ::set-tf-tube-row-count}
                       :dispatch-to [::set-tf-burner-row-count]}
                      #_{:register ::tf-sections
-                      :events #{::set-tf-tube-count-per-row
-                                ::set-tf-burner-count-per-row
-                                ::set-tf-section-count}
-                      :dispatch-to [::set-tf-sections]}
+                        :events #{::set-tf-tube-count-per-row
+                                  ::set-tf-burner-count-per-row
+                                  ::set-tf-section-count}
+                        :dispatch-to [::set-tf-sections]}
                      #_{:register ::tf-sections-validity
-                      :events #{::set-tf-sections
-                                ::set-tf-section-tube-count
-                                ::set-tf-section-burner-count}
-                      :dispatch-to [::validate-tf-sections]}
+                        :events #{::set-tf-sections
+                                  ::set-tf-section-tube-count
+                                  ::set-tf-section-burner-count}
+                        :dispatch-to [::validate-tf-sections]}
                      {:register ::tf-measure-levels-validity
                       :events #{::set-tf-measure-level?}
                       :dispatch-to [::validate-tf-measure-levels]}
@@ -71,8 +71,8 @@
  (fn [{:keys [db]} _]
    {:db (assoc-in db comp-path nil)
     :forward-events (list {:unregister ::tf-burner-row}
-                         ;{:unregister ::tf-sections}
-                         ;{:unregister ::tf-sections-validity}
+                                        ;{:unregister ::tf-sections}
+                                        ;{:unregister ::tf-sections-validity}
                           {:unregister ::tf-measure-levels-validity}
                           {:unregister ::sf-peep-doors}
                           {:unregister ::sf-chamber-validity})}))
@@ -238,7 +238,7 @@
                               :tf-config
                               {:tube-rows [{:tube-count (missing-field)}]
                                :burner-rows [{:burner-count (missing-field)}]
-                               ;:section-count (missing-field)
+                                        ;:section-count (missing-field)
                                :tube-row-count (missing-field)})))
           (= firing "side")
           (update-in form-path
@@ -274,6 +274,13 @@
 
 ;;; TOP-FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn set-tf-wall-name [wall-key wall-name]
+  (rf/dispatch [::set-text [:tf-config :wall-names wall-key] wall-name true]))
+
+(rf/reg-event-fx
+ ::set-tf-wall-name
+ (fn [_ [_ wall-key wall-name]]
+   (set-tf-wall-name wall-key wall-name)))
 (rf/reg-event-fx
  ::set-tf-measure-level?
  [(inject-cofx ::inject/sub [::subs/data])]
@@ -290,9 +297,6 @@
                     (if-not (or top? bottom? middle?)
                       {:error "at least one level must be selected!"
                        :valid? false}))})))
-
-(defn set-tf-wall-name [wall-key wall-name]
-  (rf/dispatch [::set-text [:tf-config :wall-names wall-key] wall-name true]))
 
 (rf/reg-event-fx
  ::set-tf-burner-first?
@@ -325,8 +329,8 @@
   update the row count as well as update the rows vector to match the count."
   [db data row-type row-count]
   (let [[row-count-key checks] (case row-type
-                          :tube [:tube-row-count {:min 2, :max 9}]
-                          :burner [:burner-row-count nil])
+                                 :tube [:tube-row-count {:min 2, :max 9}]
+                                 :burner [:burner-row-count nil])
         db (set-field-number db [:tf-config row-count-key] (str row-count)
                              data data-path form-path true checks)
         valid? (chk? (get-in db (conj form-path :tf-config row-count-key)))]
@@ -405,89 +409,89 @@
                                   row-index sel-id tf-burner-numbers-options)}))
 
 #_(rf/reg-event-fx
- ::set-tf-section-count
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ section-count]]
-   {:db (set-field-number db [:tf-config :section-count]
-                          section-count data data-path form-path true)}))
+   ::set-tf-section-count
+   [(inject-cofx ::inject/sub [::subs/data])]
+   (fn [{:keys [db ::subs/data]} [_ section-count]]
+     {:db (set-field-number db [:tf-config :section-count]
+                            section-count data data-path form-path true)}))
 
 #_(rf/reg-event-fx
- ::set-tf-section-tube-count
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ section-index tube-count]]
-   {:db (set-field-number db [:tf-config :sections section-index :tube-count]
-                          tube-count data data-path form-path true)}))
+   ::set-tf-section-tube-count
+   [(inject-cofx ::inject/sub [::subs/data])]
+   (fn [{:keys [db ::subs/data]} [_ section-index tube-count]]
+     {:db (set-field-number db [:tf-config :sections section-index :tube-count]
+                            tube-count data data-path form-path true)}))
 
 #_(rf/reg-event-fx
- ::set-tf-section-burner-count
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ section-index burner-count]]
-   {:db (set-field-number db [:tf-config :sections section-index :burner-count]
-                          burner-count data data-path form-path true)}))
+   ::set-tf-section-burner-count
+   [(inject-cofx ::inject/sub [::subs/data])]
+   (fn [{:keys [db ::subs/data]} [_ section-index burner-count]]
+     {:db (set-field-number db [:tf-config :sections section-index :burner-count]
+                            burner-count data data-path form-path true)}))
 
 #_(defn update-tf-sections [db data section-count total-count count-key]
-  (let [count-vals (distribute total-count section-count)]
-    (-> db
-        (update-in (conj data-path :tf-config :sections)
-                   (fn [sections]
-                     (let [sections (if (= (count sections) section-count)
-                                      sections (repeat section-count {}))]
-                       (mapv #(assoc %1 count-key %2) sections count-vals))))
-        (update-in (conj form-path :tf-config :sections)
-                   (fn [sections]
-                     (if (= (count sections) section-count)
-                       (mapv #(assoc % count-key nil) sections)
-                       (vec (repeat section-count {}))))))))
+    (let [count-vals (distribute total-count section-count)]
+      (-> db
+          (update-in (conj data-path :tf-config :sections)
+                     (fn [sections]
+                       (let [sections (if (= (count sections) section-count)
+                                        sections (repeat section-count {}))]
+                         (mapv #(assoc %1 count-key %2) sections count-vals))))
+          (update-in (conj form-path :tf-config :sections)
+                     (fn [sections]
+                       (if (= (count sections) section-count)
+                         (mapv #(assoc % count-key nil) sections)
+                         (vec (repeat section-count {}))))))))
 
 #_(rf/reg-event-fx
- ::set-tf-sections
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ [eid]]]
-   ;; update only when the change is valid, else just skip
-   (let [form (get-in db (conj form-path :tf-config))
-         data (:tf-config data)
-         sn (if (chk? (:section-count form))
-              (get-in data [:section-count]))
-         tn (if (chk? (get-in form [:tube-rows 0 :tube-count]))
-              (get-in data [:tube-rows 0 :tube-count]))
-         bn (if (chk? (get-in form [:burner-rows 0 :burner-count]))
-              (get-in data [:burner-rows 0 :burner-count]))]
-     {:db (cond-> db
-            ;; tube or section count changed => update tube counts
-            (and sn tn (>= tn sn)
-                 (#{::set-tf-tube-count-per-row ::set-tf-section-count} eid))
-            (update-tf-sections data sn tn :tube-count)
-            ;; burner or section count changed => update burner counts
-            (and sn bn (>= bn sn)
-                 (#{::set-tf-burner-count-per-row ::set-tf-section-count} eid))
-            (update-tf-sections data sn bn :burner-count))})))
+   ::set-tf-sections
+   [(inject-cofx ::inject/sub [::subs/data])]
+   (fn [{:keys [db ::subs/data]} [_ [eid]]]
+     ;; update only when the change is valid, else just skip
+     (let [form (get-in db (conj form-path :tf-config))
+           data (:tf-config data)
+           sn (if (chk? (:section-count form))
+                (get-in data [:section-count]))
+           tn (if (chk? (get-in form [:tube-rows 0 :tube-count]))
+                (get-in data [:tube-rows 0 :tube-count]))
+           bn (if (chk? (get-in form [:burner-rows 0 :burner-count]))
+                (get-in data [:burner-rows 0 :burner-count]))]
+       {:db (cond-> db
+              ;; tube or section count changed => update tube counts
+              (and sn tn (>= tn sn)
+                   (#{::set-tf-tube-count-per-row ::set-tf-section-count} eid))
+              (update-tf-sections data sn tn :tube-count)
+              ;; burner or section count changed => update burner counts
+              (and sn bn (>= bn sn)
+                   (#{::set-tf-burner-count-per-row ::set-tf-section-count} eid))
+              (update-tf-sections data sn bn :burner-count))})))
 
 #_(rf/reg-event-fx
- ::validate-tf-sections
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} _]
-   (let [{:keys [tube-rows burner-rows section-count sections]} (:tf-config data)
-         tube-count (get-in tube-rows [0 :tube-count])
-         burner-count (get-in burner-rows [0 :burner-count])
-         err (cond
-               ;; section more than tube
-               (and section-count tube-count (> section-count tube-count))
-               "section count should be less than tube count!"
-               ;; section more than burner
-               (and section-count burner-count (> section-count burner-count))
-               "section count should be less than burner count!"
-               ;; check sum of tube count in all sections
-               (and tube-count
-                    (if-let [tns (not-empty (remove nil? (map :tube-count sections)))]
-                      (not= (apply + tns) tube-count)))
-               "sum of tube counts in all sections should be same as tube count per row!"
-               ;; check sum of burner count in all sections
-               (and burner-count
-                    (if-let [bns (not-empty (remove nil? (map :burner-count sections)))]
-                      (not= (apply + bns) burner-count)))
-               "sum of burner counts in all sections should be same as burner count per row!")]
-     {:db (assoc-in db (conj form-path :tf-config :sections-validity)
-                    (if err {:error err, :valid? false}))})))
+   ::validate-tf-sections
+   [(inject-cofx ::inject/sub [::subs/data])]
+   (fn [{:keys [db ::subs/data]} _]
+     (let [{:keys [tube-rows burner-rows section-count sections]} (:tf-config data)
+           tube-count (get-in tube-rows [0 :tube-count])
+           burner-count (get-in burner-rows [0 :burner-count])
+           err (cond
+                 ;; section more than tube
+                 (and section-count tube-count (> section-count tube-count))
+                 "section count should be less than tube count!"
+                 ;; section more than burner
+                 (and section-count burner-count (> section-count burner-count))
+                 "section count should be less than burner count!"
+                 ;; check sum of tube count in all sections
+                 (and tube-count
+                      (if-let [tns (not-empty (remove nil? (map :tube-count sections)))]
+                        (not= (apply + tns) tube-count)))
+                 "sum of tube counts in all sections should be same as tube count per row!"
+                 ;; check sum of burner count in all sections
+                 (and burner-count
+                      (if-let [bns (not-empty (remove nil? (map :burner-count sections)))]
+                        (not= (apply + bns) burner-count)))
+                 "sum of burner counts in all sections should be same as burner count per row!")]
+       {:db (assoc-in db (conj form-path :tf-config :sections-validity)
+                      (if err {:error err, :valid? false}))})))
 
 ;;; SIDE-FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

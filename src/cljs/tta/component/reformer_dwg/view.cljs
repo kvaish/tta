@@ -64,7 +64,8 @@
                    chs (range))))
     :nodes [ ;; chamber box
             {:tag :rect, :class :ch-box
-             :attr {:height :h, :width, :w, :y :y, :x :x}}
+             :attr {:height :h, :width, :w, :y :y, :x :x,
+                    :stroke "black" :stroke-width "5px"}}
             ;; section label
             {:tag :text, :class :s-label
              :attr (label-attr #(- (:x %) 6) 106 true "end")
@@ -115,7 +116,8 @@
     [{:tag :g, :class :reformer
       :nodes [;; chamber box
               {:tag :rect, :class :ch-box
-               :attr {:x x, :y y, :width w, :height h}}
+               :attr {:x x, :y y, :width w, :height h
+                      :stroke "black", :stroke-width "5px"}}
               ;; section label
               {:tag :text, :class :s-label
                :attr (label-attr (- x 6) (+ y 6) true "end")

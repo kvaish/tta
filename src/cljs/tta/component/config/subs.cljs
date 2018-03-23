@@ -245,34 +245,41 @@
                           form data opts :burner)))
 
 ;; sections
-#_(rf/reg-sub
+(rf/reg-sub
  ::tf-section-count
  :<- [::data]
  (fn [data _]
    (get-in data [:tf-config :section-count])))
 
-#_(rf/reg-sub
+(rf/reg-sub
  ::tf-section-count-field
  :<- [::data]
  :<- [::form]
  (fn [[data form] _]
    (get-field [:tf-config :section-count] form data)))
 
-#_(rf/reg-sub
+(rf/reg-sub
+ ::tf-wall-name-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ wall]]
+   (get-field [:tf-config :wall-names wall] form data)))
+
+(rf/reg-sub
  ::tf-section-tube-count-field
  :<- [::data]
  :<- [::form]
  (fn [[data form] [_ s-index]]
    (get-field [:tf-config :sections s-index :tube-count] form data)))
 
-#_(rf/reg-sub
+(rf/reg-sub
  ::tf-section-burner-count-field
  :<- [::data]
  :<- [::form]
  (fn [[data form] [_ s-index]]
    (get-field [:tf-config :sections s-index :burner-count] form data)))
 
-#_(rf/reg-sub
+(rf/reg-sub
  ::tf-sections-validity
  :<- [::form]
  (fn [form _]

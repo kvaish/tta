@@ -19,7 +19,8 @@
             [tta.component.root.event :as root-event]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
-            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]
+            [clojure.string :as str]))
 
 
 (defn show-error? [] @(rf/subscribe [::subs/show-error?]))
@@ -318,6 +319,21 @@
        (map #(with-meta (vector tf-burner-numbers-selection %) {:key %})
             (range rn))])))
 
+;;TF SIDE NAMES
+(defn tf-wall-name [style side]
+  (let [{:keys [value error valid?]} (query-id ::subs/tf-wall-name-field side)]
+    [form-cell-2 style error
+     (str (translate [:config :wall-name :label] (str/capitalize (name side))))
+     [app-comp/text-input
+      {:value value, :valid? valid?, :width 100
+       :on-change #(rf/dispatch [::event/set-tf-wall-name side %])}]]))
+
+(defn tf-side-names [style]
+  (let [sides [:east :west :north :south]
+        {:keys [value error valid?]} (query-id ::subs/tf-wall-name-field :east)]
+    [form-cell-1 style nil
+     (map #(with-meta (vector tf-wall-name style %) {:key %}) sides)]))
+
 ;; TF SECTIONS
 
 #_(defn tf-section-count [style]
@@ -398,6 +414,9 @@
        (translate [:config :tube-rows :label] "Tubes rows")]
       [tf-tube-count-per-row style]
       [tf-tube-numbers style]
+      [:div (use-sub-style style :form-heading-label)
+       (translate [:config :wall-names :label] "Wall Names")
+       [tf-side-names style]]
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :burner-rows :label] "Burner rows")]
       [tf-burner-count-per-row style]
