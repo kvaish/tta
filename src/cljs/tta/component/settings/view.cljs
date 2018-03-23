@@ -20,6 +20,7 @@
             [tta.component.settings.subs :as subs]
             [tta.component.settings.event :as event]
             [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
+            [tta.dialog.custom-emissivity.view :refer [custom-emissivity]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
 
 (defn form-cell [style error label widget]
@@ -108,7 +109,7 @@
         [app-comp/button {:key :edit
                           :icon ic/emissivity+
                           :label (translate [:action :edit :label] "Edit")
-                          :on-click #(js/console.log "custom emissivity")}]))]))
+                          :on-click #(rf/dispatch [:tta.dialog.custom-emissivity.event/open])}]))]))
 
 (defn min-tubes% [style]
   (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:min-tubes%]])
@@ -148,7 +149,9 @@
       [form style]]
      ;;dialogs
      (if @(rf/subscribe [:tta.dialog.edit-pyrometer.subs/open?])
-       [edit-pyrometer])]))
+       [edit-pyrometer])
+     (if @(rf/subscribe [:tta.dialog.custom-emissivity.subs/open?])
+       [custom-emissivity])]))
 
 (defn no-config [{:keys [width height]}]
   [:div {:style {:width width, :height height}}

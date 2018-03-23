@@ -10,6 +10,7 @@
                                             set-field-temperature
                                             validate-field parse-value]]
             [tta.app.event :as app-event]
+            [tta.app.subs :as app-subs]
             [tta.component.settings.subs :as subs]))
 
 (defonce comp-path [:component :settings])
@@ -97,3 +98,19 @@
          missing? (not (some #(= pid (:id %)) pyrometers))]
      {:db (assoc-in db data-path (assoc data :pyrometers pyrometers))
       :dispatch-n (list (if missing? [::set-field [:pyrometer-id] nil true]))})))
+
+;;TODO set custom emissivity
+#_(rf/reg-event-db
+  ::set-custom-emissivity
+  (fn [db [_ custom-emissivity]]
+    (let [data @(rf/subscribe [::subs/data])
+          firing (get-in @(rf/subscribe [:tta.app.subs/plant]) [:config :firing])
+          old-custom-emissivity
+          (or (get-in db (conj data-path :sf-settings :chambers))
+              (get-in db (conj data-path :tf-settings :levels)))
+          new-custom-emissivity
+          (mapv (fn [col1 col2]
+                  (assoc-in col1 (case firing
+                                   "side" [:custom-emissivity]
+                                   "top" [:tube-rows :custom-emissivity]) col2))
+                old-custom-emissivity custom-emissivity)])))
