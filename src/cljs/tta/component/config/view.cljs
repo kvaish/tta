@@ -271,24 +271,38 @@
       {:value value, :valid? valid?, :align "center"
        :on-change #(rf/dispatch [::event/set-tf-tube-count-per-row %])}]]))
 
-(defn tf-tube-numbers-selection [index]
-  (let [sel-id @(rf/subscribe [::subs/tf-tube-numbers-selection index])
+(defn tf-tube-numbers-selection [style index]
+  (let [{:keys [value error valid?]} (query-id ::subs/field
+                                               [:tf-config :tube-rows index :name])
+        sel-id @(rf/subscribe [::subs/tf-tube-numbers-selection index])
         options @(rf/subscribe [::subs/tf-tube-numbers-options])
         selected (some #(if (= (:id %) sel-id) %) options)]
-    [app-comp/dropdown-selector
-     {:items options, :selected selected
-      :width 72, :value-fn :id, :label-fn :label
-      :on-select #(rf/dispatch [::event/set-tf-tube-numbers-selection
-                                index (:id %)])}]))
+
+    [:div (use-sub-style style :form-cell-1)
+     (str (translate [:config :row :name] "Row #") (inc index))
+     [:div
+      [form-cell-2 style error
+       (translate [:config :row :name] "Tube number")
+       [app-comp/dropdown-selector
+        {:items options, :selected selected
+         :width 72, :value-fn :id, :label-fn :label
+         :on-select #(rf/dispatch [::event/set-tf-tube-numbers-selection
+                                   index (:id %)])}]]
+      [form-cell-2 style error
+       (translate [:config :row :name] "Row Name")
+       [app-comp/text-input
+        {:value value, :valid? valid?, :width 100
+         :on-change #(rf/dispatch [::event/set-text
+                                   [:tf-config :tube-rows index :name] % true])}]]]]))
+
 
 (defn tf-tube-numbers [style]
   (let [rn @(rf/subscribe [::subs/tf-tube-row-count])
         tn @(rf/subscribe [::subs/tf-tube-count-per-row])]
     (if (and rn tn)
-      [form-cell-1 style
-       (translate [:config :tube-numbers :label] "Tube numbers")
-       (map #(with-meta (vector tf-tube-numbers-selection %) {:key %})
-            (range rn))])))
+      (doall
+       (map #(with-meta (vector tf-tube-numbers-selection style %) {:key %})
+            (range rn))))))
 
 ;; TF BURNERS
 
@@ -412,7 +426,7 @@
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :tube-rows :label] "Tubes rows")]
       [tf-tube-count-per-row style]
-      [tf-tube-numbers style]
+      (tf-tube-numbers style)
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :wall-names :label] "Wall Names")]
       (tf-side-names style)

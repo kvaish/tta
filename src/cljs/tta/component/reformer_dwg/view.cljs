@@ -152,12 +152,16 @@
                                :burners burner-rows}))
                :nodes [;; row labels
                        {:tag :text, :class :r-label
-                        :attr (merge (label-attr #(- % 6) y1 true "end")
-                                      {:font-size "16px"
-                                       :stroke "black"})
-                        :text #(str "Row " (inc %2))
+                        :attr (merge
+                               (label-attr #(- (:x %) 6) y1 true "end")
+                               {:font-size "16px"
+                                :stroke "black"})
+                        :text :text
                         :multi? true
-                        :data :xt-pos}
+                        :data (fn [{:keys [xt-pos tubes]}]
+                                (map (fn [x {name :name}]
+                                       {:x x :text name})
+                                       xt-pos tubes))}
                        ;; tube row
                        {:tag :line, :class :t-row
                         :attr {:x1 identity, :y1 y1, :x2 identity, :y2 y2

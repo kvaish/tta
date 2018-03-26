@@ -305,20 +305,24 @@
    {:db (assoc-in db data-path (assoc-in data [:tf-config :burner-first?] first?))}))
 
 (defn reset-tf-rows [db row-type]
-  (let [[row-count-key rows-key count-key start-key end-key sel-key]
+  (let [[row-count-key rows-key count-key start-key end-key sel-key name-key]
         (case row-type
           :tube [:tube-row-count :tube-rows
                  :tube-count :start-tube :end-tube
-                 :tube-numbers-selection]
+                 :tube-numbers-selection :name]
           :burner [:burner-row-count :burner-rows
                    :burner-count :start-burner :end-burner
                    :burner-numbers-selection])
         row-count (get-in db (conj data-path :tf-config row-count-key))
         count-per-row (get-in db (conj data-path :tf-config rows-key 0 count-key))]
-    (-> db
+    (-> db 
         (assoc-in (conj data-path :tf-config rows-key)
-                  (vec (repeat row-count {count-key count-per-row
-                                          start-key 1, end-key count-per-row})))
+                  (reduce #(conj %1 (assoc %2 name-key
+                                           (str "Row " (inc (count %1)))))
+                          []
+                          (repeat row-count {count-key count-per-row
+                                             start-key 1, end-key count-per-row,
+                                             }))) 
         (assoc-in (conj form-path :tf-config rows-key)
                   (vec (repeat row-count {sel-key "00"
                                           count-key (if-not count-per-row
