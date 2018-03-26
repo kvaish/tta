@@ -21,7 +21,8 @@
             [tta.component.settings.event :as event]
             [tta.dialog.edit-pyrometer.view :refer [edit-pyrometer]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]
-            [tta.dialog.tube-prefs.view :refer [tube-prefs]]))
+            [tta.dialog.tube-prefs.view :refer [tube-prefs]]
+            [tta.dialog.custom-emissivity.view :refer [custom-emissivity]]))
 
 (defn form-cell [style error label widget]
   [:div (use-sub-style style :form-cell)
@@ -88,7 +89,7 @@
       [app-comp/button {:key :edit
                         :icon ic/pyrometer+
                         :label (translate [:action :edit :label] "Edit")
-                        :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}])]))
+                        :on-click #(rf/dispatch [:tta.dialog.edit-pyrometer.event/open])}])]))  
 
 (defn tube-emissivity [style]
   (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:emissivity-type]])
@@ -102,14 +103,17 @@
        {:key :selector
         :valid? valid?
         :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-        :on-select #(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
+        :on-select #(rf/dispatch [::event/set-emissivity-type 
+                                  [:emissivity-type] 
+                                  (:id %) true])
+                                        ;#(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
         :selected selected, :items options
         :value-fn :id, :label-fn :name, :disabled?-fn :disabled?}]
       (if (= value "custom")
         [app-comp/button {:key :edit
                           :icon ic/emissivity+
                           :label (translate [:action :edit :label] "Edit")
-                          :on-click #(js/console.log "custom emissivity")}]))]))
+                          :on-click #(rf/dispatch [:tta.dialog.custom-emissivity.event/open])}]))]))
 
 (defn min-tubes% [style]
   (let [{:keys [value] :as field} @(rf/subscribe [::subs/field [:min-tubes%]])
@@ -152,7 +156,8 @@
        [edit-pyrometer])
      (if @(rf/subscribe [:tta.dialog.tube-prefs.subs/open?])
        [tube-prefs])
-     ]))
+     (if @(rf/subscribe [:tta.dialog.custom-emissivity.subs/open?])
+       [custom-emissivity])]))
 
 (defn no-config [{:keys [width height]}]
   [:div {:style {:width width, :height height}}

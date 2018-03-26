@@ -13,6 +13,7 @@
                                             validate-field parse-value]]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
+            [tta.app.subs :as app-subs]
             [tta.component.settings.subs :as subs]))
 
 (defonce comp-path [:component :settings])
@@ -91,12 +92,12 @@
                                         ::ht-event/service-failure}
                               :dispatch-to [::sync-after-save]}
              :dispatch [::ht-event/set-busy? true]
-             :service/update-plant-settings
-             {:client-id (:id client)
-              :plant-id (:id plant)
-              :change-id (:change-id plant)
-              :settings (archive-settings (get-in db data-path) (:settings plant))
-              :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}})
+             #_:service/update-plant-settings
+             #_{:client-id (:id client)
+                :plant-id (:id plant)
+                :change-id (:change-id plant)
+                :settings (archive-settings (get-in db data-path) (:settings plant))
+                :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db
@@ -161,3 +162,32 @@
                     "side" (conj data-path :sf-settings :chambers)
                     "top" (conj data-path :tf-settings :tube-rows))
                new-prefs))))
+
+(rf/reg-event-db
+ ::set-emissivity-type
+ (fn [db [_ path value required?]]
+   (let [has-custom-emissivity @(rf/subscribe [::subs/has-custom-emissivity?])
+         data @(rf/subscribe [::subs/data])]
+     (if (and (nil? has-custom-emissivity) (= value "custom"))
+       (assoc-in db (into form-path path)
+                 {:value value
+                  :valid? false
+                  :error
+                  (translate [::settings :custom-emissivity :error]
+                             "Please provide each tube emissivity")})
+       (set-field db path value data data-path form-path required?)))))
+
+
+;;TODO set custom emissivity
+(rf/reg-event-db
+ ::set-custom-emissivity
+ (fn [db [_ custom-emissivity]]
+   (let [data @(rf/subscribe [::subs/data])
+         firing (get-in @(rf/subscribe [:tta.app.subs/plant]) [:config :firing])
+         old-custom-emissivity
+         (or (get-in db (conj data-path :sf-settings :chambers))
+             (get-in db (conj data-path :tf-settings :levels)))
+         new-custom-emissivity
+         (mapv (fn [col1 col2]
+                 (assoc-in col1  [:custom-emissivity] col2))
+               old-custom-emissivity custom-emissivity)])))
