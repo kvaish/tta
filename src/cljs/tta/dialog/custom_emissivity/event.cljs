@@ -15,9 +15,9 @@
 (defonce ^:const dlg-path [:dialog :custom-emissivity])
 (defonce ^:const data-path (conj dlg-path :data))
 (defonce ^:const form-path (conj dlg-path :form))
-(def plant @(rf/subscribe [::app-subs/plant]))
-(def firing (get-in plant [:config :firing]))
-(def config-data  (case firing
+;(def plant @(rf/subscribe [::app-subs/plant]))
+;(def firing (get-in plant [:config :firing]))
+#_(def config-data  (case firing
                     "side" (get-in plant [:config :sf-config :chambers])
                     "top" (get-in plant [:config :tf-config :tube-rows])))
 
@@ -90,6 +90,11 @@
  (fn [db [_]]
    (let [emissivity @(rf/subscribe [::subs/field [:fill-all]])
          level @(rf/subscribe [::subs/selected-level-index])
+         plant @(rf/subscribe [::app-subs/plant])
+         firing (get-in plant [:config :firing])
+         config-data  (case firing
+                        "side" (get-in plant [:config :sf-config :chambers])
+                        "top" (get-in plant [:config :tf-config :tube-rows]))
          tube-count (get-in config-data [0 :tube-count])
          side-data (case firing
                      "side" (vec (repeat 2 (vec (repeat tube-count (js/Number (:value emissivity))))))
@@ -108,6 +113,11 @@
   (fn [db [_ col-index]]
     (let [data @(rf/subscribe [::subs/data])
           level @(rf/subscribe [::subs/selected-level-index])
+          plant @(rf/subscribe [::app-subs/plant])
+          firing (get-in plant [:config :firing])
+          config-data  (case firing
+                         "side" (get-in plant [:config :sf-config :chambers])
+                         "top" (get-in plant [:config :tf-config :tube-rows]))
           tube-count (get-in config-data [0 :tube-count])
           side-data (vec (repeat 2 (vec (repeat tube-count nil))))]
       (case firing
