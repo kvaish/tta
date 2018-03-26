@@ -11,14 +11,16 @@
 (defn datepickers-test []
   [:div
    [date-picker {:date (:start @state)
-                 :max {:day 20, :month 3, :year 2018}
-                 :min {:day 1, :month 1, :year 2018}
+                 :valid-range {:max {:day 20, :month 3, :year 2018}
+                               :min {:day 20, :month 3, :year 2018}}
                  :on-select #(swap! state assoc :start %)}]
    [date-range-picker {:start (:start @state)
                        :end (:end @state)
+                       :valid-range {:max {:day 20, :month 3, :year 2018}
+                                     :min {:day 20, :month 3, :year 2018}}
                        :on-select #(swap! state assoc
-                                          :start (:start %)
-                                          :end (:end %))}]])
+                                      :start (:start %)
+                                      :end (:end %))}]])
 
 (defn calendar-test []
   [:div

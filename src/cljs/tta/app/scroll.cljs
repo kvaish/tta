@@ -21,8 +21,7 @@
                             l (if h? (- page-x start-x) (- page-y start-y))
                             p (+ start-pos-f (/ l length (- 1 page-f)))
                             new-pos-f (if (> 0 p) 0
-                                          (if (< 1 p) 1
-                                              p))]
+                                          (if (< 1 p) 1  p))]
                         ;; (js/console.log "new pos: " new-pos-f)
                         (on-scroll new-pos-f)))))
         end-drag (fn _ed [e]
