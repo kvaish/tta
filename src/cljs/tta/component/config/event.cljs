@@ -88,7 +88,8 @@
           (or
            (not= (count chs) (count ochs))
            (some (fn [cs]
-                   (apply not= (map #(select-keys % [:peep-door-count
+                   (apply not= (map #(select-keys % [:peep-door-tube-count
+                                                     :peep-door-count
                                                      :tube-count
                                                      :burner-count-per-row
                                                      :burner-row-count])

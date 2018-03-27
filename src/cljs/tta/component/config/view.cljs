@@ -279,9 +279,10 @@
         selected (some #(if (= (:id %) sel-id) %) options)]
 
     [:div (use-sub-style style :form-cell-1)
-     (str (translate [:config :row :name] "Row #") (inc index))
+     [:div (use-sub-style style :form-heading-label)
+      (str (translate [:config :row :name] "Row #") (inc index))]
      [:div
-      [form-cell-2 style error
+      [form-cell-2 style nil
        (translate [:config :row :name] "Tube number")
        [app-comp/dropdown-selector
         {:items options, :selected selected
