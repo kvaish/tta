@@ -24,11 +24,12 @@
 
 (stylefy/class "s-transparent" {:opacity "0"})
 
-(defn- s-date [disabled?] {:display "inline-block"
+(defn- s-date [valid?] {:display "inline-block"
              :width "30px"
              :padding "10px 5px "
              :vertical-align "top"
              :text-align "center"
+             :opacity (if valid? 1 0.3)
              :color (ht-style/colors :royal-blue)})
 
 (defn- s-date-dots [background-color] {:margin "auto"
@@ -158,11 +159,11 @@
                        (and (<= end-date jsdate) (<= jsdate start-date))))))
 
 (defn day-fn [{:keys 
-  [range on-date-click on-date-mouse-enter on-date-mouse-leave valid-range]} 
-    day]
+  [range on-date-click on-date-mouse-enter on-date-mouse-leave]} 
+    in-valid-range? day]
   ^{:key day}
-  [:div (merge (stylefy/use-style (s-date false))
-               (if (in-range? day valid-range) {:on-click #(on-date-click day)
+  [:div (merge (stylefy/use-style (s-date in-valid-range?))
+               (if in-valid-range? {:on-click #(on-date-click day)
                 :on-mouse-enter #(on-date-mouse-enter day)
                 :on-mouse-leave #(on-date-mouse-leave day)}))
    [:div (day :day)]
@@ -194,7 +195,8 @@
         (doall (map
           (fn [week]
             ^{:key week}
-            [:div (doall (map #(day-fn props %) week))])
+            [:div (doall (map 
+              #(day-fn props (if valid-range (in-range? % valid-range) true) %) week))])
           weeks)))]])
 
 (defn- months-component [on-month-change]
@@ -216,7 +218,7 @@
                {:on-click #(onclick %)})
    text])
 
-(defn calendar-component [{:keys [selection-complete-event selection]}]
+(defn calendar-component [{:keys [selection-complete-event selection valid-range]}]
   (let [state (r/atom {:view "date"     ; or "date/month"
                        :month-to-show {:month (inc (.getMonth (js/Date.)))
                                        :year (.getFullYear (js/Date.))}
@@ -396,19 +398,24 @@
         (swap! mystate assoc :anchor (dom/dom-node this)
                              :open? false
                              :on-select on-select
-                             :date date))
+                             :date (if 
+                                (or (not valid-range) 
+                                  (in-range? date valid-range))
+                                    date nil) ))
 
       :reagent-render
       (fn [{:keys [date valid-range on-select]}]
         [:div {:style {:display "inline-block" :vertical-align "top"}}
-         [app-comp/action-input-box {:disabled? false
-                                     :valid? true
-                                     :width 100
-                                     :label (get-label (:date @mystate))
-                                     :action #(swap! mystate assoc :open? true)
-                                     :right-icon ic/dropdown
-                                     :right-action 
-                                        #(swap! mystate assoc :open? true)}]
+         [app-comp/action-input-box 
+            {:disabled? false
+              :valid? true
+              :width 100
+              :label (if (or (not valid-range) (in-range? (:date @mystate) valid-range))
+                (get-label (:date @mystate)) nil) 
+              :action #(swap! mystate assoc :open? true)
+              :right-icon ic/dropdown
+              :right-action 
+                #(swap! mystate assoc :open? true)}]
          (if (:open? @mystate)
            [app-comp/popover {:open (:open? @mystate)
                               :on-request-close 
@@ -431,7 +438,7 @@
 
 
 ;; date-range-picker component
-(defn date-range-picker [{:keys [start end min max]}]
+(defn date-range-picker [{:keys [start end valid-range]}]
   (let [state (r/atom {})
         get-label (fn [{:keys [start end]}]
                     (str (:day start)
@@ -446,32 +453,41 @@
       (fn [this]
         (swap! state assoc :anchor (dom/dom-node this))
         (swap! state assoc :open? false)
-        (swap! state assoc :range {:start start :end end}))
+        (swap! state assoc :range
+          (if (or (not valid-range) (and
+              (in-range? start valid-range)
+              (in-range? end valid-range)))
+                {:start start :end end} nil)))
 
       :reagent-render
-      (fn [{:keys [on-select]}]
+      (fn [{:keys [on-select valid-range]}]
         [:div {:style {:display "inline-block"
                        :vertical-align "top"}}
          [app-comp/action-input-box
           {:disabled? false
            :valid? true
            :width "200px"
-           :label (get-label (:range @state))
+           :label (if (or (not valid-range) (and 
+              (in-range? (get-in @state [:range :start]) valid-range) 
+              (in-range? (get-in @state [:range :end]) valid-range))) 
+                (get-label (:range @state)) nil) 
            :action #(swap! state assoc :open? true)
            :left-icon ic/nav-left
            :left-action (fn [_]
-                          (swap! state update-in [:range :start]
-                                 add-days {:days 0 :months 0 :years 0})
-                          (swap! state update-in [:range :end]
-                                 add-days {:days 0 :months 0 :years 0})
-                          (on-select (:range @state)))
+              (if (not= (:start valid-range) (get-in @state [:range :start]))
+                (do ((swap! state update-in [:range :start]
+                        add-days {:days 0 :months 0 :years 0})
+                (swap! state update-in [:range :end]
+                        add-days {:days 0 :months 0 :years 0})
+                (on-select (:range @state))))))
            :right-icon ic/nav-right
            :right-action (fn [_]
-                           (swap! state update-in [:range :start]
-                                  add-days {:days 2 :months 0 :years 0})
-                           (swap! state update-in [:range :end]
-                                  add-days {:days 2 :months 0 :years 0})
-                           (on-select (:range @state)))}]
+               (if (not= (:end valid-range) (get-in @state [:range :end]))
+                (do ((swap! state update-in [:range :start]
+                        add-days {:days 2 :months 0 :years 0})
+                  (swap! state update-in [:range :end]
+                        add-days {:days 2 :months 0 :years 0})
+                  (on-select (:range @state))))))}]
          (if (:open? @state)
            [app-comp/popover {:open true
                               :on-request-close #(swap! state assoc :open? false)
@@ -480,7 +496,8 @@
                                               :vertical "bottom"}
                               :target-origin {:horizontal "right", 
                                               :vertical "top"}}
-            [calendar-component {:selection-complete-event
+            [calendar-component {:valid-range valid-range
+                                :selection-complete-event
                                  (fn [r] ;; (js/console.log r)
                                    (swap! state assoc :range r)
                                    (swap! state assoc :open? false)
