@@ -9,18 +9,14 @@
   (let [xi 0, xe 600
         yi 0, ye 400
         n (or n 100)
-        x (random-sample 0.5 (range n))
-        y (repeatedly (count x) #(rand-int ye))
-        f (fn [i e x] (+ i (* x (/ (- e i) n))))]
-    (mapv (fn [x y]
-            {:x (f xi xe x)
-             :y y})
-          x y)))
-
-
+        x (map #(* % (/ xe n)) (random-sample 0.5 (range n)))
+        f (fn [x xi yi] (+ (* x (/ yi xi)) (rand-int 50)))]
+    (mapv (fn [x]
+            {:x x
+             :y (f x xe ye)})
+          x)))
 
 (defn charts []
   [:div {:style {:padding "20px"
                  :background "white"}} 
-    [ht-charts/d3-chart {:data (gen-chart 100)}]
-   ])
+    [ht-charts/d3-chart {:data (gen-chart 100)}]])
