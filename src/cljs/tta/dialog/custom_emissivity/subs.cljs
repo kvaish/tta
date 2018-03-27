@@ -27,7 +27,7 @@
 (rf/reg-sub
   ::valid?
   :<- [::form]
-  (fn [form _] (au/some-invalid form)))
+  (fn [form _] (not (au/some-invalid form))))
 
 (rf/reg-sub
   ::can-submit?

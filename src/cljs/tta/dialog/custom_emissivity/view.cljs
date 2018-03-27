@@ -124,7 +124,7 @@
      [:div (use-style style/body)
       [custom-emissivity-component h]
       [:div (use-sub-style style/body :btns)
-       [app-comp/button {:disabled? @(rf/subscribe [::subs/can-submit?])
+       [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
                          :icon ic/accept
                          :label (translate [:action :add :label] "Accept")
                          :on-click #(rf/dispatch [::event/submit])}]
