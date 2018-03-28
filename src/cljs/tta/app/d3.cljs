@@ -12,9 +12,9 @@
    :style {:key <value | keyword | [key seq ..] | (fn [data i idv])>}
    :attr {:key <value | keyword | [key seq ..] | (fn [data i idv])>}
    :text <value | keyword | [key seq ..] | (fn [data i idv])>
-   :on-off-classes <{:on \"on classes ..\", :off \"off classes ..\"} | (fn [data i idv])>
-   :data <keyword | [key seq..] (fn [data i idv])>
-   :skip? (fn [data i idv])
+   :classes <\"class1 class2 ..\" | keyword | [key seq ..] | (fn [data i idv])>
+   :data <keyword | [key seq..] | (fn [data i idv])>
+   :skip? <keyword | [key seq..] | (fn [data i idv])>
    :multi? <true | false>
    :nodes [child nodes..]
    :on {:event (fn handler [sel-node data i idv])}
@@ -72,11 +72,10 @@
   ;; (js/console.log "updated" (name (:class node)) data)
   (if (contains? node :text)
     (i/ocall sel-node :text (get-value (:text node) data index idv)))
-  (if (contains? node :on-off-classes)
-    (let [{:keys [on off]}
-          (get-value (:on-off-classes node) data index idv)]
-      (if on (i/ocall sel-node :classed on true))
-      (if off (i/ocall sel-node :classed off false))))
+  (if (contains? node :classes)
+    (let [classes (str (name (:class node))
+                       " " (get-value (:classes node) data index idv))]
+      (i/ocall sel-node :attr "class" classes)))
   (if (contains? node :style)
     (doseq [[k vf] (:style node)]
       (i/ocall sel-node :style (name k) (get-value vf data index idv))))
