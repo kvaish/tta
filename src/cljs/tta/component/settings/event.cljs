@@ -182,11 +182,13 @@
  ::set-custom-emissivity
  (fn [db [_ custom-emissivity]]
    (let [data @(rf/subscribe [::subs/data])
-         firing (get-in @(rf/subscribe [:tta.app.subs/plant]) [:config :firing])
-         old-custom-emissivity
-         (or (get-in db (conj data-path :sf-settings :chambers))
-             (get-in db (conj data-path :tf-settings :levels)))
-         new-custom-emissivity
-         (mapv (fn [col1 col2]
-                 (assoc-in col1  [:custom-emissivity] col2))
-               old-custom-emissivity custom-emissivity)])))
+         firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])
+         path (case firing
+                "top" (conj data-path :tf-settings :levels)
+                "side" (conj data-path :sf-settings :chambers))]
+     (case firing
+      "side" (update-in db path (fn [old]
+                           (mapv (fn [m emissivity]
+                                   (assoc m :custom-emissivity emissivity))
+                                 old custom-emissivity)))
+      "top" db))))
