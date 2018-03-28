@@ -92,8 +92,8 @@
                                         ::ht-event/service-failure}
                               :dispatch-to [::sync-after-save]}
              :dispatch [::ht-event/set-busy? true]
-             #_:service/update-plant-settings
-             #_{:client-id (:id client)
+             :service/update-plant-settings
+             {:client-id (:id client)
                 :plant-id (:id plant)
                 :change-id (:change-id plant)
                 :settings (archive-settings (get-in db data-path) (:settings plant))
@@ -153,15 +153,14 @@
 (rf/reg-event-db
  ::set-tube-prefs
  (fn [db [_ tube-prefs]]
-   (let [firing (get-in @(rf/subscribe [:tta.app.subs/plant]) [:config :firing])
-         old-prefs (or (get-in db (conj data-path :sf-settings :chambers))
-                       (get-in db (conj data-path :tf-settings :tube-rows)))
-         new-prefs (mapv (fn [col1 col2]
-                           (assoc-in col1 [:tube-prefs] col2)) old-prefs tube-prefs)]
-     (assoc-in db (case firing
-                    "side" (conj data-path :sf-settings :chambers)
-                    "top" (conj data-path :tf-settings :tube-rows))
-               new-prefs))))
+   (let [firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])
+         path (case firing
+                "side" (conj data-path :sf-settings :chambers)
+                "top" (conj data-path :tf-settings :tube-rows))]
+     (update-in db path
+                (fn [old]
+                  (mapv (fn [m prefs]
+                          (assoc m :tube-prefs prefs)) old tube-prefs))))))
 
 (rf/reg-event-db
  ::set-emissivity-type

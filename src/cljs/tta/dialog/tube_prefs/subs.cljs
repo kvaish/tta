@@ -17,10 +17,8 @@
  ::src-data
  :<- [::src-subs/data]
  (fn [settings _]
-   (reduce #(conj %1 (:tube-prefs %2))
-           []
-           (or (get-in settings [:sf-settings :chambers])
-               (get-in settings [:tf-settings :tube-rows])))))
+   (mapv :tube-prefs (or (get-in settings [:sf-settings :chambers])
+                         (get-in settings [:tf-settings :tube-rows])))))
 
 (rf/reg-sub
  ::data

@@ -2,11 +2,14 @@
 (ns tta.dialog.tube-prefs.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [day8.re-frame.forward-events-fx]
+            [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
             [tta.dialog.tube-prefs.subs :as subs]))
 
 (def ^:const dlg-path [:dialog :tube-prefs])
+(def ^:const data-path (conj dlg-path :data))
 
 (rf/reg-event-db
  ::open
@@ -30,7 +33,7 @@
 (rf/reg-event-db
  ::set-field
  (fn [db [_ ch ind  value]]
-   (let [tube-prefs @(rf/subscribe [:tta.dialog.tube-prefs.subs/data])
+   (let [tube-prefs @(rf/subscribe [::subs/data])
          new-data (assoc-in tube-prefs [ch ind] value)]
      (-> db
          (assoc-in [:dialog :tube-prefs :data] new-data)))))
@@ -40,14 +43,13 @@
  (fn [db [_ data]]
    (assoc-in db [:dialog :tube-prefs :data] data)))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::clear-tube-prefs
- (fn [db [_ i]]
-   (let [tube-prefs @(rf/subscribe [:tta.dialog.tube-prefs.subs/data])
-         c (count (get-in db [:dialog :tube-prefs :data i]))] 
-     (assoc-in db [:dialog :tube-prefs :data]
-               (assoc tube-prefs i 
-                      (vec (take c (repeat nil))))))))
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ i]]
+   {:db (assoc-in db data-path
+                  (update data i #(vec (repeat (count %) nil))))}))
+
 (rf/reg-event-db
  ::set-options
  (fn [db [_ options]]
