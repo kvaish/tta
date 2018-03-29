@@ -24,103 +24,90 @@
 
 (def container (r/atom {}))
 
-(defn render-tubes [plant height]
-  (let [items-render-fn
+(defn tube-col [sel-level height col-index {:keys [start-tube end-tube name]}]
+  (let [data       @(rf/subscribe [::subs/data])
+        has-data?  (some #(some some? %)
+                         (get-in data
+                                 [:levels sel-level :tube-rows col-index
+                                  :custom-emissivity]))
+        field-path [:levels sel-level :tube-rows col-index :custom-emissivity]]
+    [input/list-tube-both-sides
+     {:label      name
+      :height     height
+      :start-tube start-tube
+      :end-tube   end-tube
+      :field-fn   (fn [tube side]
+                    @(rf/subscribe [::subs/field (conj field-path side tube)]))
+      :pref-fn    (fn [tube]
+                    @(rf/subscribe [::subs/tube-pref col-index tube]))
+      :on-change  (fn [tube side value]
+                    (rf/dispatch [::event/set-emissivity-field
+                                  (conj field-path side tube) value]))
+      :on-clear   (if has-data? #(rf/dispatch
+                                  [::event/clear-custom-emissivity col-index]))}]))
+
+(defn render-tubes [height sel-level]
+  (let [plant @(rf/subscribe [::app-subs/plant])
+        tube-configs (or
+                      (get-in plant [:config :sf-config :chambers])
+                      (get-in plant [:config :tf-config :tube-rows]))
+        data @(rf/subscribe [::subs/data])
+        row-count (count (get-in data [:levels sel-level :tube-rows]))
+        items-render-fn
         (fn [indexes show-item]
           (map (fn [i]
-                 (let [
-                       {:keys [start-tube end-tube tube-count]}
-                       (or
-                         (get-in plant [:config :sf-config :chambers i])
-                         (get-in plant [:config :tf-config :tube-rows i]))
-                       level @(rf/subscribe [::subs/selected-level-index])
-                       firing (get-in plant [:config :firing])
-                       label (case firing
-                               "side" "Chamber"
-                               "top" "Row")]
-                   [input/list-tube-both-sides
-                    {:label      (str label " " (inc i))
-                     :height     (- height 140)
-                     :start-tube start-tube
-                     :end-tube   end-tube
-                     :field-fn   (fn [%1 %2]
-                                   (case firing
-                                     "side" @(rf/subscribe [::subs/field (conj [] i %2 %1)])
-                                     "top" @(rf/subscribe [::subs/field (conj [] level i %2 %1)])))
-                     :pref-fn    (fn [%1 %2]
-                                   @(rf/subscribe [::subs/tube-pref %1 %2]))
-                     :on-change  (case firing
-                                   "side" #(rf/dispatch
-                                             [::event/set-field
-                                              (conj [] i %2 %1) %3 false
-                                              {:max 0.99 :min 0.01 :precision 2}])
-                                   "top" #(rf/dispatch
-                                            [::event/set-field
-                                             (conj [] level i %2 %1) %3 false
-                                             {:max 0.99 :min 0.01 :precision 2}]))
-                     :on-clear   #(rf/dispatch
-                                    [::event/clear-custom-emissivity i])}]))
+                 [tube-col sel-level (- height 10) i (get tube-configs i)])
                indexes))]
-    [lazy-cols {:height          (- height 120)
+    [lazy-cols {:height          height
                 :width           (- (:width @container) 30)
                 :item-width      220
-                :item-count      (count (or
-                                          (get-in plant [:config :sf-config :chambers])
-                                          (get-in plant [:config :tf-config :tube-rows])))
+                :item-count       row-count
                 :items-render-fn items-render-fn}]))
 
 (defn fill-all []
   (let [{:keys [value valid? error]} @(rf/subscribe [::subs/field [:fill-all]])
         error (if (fn? error) (error) error)]
     [:div (use-style style/form-field)
-     #_[:span (use-sub-style style/form-field :label)
-        (translate [:custom-emissivity :fill-all :label] "Fill all")]
      [app-comp/text-input
-      {:on-change #(rf/dispatch
-                     [::event/set-fill-all-field
-                      [:fill-all] % false
-                      {:max 0.99 :min 0.01 :precision 2}])
+      {:on-change #(rf/dispatch [::event/set-fill-all-field %])
        :value value, :valid? valid?}]
      [:span (use-sub-style style/form-field :error) error]
      [app-comp/button
-      {:disabled? (not valid?)
+      {:disabled? (or (not valid?)
+                      (empty? value))
        :icon      ic/dataset
        :label     (translate [:action :fill-all :label] "Fill all")
        :on-click  #(rf/dispatch [::event/fill-all])}]]))
 
+(defn content-render [{:keys [height], [_ sel] :selected}]
+  [:div
+   [fill-all]
+   [render-tubes (- height 60) sel]])
+
 (defn custom-emissivity-component [height]
   (r/create-class
-    {:component-did-mount
-     (fn [this]
-       (swap! container assoc
-              :width (i/oget-in this [:refs :container :offsetWidth])
-              :height height))
-     :reagent-render
-     (fn [height]
-       [:div {:ref "container"}
-        (let [tab-opts @(rf/subscribe [::subs/tab-opts])
-              plant @(rf/subscribe [::app-subs/plant])]
-
-          [app-view/tab-layout
-           {:bottom-tabs
-            (case (get-in plant [:config :firing])
-              "side" nil
-              "top" {:labels    tab-opts
-                     :selected  @(rf/subscribe [::subs/selected-level-index])
-                     :on-select #(rf/dispatch [::event/set-level-index %])}
-              "default")
-            :width  (:width @container)
-            :height height
-            :content (fn []
-                       [:div
-                        (fill-all)
-                        (render-tubes plant height)])}])])}))
+   {:component-did-mount
+    (fn [this]
+      (swap! container assoc
+             :width (i/oget-in this [:refs :container :offsetWidth])))
+    :reagent-render
+    (fn [height]
+      [:div {:ref "container"}
+       (let [tab-opts @(rf/subscribe [::subs/tab-opts])]
+         [app-view/tab-layout
+          {:bottom-tabs {:labels    tab-opts
+                         :selected  @(rf/subscribe [::subs/selected-level-index])
+                         :on-select #(rf/dispatch [::event/set-level-index %])}
+           :width  (:width @container)
+           :height height
+           :content content-render}])])}))
 
 (defn custom-emissivity []
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
         h (* 0.5 height)]
     [ui/dialog {:open  @(rf/subscribe [::subs/open?])
-                :title (translate [:custom-emissivity :manage :title] "Manage Custom Emissivity")}
+                :title (translate [:custom-emissivity :manage :title]
+                                  "Manage custom emissivity")}
      [:div (use-style style/body)
       [custom-emissivity-component h]
       [:div (use-sub-style style/body :btns)

@@ -19,73 +19,90 @@
  (fn [dialog _] (:open? dialog)))
 
 (rf/reg-sub
-  ::dirty?
-  :<- [::data]
-  :<- [::src-data]
-  (fn [[data src-data] _] (not= data src-data)))
+ ::dirty?
+ :<- [::data]
+ :<- [::src-data]
+ (fn [[data src-data] _] (not= data src-data)))
 
 (rf/reg-sub
-  ::valid?
-  :<- [::form]
-  (fn [form _] (not (au/some-invalid form))))
+ ::valid?
+ :<- [::form]
+ (fn [form _] (not (au/some-invalid form))))
 
 (rf/reg-sub
-  ::can-submit?
-  :<- [::dirty?]
-  :<- [::valid?]
-  (fn [[dirty? valid?] _] (and dirty? (if valid? valid? false))))
+ ::can-submit?
+ :<- [::dirty?]
+ :<- [::valid?]
+ (fn [[dirty? valid?] _] (and dirty? valid?)))
 
 (rf/reg-sub
-  ::warn-on-close?
-  :<- [::dirty?]
-  :<- [::valid?]
-  (fn [[dirty? valid?] _] (or dirty? (not valid?))))
+ ::warn-on-close?
+ :<- [::dirty?]
+ :<- [::valid?]
+ (fn [[dirty? valid?] _] (or dirty? (not valid?))))
 
-(defn init-raw-data [plant]
-  (let [firing (get-in plant [:config :firing])
-        config-data  (case firing
-                       "side" (get-in plant [:config :sf-config :chambers])
-                       "top" (get-in plant [:config :tf-config :tube-rows]))
-        tube-count (get-in config-data [0 :tube-count])
-        side-data (vec (repeat 2 (vec (repeat tube-count nil))))]
-    (case firing
-      "side" (vec (repeat (count config-data) side-data))
-      "top" (vec (repeat 3 (vec (repeat (count config-data) side-data)))))))
 
-(rf/reg-sub
-  ::src-data
-  :<- [::src-subs/data]
-  :<- [::app-subs/plant]
-  (fn [[settings plant] _]
-    (let [data (or (get-in settings [:sf-settings :chambers])
-                   (get-in settings [:tf-settings :levels]))
-          firing (get-in plant [:config :firing])]
-      (if (nil? (get-in data [0 :custom-emissivity]))
-        (init-raw-data plant)
-        (reduce #(conj %1 (case firing
-                            "side" (:custom-emissivity %2)
-                            "top" (mapv (fn [level-data]
-                                          (let [data (:tube-rows data)]
-                                            (:custom-emissivity data)))
-                                        %2))) [] data)))))
+;;structure of src data : arranged as array of levels
+;;
+;; {:levels [{:tube-rows [{:custom-emissivity [[side x tube]]}
+;;                        ..]}
+;;            ..]}
+;;
+;; in case of side-fired, it is transformed into a single virtual level
+;; so as homogenize the structure and keep the logic simple in this component
+
 
 (rf/reg-sub
-  ::data
-  :<- [::dialog]
-  :<- [::src-data]
-  (fn [[dialog src-data] _]
-    (or (:data dialog) src-data)))
+ ::src-data
+ :<- [::src-subs/data]
+ :<- [::app-subs/plant]
+ (fn [[settings plant] _]
+   (let [{:keys [config]} plant
+         {:keys [firing]} config
+         [level-count row-count tube-counts]
+         (case firing
+           "side" (let [chs (get-in config [:sf-config :chambers])]
+                    [1
+                     (count chs)
+                     (map :tube-count chs)])
+           "top" [(->> (get-in config [:tf-config :measure-levels])
+                        (filter val)
+                        (count))
+                  (get-in config [:tf-config :tube-row-count])
+                  (map :tube-count (get-in config [:tf-config :tube-rows]))])]
+     {:levels
+      (->>
+       (or (case firing
+             "side" [{:tube-rows (get-in settings [:sf-settings :chambers])}]
+             "top" (get-in settings [:tf-settings :levels]))
+           (repeat level-count {}))
+       (mapv (fn [level]
+               {:tube-rows
+                (->> (or (:tube-rows level)
+                         (repeat row-count {}))
+                     (mapv (fn [tube-count row]
+                             {:custom-emissivity
+                              (or (:custom-emissivity row)
+                                  (vec (repeat 2 (vec (repeat tube-count nil)))))})
+                           tube-counts))})))})))
 
 (rf/reg-sub
-  ::form
-  :<- [::dialog]
-  (fn [dialog _] (:form dialog)))
+ ::data
+ :<- [::dialog]
+ :<- [::src-data]
+ (fn [[dialog src-data] _]
+   (or (:data dialog) src-data)))
 
 (rf/reg-sub
-  ::selected-level-index
-  :<- [::form]
-  (fn [form _]
-    (or (:selected-level-index form) 0)))
+ ::form
+ :<- [::dialog]
+ (fn [dialog _] (:form dialog)))
+
+(rf/reg-sub
+ ::selected-level-index
+ :<- [::dialog]
+ (fn [dialog _]
+   (get-in dialog [:view :selected-level-index] 0)))
 
 (rf/reg-sub
  ::field
@@ -97,13 +114,23 @@
         :valid? true})))
 
 (rf/reg-sub
-  ::tab-opts
-  (fn [db _]
-     ["Top" "Middle" "Bottom"]))
+ ::tab-opts
+ :<- [::app-subs/plant]
+ (fn [plant _]
+   (let [firing (get-in plant [:config :firing])
+         {:keys [measure-levels]} (get-in plant [:config :tf-config])
+         levels [{:test :top?, :label "Top"}
+                 {:test :middle?, :label "Middle"}
+                 {:test :bottom?, :label "Bottom"}]]
+     (case firing
+       "side" ["Reformer"]
+       "top" (->>
+              (filter #(get measure-levels (:test %)) levels)
+              (map :label))))))
 
 (rf/reg-sub
-  ::tube-pref
-  :<- [::src-subs/data]
-  (fn [settings [_ row index]]
-    (or (get-in settings [:tf-settings :tube-rows row :tube-prefs index])
-        (get-in settings [:sf-settings :chambers row :tube-prefs index]))))
+ ::tube-pref
+ :<- [::src-subs/data]
+ (fn [settings [_ row index]]
+   (or (get-in settings [:tf-settings :tube-rows row :tube-prefs index])
+       (get-in settings [:sf-settings :chambers row :tube-prefs index]))))

@@ -106,7 +106,6 @@
         :on-select #(rf/dispatch [::event/set-emissivity-type 
                                   [:emissivity-type] 
                                   (:id %) true])
-                                        ;#(rf/dispatch [::event/set-field [:emissivity-type] (:id %) true])
         :selected selected, :items options
         :value-fn :id, :label-fn :name, :disabled?-fn :disabled?}]
       (if (= value "custom")

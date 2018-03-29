@@ -177,18 +177,39 @@
        (set-field db path value data data-path form-path required?)))))
 
 
-;;TODO set custom emissivity
+;; set custom emissivity
+;; in custom emissivity dialog, it has been tried to homogenize the handling of
+;; emissivity data by considering side fired as top fired with one level
+
 (rf/reg-event-db
  ::set-custom-emissivity
- (fn [db [_ custom-emissivity]]
+ (fn [db [_ emissivity-data]]
    (let [data @(rf/subscribe [::subs/data])
-         firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])
-         path (case firing
-                "top" (conj data-path :tf-settings :levels)
-                "side" (conj data-path :sf-settings :chambers))]
-     (case firing
-      "side" (update-in db path (fn [old]
-                           (mapv (fn [m emissivity]
-                                   (assoc m :custom-emissivity emissivity))
-                                 old custom-emissivity)))
-      "top" db))))
+         firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])]
+     (-> db
+         (assoc-in data-path
+                   (case firing
+                     "side" (update-in data [:sf-settings :chambers]
+                                       (fn [chs]
+                                         (let [new-chs (get-in emissivity-data
+                                                               [:levels 0 :tube-rows])]
+                                           (mapv merge
+                                                 (or chs (repeat (count new-chs) nil))
+                                                 new-chs))))
+                     "top" (update-in
+                            data [:tf-settings :levels]
+                            (fn [levels]
+                              (let [new-levels (:levels emissivity-data)]
+                                (mapv
+                                 (fn [level new-level]
+                                   (update
+                                    level :tube-rows
+                                    (fn [rows]
+                                      (let [new-rows (:tube-rows new-level)]
+                                        (mapv merge
+                                              (or rows (repeat (count new-rows) nil))
+                                              new-rows)))))
+                                 (or levels (repeat (count new-levels) nil))
+                                 new-levels))))))
+         (assoc-in (conj form-path :emissivity-type) {:value "custom"
+                                                      :valid? true})))))
