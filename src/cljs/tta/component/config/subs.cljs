@@ -259,6 +259,13 @@
    (get-field [:tf-config :section-count] form data)))
 
 (rf/reg-sub
+ ::tf-wall-name-field
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ wall]]
+   (get-field [:tf-config :wall-names wall] form data)))
+
+(rf/reg-sub
  ::tf-section-tube-count-field
  :<- [::data]
  :<- [::form]

@@ -136,7 +136,8 @@
                   :tube-row-count   "tubeRowCount"
                   :tube-rows        {:name   "tubeRows"
                                      :array? true
-                                     :schema {:tube-count "tubeCount"
+                                     :schema {:name "name"
+                                              :tube-count "tubeCount"
                                               :start-tube "startTube"
                                               :end-tube   "endTube"}}
                   :burner-row-count "burnerRowCount"

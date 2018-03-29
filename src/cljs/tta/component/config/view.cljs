@@ -19,7 +19,8 @@
             [tta.component.root.event :as root-event]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
-            [tta.component.reformer-dwg.view :refer [reformer-dwg]]))
+            [tta.component.reformer-dwg.view :refer [reformer-dwg]]
+            [clojure.string :as str]))
 
 
 (defn show-error? [] @(rf/subscribe [::subs/show-error?]))
@@ -226,7 +227,7 @@
    [:div
     [sf-dual-chamber? style]
     [sf-whs-placement style]]
-    [sf-dual-nozzle? style]
+   [sf-dual-nozzle? style]
    [:div (use-sub-style style :form-heading-label)
     (translate [:config :chamber-configuration :label] "Chamber configuration")]
    [:div
@@ -270,24 +271,39 @@
       {:value value, :valid? valid?, :align "center"
        :on-change #(rf/dispatch [::event/set-tf-tube-count-per-row %])}]]))
 
-(defn tf-tube-numbers-selection [index]
-  (let [sel-id @(rf/subscribe [::subs/tf-tube-numbers-selection index])
+(defn tf-tube-numbers-selection [style index]
+  (let [{:keys [value error valid?]} (query-id ::subs/field
+                                               [:tf-config :tube-rows index :name])
+        sel-id @(rf/subscribe [::subs/tf-tube-numbers-selection index])
         options @(rf/subscribe [::subs/tf-tube-numbers-options])
         selected (some #(if (= (:id %) sel-id) %) options)]
-    [app-comp/dropdown-selector
-     {:items options, :selected selected
-      :width 72, :value-fn :id, :label-fn :label
-      :on-select #(rf/dispatch [::event/set-tf-tube-numbers-selection
-                                index (:id %)])}]))
+
+    [:div (use-sub-style style :form-cell-1)
+     [:div (use-sub-style style :form-heading-label)
+      (str (translate [:config :row :name] "Row #") (inc index))]
+     [:div
+      [form-cell-2 style nil
+       (translate [:config :row :name] "Tube number")
+       [app-comp/dropdown-selector
+        {:items options, :selected selected
+         :width 72, :value-fn :id, :label-fn :label
+         :on-select #(rf/dispatch [::event/set-tf-tube-numbers-selection
+                                   index (:id %)])}]]
+      [form-cell-2 style error
+       (translate [:config :row :name] "Row Name")
+       [app-comp/text-input
+        {:value value, :valid? valid?, :width 100
+         :on-change #(rf/dispatch [::event/set-text
+                                   [:tf-config :tube-rows index :name] % true])}]]]]))
+
 
 (defn tf-tube-numbers [style]
   (let [rn @(rf/subscribe [::subs/tf-tube-row-count])
         tn @(rf/subscribe [::subs/tf-tube-count-per-row])]
     (if (and rn tn)
-      [form-cell-1 style
-       (translate [:config :tube-numbers :label] "Tube numbers")
-       (map #(with-meta (vector tf-tube-numbers-selection %) {:key %})
-            (range rn))])))
+      (doall
+       (map #(with-meta (vector tf-tube-numbers-selection style %) {:key %})
+            (range rn))))))
 
 ;; TF BURNERS
 
@@ -318,53 +334,67 @@
        (map #(with-meta (vector tf-burner-numbers-selection %) {:key %})
             (range rn))])))
 
+;;TF SIDE NAMES
+(defn tf-wall-name [style side]
+  (let [{:keys [value error valid?]} (query-id ::subs/tf-wall-name-field side)]
+    [form-cell-2 style error
+     (str (translate [:config :wall-name :label] (str/capitalize (name side))))
+     [app-comp/text-input
+      {:value value, :valid? valid?, :width 100
+       :on-change #(rf/dispatch [::event/set-tf-wall-name side %])}]]))
+
+(defn tf-side-names [style]
+  (let [sides [:east :west :north :south]] 
+    (doall
+     (map #(with-meta (vector tf-wall-name style %) {:key %}) sides))))
+
 ;; TF SECTIONS
 
-(defn tf-section-count [style]
-  (let [{:keys [value error valid?]} (query-id ::subs/tf-section-count-field)]
-    [form-cell-1 style error
-     (translate [:config :section-count :label]
-                "No of sections")
-     [app-comp/text-input
-      {:value value, :valid? valid?, :align "center"
-       :on-change #(rf/dispatch [::event/set-tf-section-count %])}]]))
+#_(defn tf-section-count [style]
+    (let [{:keys [value error valid?]} (query-id ::subs/tf-section-count-field)]
+      [form-cell-1 style error
+       (translate [:config :section-count :label]
+                  "No of sections")
+       [app-comp/text-input
+        {:value value, :valid? valid?, :align "center"
+         :on-change #(rf/dispatch [::event/set-tf-section-count %])}]]))
 
-(defn tf-section-tube-count [index]
-  (let [{:keys [value valid?]} (query-id ::subs/tf-section-tube-count-field index)]
-    [app-comp/text-input
-     {:value value, :valid? valid?, :align "center", :width 60
-      :on-change #(rf/dispatch [::event/set-tf-section-tube-count index %])}]))
+#_(defn tf-section-tube-count [index]
+    (let [{:keys [value valid?]} (query-id ::subs/tf-section-tube-count-field index)]
+      [app-comp/text-input
+       {:value value, :valid? valid?, :align "center", :width 60
+        :on-change #(rf/dispatch [::event/set-tf-section-tube-count index %])}]))
 
-(defn tf-section-tubes [style]
-  (let [sn @(rf/subscribe [::subs/tf-section-count])
-        tn @(rf/subscribe [::subs/tf-tube-count-per-row])]
-    (if (and sn tn)
-      [form-cell-1 style
-       (translate [:config :section-tube-counts :label]
-                  "No of tubes in each section")
-       (map #(with-meta (vector tf-section-tube-count %) {:key %})
-            (range sn))])))
+#_(defn tf-section-tubes [style]
+    (let [sn @(rf/subscribe [::subs/tf-section-count])
+          tn @(rf/subscribe [::subs/tf-tube-count-per-row])]
+      (if (and sn tn)
+        [form-cell-1 style
+         (translate [:config :section-tube-counts :label]
+                    "No of tubes in each section")
+         (map #(with-meta (vector tf-section-tube-count %) {:key %})
+              (range sn))])))
 
-(defn tf-section-burner-count [index]
-  (let [{:keys [value valid?]} (query-id ::subs/tf-section-burner-count-field index)]
-    [app-comp/text-input
-     {:value value, :valid? valid?, :align "center", :width 60
-      :on-change #(rf/dispatch [::event/set-tf-section-burner-count index %])}]))
+#_(defn tf-section-burner-count [index]
+    (let [{:keys [value valid?]} (query-id ::subs/tf-section-burner-count-field index)]
+      [app-comp/text-input
+       {:value value, :valid? valid?, :align "center", :width 60
+        :on-change #(rf/dispatch [::event/set-tf-section-burner-count index %])}]))
 
-(defn tf-section-burners [style]
-  (let [sn @(rf/subscribe [::subs/tf-section-count])
-        tn @(rf/subscribe [::subs/tf-burner-count-per-row])]
-    (if (and sn tn)
-      [form-cell-1 style
-       (translate [:config :section-burner-counts :label]
-                  "No of burners in each section")
-       (map #(with-meta (vector tf-section-burner-count %) {:key %})
-            (range sn))])))
+#_(defn tf-section-burners [style]
+    (let [sn @(rf/subscribe [::subs/tf-section-count])
+          tn @(rf/subscribe [::subs/tf-burner-count-per-row])]
+      (if (and sn tn)
+        [form-cell-1 style
+         (translate [:config :section-burner-counts :label]
+                    "No of burners in each section")
+         (map #(with-meta (vector tf-section-burner-count %) {:key %})
+              (range sn))])))
 
-(defn tf-sections-validity [style]
-  (let [{:keys [error]} (query-id ::subs/tf-sections-validity)]
-    (if error
-      [:div (use-sub-style style :div-error) error])))
+#_(defn tf-sections-validity [style]
+    (let [{:keys [error]} (query-id ::subs/tf-sections-validity)]
+      (if error
+        [:div (use-sub-style style :div-error) error])))
 
 ;; MEASURE LEVELS
 
@@ -397,17 +427,21 @@
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :tube-rows :label] "Tubes rows")]
       [tf-tube-count-per-row style]
-      [tf-tube-numbers style]
+      (tf-tube-numbers style)
+      [:div (use-sub-style style :form-heading-label)
+       (translate [:config :wall-names :label] "Wall Names")]
+      (tf-side-names style)
       [:div (use-sub-style style :form-heading-label)
        (translate [:config :burner-rows :label] "Burner rows")]
       [tf-burner-count-per-row style]
       [tf-burner-numbers style]
-      [:div (use-sub-style style :form-heading-label)
-       (translate [:config :sections :label] "Sections")]
-      [tf-section-count style]
-      [tf-section-tubes style]])
-   [tf-section-burners style]
-   [tf-sections-validity style]
+      #_[:div (use-sub-style style :form-heading-label)
+         (translate [:config :sections :label] "Sections")]
+                                        ;    [tf-section-count style]
+                                        ;   [tf-section-tubes style]
+      ])
+                                        ;[tf-section-burners style]
+                                        ;[tf-sections-validity style]
    [:div (use-sub-style style :form-heading-label)
     (translate [:config :measure-levels :label] "Measurement levels")]
    [tf-measure-levels style]])
