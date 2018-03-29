@@ -10,9 +10,9 @@
 
 
 ;;;;;;;;;; Styles Start ;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-(def ^:private s-week-header {:display "inline-block"
+(def s-week-header {:display "inline-block"
                               :width "30px"
                               :padding "5px"
                               :font-size "9px"
@@ -39,7 +39,7 @@
                                        :border-radius "3px"
                                        :background-color background-color})
 
-(defn- s-full-toggle-button [is-selected?]
+(defn- s-full-toggle-button [is-selected? enabled?]
   (merge {:background-color (if is-selected?
             (ht-style/colors :sky-blue)
             (ht-style/colors :white))
@@ -47,6 +47,7 @@
             (ht-style/colors :white)
             (ht-style/colors :sky-blue))
           :text-align "center"
+          :opacity (if enabled? 1 0.6)
           :display "inline-block"
           :width "56px"
           :font-size "9px"
@@ -56,22 +57,23 @@
           :margin "3px"
           :cursor "pointer"
           ::stylefy/mode
-          {:hover {:background-color (ht-style/colors :alumina-grey)
-                   :color (ht-style/colors :white)}}}))
+          {:hover (if enabled? {:background-color (ht-style/colors :alumina-grey)
+                   :color (ht-style/colors :white)})}}))
 
 (def s-range-options {:border-top "1px solid #CFD2D3"
                       :padding "10px"
                       :background-color "#F1F1F1"})
 
-;;;;;;;;;; Styles End ;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;; Styles End ;;;;;;;;;;;;
 
 
 (def range-options
-  [{:name "Custom" :to-add nil}
-   {:name "1 week" :to-add {:days 7 :months 0 :years 0}}
-   {:name "1 month" :to-add {:days 0 :months 1 :years 0}}
-   {:name "6 months" :to-add {:days 0 :months 6 :years 0}}
-   {:name "1 year" :to-add {:days 0 :months 0 :years 1}}])
+  { :custom {:label "Custom" :to-add nil} 
+    :week {:label "1 week" :to-add {:days 7 :months 0 :years 0}}
+    :month {:label "1 month" :to-add {:days 0 :months 1 :years 0}}
+    :six-months {:label "6 months" :to-add {:days 0 :months 6 :years 0}}
+    :year {:label "1 year" :to-add {:days 0 :months 0 :years 1}}})
 
 (defn week-days []
   [(translate [:calendar :week-days :Sunday] "Sunday")
@@ -96,6 +98,8 @@
    (translate [:calendar :month-names :November] "November")
    (translate [:calendar :month-names :December] "December")])
 
+(defn- update-values [m f & args]
+ (reduce (fn [r [k v]] (assoc r k (apply f v args))) {} m))
 
 (defn- is-leap-year? [year]
   (or (and
@@ -112,14 +116,17 @@
 (defn- get-day-of-week [year month day]
   (.getDay (js/Date. year (dec month) day)))
 
-(defn add-days [{:keys [day month year]} {:keys [days months years]}]
-  (let [jsDate (js/Date. year (dec month) day)]
-    (.setYear jsDate (+ years (.getFullYear jsDate)))
-    (.setMonth jsDate (+ months (.getMonth jsDate)))
-    (.setDate jsDate (dec (+ days (.getDate jsDate))))
-    {:day (.getDate jsDate)
-     :month (inc (.getMonth jsDate))
-     :year (.getFullYear jsDate)}))
+(defn add-days
+  ( [{:keys [day month year]} {:keys [days months years]} adjust-fn]
+    (let [jsDate (js/Date. year (dec month) day)]
+      (.setYear jsDate (+ years (.getFullYear jsDate)))
+      (.setMonth jsDate (+ months (.getMonth jsDate)))
+      (.setDate jsDate (adjust-fn (+ days (.getDate jsDate))))
+      {:day (.getDate jsDate)
+      :month (inc (.getMonth jsDate))
+      :year (.getFullYear jsDate)}))
+  ( [date period]
+    (add-days date period identity)))
 
 (defn- dates-to-show [year month week-start]
   (let [full-date (fn [d m y] {:day d :month m :year y})
@@ -150,16 +157,40 @@
                       (into []))]
     all-days))
 
-(defn- in-range? [date {:keys [start end]}]
-  (let [{:keys [day month year]} date
-        start-date (js/Date. (:year start) (dec (:month start)) (:day start))
-        end-date (js/Date. (:year end) (dec (:month end)) (:day end))
-        jsdate (js/Date. year (dec month) day)]
-    (and start end (or (and (<= start-date jsdate) (<= jsdate end-date))
-                       (and (<= end-date jsdate) (<= jsdate start-date))))))
+(defn- is-valid-date? [{:keys [day month year]}]
+  (and (and day month year)
+       (<= 0 year)
+       (<= 1 month 12)
+       (<= 1 day (no-of-days year month))))
 
-(defn day-fn [{:keys 
-  [range on-date-click on-date-mouse-enter on-date-mouse-leave]} 
+(defn- in-range? 
+  ([date {:keys [start end]} default]
+    (let [{:keys [day month year]} date
+      jsdate (js/Date. year (dec month) day)
+      satisty-start? (if (and start (is-valid-date? start))
+        (<= (js/Date. (:year start) (dec (:month start)) (:day start)) jsdate)
+        default)
+      satisty-end? (if (and end (is-valid-date? end))
+        (<= jsdate (js/Date. (:year end) (dec (:month end)) (:day end)))
+        default)]
+      (and satisty-start? satisty-end?)))
+  ([date range] (in-range? date range false)))
+
+(defn- get-label 
+  ([{:keys [day month year]}] 
+    (str day
+      " " (if month (subs ((month-names) (dec month)) 0 3))
+      " " year)))
+
+(defn- ensure-valid-date [date min max modifier-fn]
+  (if (and date (is-valid-date? date) 
+    (in-range? date {:start min :end max} true)) 
+      (modifier-fn date)))
+
+;; Helper Components ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- day-fn [{:keys 
+  [selected-range on-date-click on-date-mouse-enter on-date-mouse-leave]} 
     in-valid-range? day]
   ^{:key day}
   [:div (merge (stylefy/use-style (s-date in-valid-range?))
@@ -170,16 +201,16 @@
    [:div (stylefy/use-style
           (s-date-dots
            (cond
-             (in-range? day (select-keys range [:start :end]))
+             (in-range? day (select-keys selected-range [:start :end]))
                 (ht-style/colors :sky-blue)
              (in-range? day (set/rename-keys 
-              (select-keys range [:start :tempend]) {:tempend :end})) 
+              (select-keys selected-range [:start :tempend]) {:tempend :end})) 
                 (ht-style/colors :sky-blue)
-             (or (= (range :start) day)
-                 (= (range :start) day)) (ht-style/colors :sky-blue)
+             (or (= (:start selected-range) day)
+                 (= (:start selected-range) day)) (ht-style/colors :sky-blue)
              :else "#F1F1F1")))]])
 
-(defn- dates-selector [{:keys [year month week-start range
+(defn- dates-selector [{:keys [year month week-start selected-range
                                on-date-click on-date-mouse-enter
                                on-date-mouse-leave valid-range]
                         :as props}]
@@ -196,7 +227,7 @@
           (fn [week]
             ^{:key week}
             [:div (doall (map 
-              #(day-fn props (if valid-range (in-range? % valid-range) true) %) week))])
+              #(day-fn props (if valid-range (in-range? % valid-range true)) %) week))])
           weeks)))]])
 
 (defn- months-component [on-month-change]
@@ -213,20 +244,18 @@
            (subs m 0 3)])
         (month-names))])
 
-(defn- full-toggle-button [text is-selected? onclick]
-  [:div (merge (stylefy/use-style (s-full-toggle-button is-selected?))
-               {:on-click #(onclick %)})
-   text])
+(defn- full-toggle-button [text is-selected? onclick enabled?]
+  [:div (merge (stylefy/use-style (s-full-toggle-button is-selected? enabled?))
+               (if enabled? {:on-click #(onclick %)})) text])
 
-(defn calendar-component [{:keys [selection-complete-event selection valid-range]}]
-  (let [state (r/atom {:view "date"     ; or "date/month"
-                       :month-to-show {:month (inc (.getMonth (js/Date.)))
-                                       :year (.getFullYear (js/Date.))}
-                       :range {:start nil
-                               :end nil
-                               :tempend nil}
-                       :selected-range "1 month"
-                       :hide-content? false})
+;; Components ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; calendar component
+(defn calendar-component [{:keys 
+  [selected-range on-change picker-type valid-range]
+  {min-date :start max-date :end} :valid-range}]
+  (let [
+    state (r/atom {})
 
     ;; Functions ;;
     change-month (fn [func]
@@ -245,50 +274,46 @@
     change-year (fn [func]
                   (swap! state update-in [:month-to-show :year] func))
 
-    raise-selection-complete-event (fn []
-      (let [start (get-in @state [:range :start])
-            end (get-in @state [:range :end])]
-        (selection-complete-event {:start start
-                                  :end end})))
+    raise-on-change (fn []
+        (on-change {:start (get-in @state [:selected-range :start])
+                    :end (get-in @state [:selected-range :end])
+                    :type (:range-option @state)}))
 
     on-date-click (fn [day]
-      (let [selected-range (:selected-range @state)
-            to-add (some #(when (= (:name %) selected-range) (:to-add %))
-                          range-options)]
-        (if (= selection "range")
-          (if (not (get-in @state [:range :start]))
-            (do (swap! state assoc-in [:range :start] day)
-                (if to-add (do
-                              (swap! state assoc-in [:range :end]
-                                    (add-days day to-add))
-                              (raise-selection-complete-event))))
-            (if (not (get-in @state [:range :end]))
-              (do
-                (swap! state assoc-in [:range :end] day)
-                (raise-selection-complete-event))
-              (do (swap! state assoc-in [:range :start] day)
-                  (swap! state assoc-in [:range :end] nil)
-                  (if to-add
-                    (do
-                      (swap! state assoc-in [:range :end]
-                              (add-days day to-add))
-                      (raise-selection-complete-event))))))
-          (do
-            (swap! state assoc-in [:range :start] day)
-            (raise-selection-complete-event)))))
+      (let [picker-type (:picker-type @state)
+            to-add (get-in range-options [(:range-option @state) :to-add])
+            new-end (if (and (= picker-type :range) to-add) 
+              (add-days day to-add dec))
+            is-end-valid? (in-range? new-end {:start min-date :end max-date} true)
+            valid-end (if is-end-valid? new-end max-date)
+            valid-start (if is-end-valid? day (add-days valid-end 
+              (update-values to-add * -1) inc))]
+        (if (= picker-type :date) 
+          (do (swap! state update :selected-range assoc :start day :end nil)
+              (raise-on-change))
+          (do (swap! state update :selected-range (fn [{:keys [start end]}]
+                (cond (and start (not end)) 
+                        {:start start :end day}
+                      (and start end) 
+                        {:start (if to-add valid-start day) :end (if to-add valid-end)}
+                      (and (not start) (not end)) 
+                        {:start (if to-add valid-start day) :end (if to-add valid-end)})))
+              (if (and (get-in @state [:selected-range :start])
+                       (get-in @state [:selected-range :end]))
+                  (raise-on-change))))))
 
     on-date-mouse-enter (fn [day]
-      (if (and (= (:selected-range @state) "Custom")
-                (= selection "range")) 
-        (if (and (get-in @state [:range :start])
-                  (not (get-in @state [:range :end])))
-          (swap! state assoc-in [:range :tempend] day))))
+      (if (and (= (:range-option @state) :custom)
+                (= picker-type :range)) 
+        (if (and (get-in @state [:selected-range :start])
+                  (not (get-in @state [:selected-range :end])))
+          (swap! state assoc-in [:selected-range :tempend] day))))
 
     on-date-mouse-leave (fn [day]
-      (if (and (= (:selected-range @state) "Custom")
-                (= selection "range"))
-        (if (get-in @state [:range :start])
-          (swap! state assoc-in [:range :tempend] nil))))
+      (if (and (= (:range-option @state) :custom)
+                (= picker-type :range))
+        (if (get-in @state [:selected-range :start])
+          (swap! state assoc-in [:selected-range :tempend] nil))))
 
     on-month-change (fn [month]
       (let [month-no (->> (month-names)
@@ -296,212 +321,190 @@
                                           (if (= m month) i)))
                           (first))]
         (swap! state assoc-in [:month-to-show :month] (+ 1 month-no)))
-      (swap! state assoc-in [:view] "date"))
+      (swap! state assoc-in [:view] :date))
 
-    on-range-option-click (fn [button]
-      (swap! state assoc-in [:selected-range] (:name button))
-      (if (= (:name button) "Custom")
-        (swap! state assoc-in [:range] {:start nil :end nil}))
-      (let [to-add (some #(when (= (:name %) (:name button))
-                            (:to-add %))
-                          range-options)
-            day (get-in @state [:range :start])]
-        (if (and day to-add (= selection "range"))
-          (do
-            (swap! state assoc-in [:range :end]
-                    (add-days day to-add))
-            (raise-selection-complete-event)))))
+    on-range-option-click (fn [option]
+      (if (not= (:range-option @state) option)
+        (do (swap! state assoc :range-option option)
+            (swap! state assoc-in [:selected-range] :start nil :end nil))))
 
     on-year-change (fn [year]
       (swap! state assoc-in [:month-to-show :year] year))]
 
-    (fn [{:keys [valid-range]}]
-      (let [selected-month (get-in @state [:month-to-show :month])
-            selected-year (get-in @state [:month-to-show :year])
-            selected-range (@state :selected-range)]
-        [:div {:style {:width "235px"
-                        :font-size "11px"
-                        :user-select "none"
-                        :display "inline-block"}}
-          [:div {:style {:padding "10px"}}
-          [:div {:style {:text-align "center"
-                          :cursor "pointer"
-                          :margin-bottom "15px"}}
-            [:div {:style {:display "inline-block"
-                          :width "15px"}
-                  :on-click (fn []
-                    (swap! state assoc-in [:hide-content?] true)
-                    (js/setTimeout #(if (= "date" (get-in @state [:view]))
-                                      (change-month dec)
-                                      (change-year dec)) 100)
-                    (js/setTimeout #(swap! state assoc-in [:hide-content?]
-                                            false) 100))} "<"]
-            [:div {:on-click #(swap! state assoc-in [:view] "month")
-                  :style {:display "inline-block"
-                          :text-align "center"
-                          :width "100px"
-                          :padding "2px"
-                          :font-weight "bold"}}
-            (if (= "date" (get-in @state [:view]))
-              [:span 
-                (->> selected-month (dec) ((month-names))) " " selected-year]
-              (get-in @state [:month-to-show :year]))]
-            [:div {:style {:display "inline-block"
-                          :width "15px" }
-                  :on-click (fn []
-                    (swap! state assoc-in [:hide-content?] true)
-                    (js/setTimeout #(if (= "date" (get-in @state [:view])) 
-                                      (change-month inc)
-                                      (change-year inc))
-                                    100)
-                    (js/setTimeout #(swap! state assoc-in [:hide-content?]
-                                            false)
-                                    100))}
-            ">"]]
-          [:div {:class (str "s-opacity-transition"
-            (if (:hide-content? @state) " s-transparent" nil))}
-            (if (= "date" (:view @state))
-              [:div
-              [dates-selector {:year selected-year
-                                :valid-range valid-range
-                                :month selected-month
-                                :week-start 1
-                                :range (:range @state)
-                                :on-date-click on-date-click
-                                :on-date-mouse-enter on-date-mouse-enter
-                                :on-date-mouse-leave on-date-mouse-leave}]]
-              [months-component on-month-change])]]
-          (if (and (= "date" (:view @state))
-                  (= selection "range"))
-            [:div (stylefy/use-style s-range-options)
-            (map (fn [op]
-                    ^{:key (:name op)}
-                    [full-toggle-button
-                    (:name op)
-                    (= selected-range (:name op))
-                    #(on-range-option-click op)])
-                  range-options)])]))))
+    (r/create-class
+      { :component-did-mount
+        (fn [_] 
+          (swap! state assoc
+            :picker-type picker-type
+            :selected-range selected-range
+            :range-option (or (:type selected-range) :custom)
+            :view :date    ; or ":date/:month"
+            :month-to-show (select-keys (or (:start selected-range) 
+                             {:month (inc (.getMonth (js/Date.)))
+                              :year (.getFullYear (js/Date.))}) [:month :year]) 
+            :hide-content? false))
 
-;; Components ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        :reagent-render
+        (fn [ {:keys [selected-range on-change picker-type valid-range]
+              {min-date :start max-date :end} :valid-range}]
+
+          [:div {:style { :width "235px" :font-size "11px"
+                          :user-select "none" :display "inline-block"}}
+            [:div {:style {:padding "10px"}}
+              [:div {:style {:text-align "center" :cursor "pointer"
+                             :margin-bottom "15px"}}
+                [:div {:style {:display "inline-block" :width "15px"}
+                      :on-click (fn []
+                        (swap! state assoc-in [:hide-content?] true)
+                        (js/setTimeout #(if (= :date (get-in @state [:view]))
+                                          (change-month dec)
+                                          (change-year dec)) 100)
+                        (js/setTimeout #(swap! state assoc-in [:hide-content?]
+                                                false) 100))} "<"]
+                [:div {:on-click #(swap! state assoc-in [:view] :month)
+                      :style {:display "inline-block"
+                              :text-align "center"
+                              :width "100px"
+                              :padding "2px"
+                              :font-weight "bold"}}
+                (if (= :date (get-in @state [:view]))
+                  [:span 
+                    (->> (get-in @state [:month-to-show :month]) 
+                      (dec) ((month-names))) " " 
+                      (get-in @state [:month-to-show :year])]
+                  (get-in @state [:month-to-show :year]))]
+                [:div {:style {:display "inline-block"
+                              :width "15px" }
+                      :on-click (fn []
+                        (swap! state assoc-in [:hide-content?] true)
+                        (js/setTimeout #(if (= :date (get-in @state [:view])) 
+                                          (change-month inc)
+                                          (change-year inc)) 100)
+                        (js/setTimeout #(swap! state assoc-in [:hide-content?]
+                                                false) 100))} ">"]]
+            [:div {:class (str "s-opacity-transition"
+              (if (:hide-content? @state) " s-transparent" nil))}
+              (if (= :date (:view @state))
+                [:div [dates-selector 
+                    { :year (get-in @state [:month-to-show :year])
+                      :valid-range valid-range
+                      :month (get-in @state [:month-to-show :month])
+                      :week-start 1
+                      :selected-range (:selected-range @state)
+                      :on-date-click on-date-click
+                      :on-date-mouse-enter on-date-mouse-enter
+                      :on-date-mouse-leave on-date-mouse-leave}]]
+                [months-component on-month-change])]]
+            (if (and (= :date (:view @state))
+                    (= picker-type :range))
+              [:div (stylefy/use-style s-range-options)
+                (doall (map (fn [op] 
+                  (let [option (op range-options)
+                        to-add (:to-add option)]
+                    ^{:key op}
+                    [full-toggle-button (:label (op range-options))
+                      (= (:range-option @state) op)
+                      #(on-range-option-click op) 
+                      (or (not to-add) (not min-date) (not max-date)
+                        (in-range? (add-days min-date to-add dec) 
+                          {:end max-date} true))])) 
+                    (keys range-options)))])])})))
+
 
 ;; date-picker component
-(defn date-picker [{:keys [date valid-range on-select]}]
-  (let [mystate (r/atom {})
-        get-label (fn [{:keys [day month year]}]
-                    (str day
-                         " " (if month
-                               (subs ((month-names) (dec month)) 0 3))
-                         " " year))]
+(defn date-picker [{:keys [date on-change min max valid? disabled?]
+                    :or {valid? true disabled? false}}]
+  (let [mystate (r/atom {})]
     (r/create-class
      {:component-did-mount
       (fn [this]
-        (swap! mystate assoc :anchor (dom/dom-node this)
-                             :open? false
-                             :on-select on-select
-                             :date (if 
-                                (or (not valid-range) 
-                                  (in-range? date valid-range))
-                                    date nil) ))
+        (swap! mystate assoc :anchor (dom/dom-node this), :open? false))
 
       :reagent-render
-      (fn [{:keys [date valid-range on-select]}]
+      (fn [{:keys [date on-change min max valid?]
+                    :or {valid? true disabled? false}}]
         [:div {:style {:display "inline-block" :vertical-align "top"}}
          [app-comp/action-input-box 
-            {:disabled? false
-              :valid? true
-              :width 100
-              :label (if (or (not valid-range) (in-range? (:date @mystate) valid-range))
-                (get-label (:date @mystate)) nil) 
+            { :disabled? disabled?, :valid? valid?, :width 100
+              :label (ensure-valid-date date min max get-label)
               :action #(swap! mystate assoc :open? true)
               :right-icon ic/dropdown
-              :right-action 
-                #(swap! mystate assoc :open? true)}]
+              :right-action #(swap! mystate assoc :open? true)}]
          (if (:open? @mystate)
-           [app-comp/popover {:open (:open? @mystate)
-                              :on-request-close 
-                                #(swap! mystate assoc :open? false)
-                              :anchor-el (:anchor @mystate)
-                              :anchor-origin {:horizontal "right", 
-                                              :vertical "bottom"}
-                              :target-origin {:horizontal "right", 
-                                              :vertical "top"}}
-            [calendar-component { :valid-range valid-range
-                                  :selection-complete-event
-                                    (fn [{:keys [start]}]
-                                      ;; (js/console.log start)
-                                      (swap! mystate assoc :date start)
-                                      (swap! mystate assoc :open? false)
-                                      (on-select start))
-                                    :selection "date"
-                                    :min min
-                                    :max max}]])])})))
+           [app-comp/popover 
+             {:open (:open? @mystate)
+              :on-request-close 
+                #(swap! mystate assoc :open? false)
+              :anchor-el (:anchor @mystate)
+              :anchor-origin {:horizontal "right", 
+                              :vertical "bottom"}
+              :target-origin {:horizontal "right", 
+                              :vertical "top"}}
+              [calendar-component 
+                { :selected-range {:start date :end nil}
+                  :valid-range {:start min :end max}
+                  :on-change (fn [{:keys [start]}]
+                      (swap! mystate assoc :open? false)
+                      (on-change (ensure-valid-date start min max identity)))
+                  :picker-type :date}]])])})))
 
 
 ;; date-range-picker component
-(defn date-range-picker [{:keys [start end valid-range]}]
-  (let [state (r/atom {})
-        get-label (fn [{:keys [start end]}]
-                    (str (:day start)
-                         " " (if (:month start)
-                               (subs ((month-names) (dec (:month start))) 0 3))
-                         " " (:year start) " - " (:day end)
-                         " " (if (:month end)
-                               (subs ((month-names) (dec (:month end))) 0 3))
-                         " " (:year end)))]
+(defn date-range-picker [_]
+  (let [mystate (r/atom {})
+        to-add (fn [type] 
+          (or (get-in range-options [type :to-add])
+               {:days 1 :months 0 :year 0}))
+        to-subtract (fn [type]
+          (update-values (to-add type) * -1))]
     (r/create-class
      {:component-did-mount
-      (fn [this]
-        (swap! state assoc :anchor (dom/dom-node this))
-        (swap! state assoc :open? false)
-        (swap! state assoc :range
-          (if (or (not valid-range) (and
-              (in-range? start valid-range)
-              (in-range? end valid-range)))
-                {:start start :end end} nil)))
+      (fn [this] (swap! mystate assoc :anchor (dom/dom-node this), :open? false))
 
       :reagent-render
-      (fn [{:keys [on-select valid-range]}]
-        [:div {:style {:display "inline-block"
-                       :vertical-align "top"}}
+      (fn [{:keys 
+        [selected-range on-change min max valid? disabled?]
+            :or {valid? true disabled? false}
+            {:keys [start end type]} :selected-range}]
+        ;; check buttons
+        (swap! mystate assoc 
+          :right-disabled? (and max end 
+              (in-range? (add-days end (to-add type) dec) {:start max} true))
+          :left-disabled? (and min start 
+              (in-range? (add-days start (to-subtract type) inc) {:end min} true)))
+        [:div {:style {:display "inline-block" :vertical-align "top"}}
          [app-comp/action-input-box
-          {:disabled? false
-           :valid? true
-           :width "200px"
-           :label (if (or (not valid-range) (and 
-              (in-range? (get-in @state [:range :start]) valid-range) 
-              (in-range? (get-in @state [:range :end]) valid-range))) 
-                (get-label (:range @state)) nil) 
-           :action #(swap! state assoc :open? true)
-           :left-icon ic/nav-left
-           :left-action (fn [_]
-              (if (not= (:start valid-range) (get-in @state [:range :start]))
-                (do ((swap! state update-in [:range :start]
-                        add-days {:days 0 :months 0 :years 0})
-                (swap! state update-in [:range :end]
-                        add-days {:days 0 :months 0 :years 0})
-                (on-select (:range @state))))))
-           :right-icon ic/nav-right
-           :right-action (fn [_]
-               (if (not= (:end valid-range) (get-in @state [:range :end]))
-                (do ((swap! state update-in [:range :start]
-                        add-days {:days 2 :months 0 :years 0})
-                  (swap! state update-in [:range :end]
-                        add-days {:days 2 :months 0 :years 0})
-                  (on-select (:range @state))))))}]
-         (if (:open? @state)
-           [app-comp/popover {:open true
-                              :on-request-close #(swap! state assoc :open? false)
-                              :anchor-el (:anchor @state)
-                              :anchor-origin {:horizontal "right", 
-                                              :vertical "bottom"}
-                              :target-origin {:horizontal "right", 
-                                              :vertical "top"}}
-            [calendar-component {:valid-range valid-range
-                                :selection-complete-event
-                                 (fn [r] ;; (js/console.log r)
-                                   (swap! state assoc :range r)
-                                   (swap! state assoc :open? false)
-                                   (on-select r))
-                                 :selection "range"
-                                 :min min
-                                 :max max}]])])})))
+           {:disabled? disabled?, :valid? valid?, :width "200px"
+            :label (str (ensure-valid-date start min max get-label)
+                " - " (ensure-valid-date end min max get-label))
+            :action #(swap! mystate assoc :open? true)
+            :left-icon ic/nav-left
+            :left-disabled? (:left-disabled? @mystate)
+            :left-action (fn [_]
+              (let [new-start (add-days start (to-subtract type))
+                    new-end (add-days (if (= type :custom) start new-start) 
+                                    (to-add type) (if (= type :custom) identity dec))]
+                    (on-change (assoc selected-range
+                      :start new-start, :end new-end))))
+            :right-icon ic/nav-right
+            :right-disabled? (:right-disabled? @mystate)
+            :right-action (fn [_]
+              (let [new-start (add-days start (to-add type))
+                    new-end (add-days (if (= type :custom) end new-start) 
+                        (to-add type) (if (= type :custom) identity dec))]
+                    (on-change (assoc selected-range
+                      :start new-start, :end new-end))))}]
+         (if (:open? @mystate)
+           [app-comp/popover 
+              { :open (:open? @mystate)
+                :on-request-close #(swap! mystate assoc :open? false)
+                :anchor-el (:anchor @mystate)
+                :anchor-origin {:horizontal "right", :vertical "bottom"}
+                :target-origin {:horizontal "right", :vertical "top"}}
+              [calendar-component 
+                { :selected-range selected-range
+                  :valid-range {:start min :end max}
+                  :on-change (fn [selected-range]
+                    (swap! mystate assoc :open? false)
+                    (on-change selected-range))
+                  :picker-type :range}]])])})))
