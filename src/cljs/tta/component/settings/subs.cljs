@@ -91,33 +91,38 @@
      (or dirty? (not valid?)
          pyro-warn?))))
 
+(defn has-emissivity? [data ekey]
+  (if-let [chs (get-in data [:sf-settings :chambers])]
+    ;; check side-fired
+    (some ekey chs)
+    (if-let [levels (get-in data [:tf-settings :levels])]
+      ;; top-fired
+      (some #(some ekey (:tube-rows %)) levels))))
+
 (rf/reg-sub
  ::has-gold-cup-emissivity?
  :<- [::data]
  (fn [data _]
-   (some :gold-cup-emissivity (or (get-in data [:sf-settings :chambers])
-                                (get-in data [:tf-settings :tube-rows])))))
+   (has-emissivity? data :gold-cup-emissivity)))
 
 (rf/reg-sub
  ::has-custom-emissivity?
  :<- [::data]
  (fn [data _]
-   (some :custom-emissivity (or (get-in data [:sf-settings :chambers])
-                               (get-in data [:tf-settings :tube-rows])))))
+   (has-emissivity? data :custom-emissivity)))
 
 (rf/reg-sub
  ::emissivity-types
  :<- [::has-gold-cup-emissivity?]
- :<- [::has-custom-emissivity?]
  :<- [::ht-subs/translation [:settings :emissivity-type :common]]
  :<- [::ht-subs/translation [:settings :emissivity-type :gold-cup]]
  :<- [::ht-subs/translation [:settings :emissivity-type :custom]]
- (fn [[gold-cup? custom? common gold-cup custom] _]
+ (fn [[gold-cup?  common gold-cup custom] _]
    [{:id "common"
      :name (or common "Common for all tubes")}
     {:id "goldcup", :disabled? (not gold-cup?)
      :name (or gold-cup "Gold cup")}
-    {:id "custom", :disabled? (not custom?)
+    {:id "custom", :disabled? false
      :name (or custom "Custom for each tube")}]))
 
 (rf/reg-sub

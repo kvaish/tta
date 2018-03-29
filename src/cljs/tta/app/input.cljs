@@ -1,6 +1,7 @@
 (ns tta.app.input
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
+            [re-frame.core :as rf]
             [cljs-react-material-ui.reagent :as ui]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [ht.util.interop :as i]
@@ -302,4 +303,3 @@
            :item-height 38
            :items-render-fn items-render-fn}]]))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

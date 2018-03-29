@@ -39,6 +39,8 @@
      :choose-plant
      {:open? false}
      :edit-pyrometer
+     {:open? false}
+     :custom-emissivity
      {:open? false}}}))
 
 (defn init []
