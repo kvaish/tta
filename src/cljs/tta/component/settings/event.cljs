@@ -13,6 +13,7 @@
                                             validate-field parse-value]]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
+            [tta.app.subs :as app-subs]
             [tta.component.settings.subs :as subs]))
 
 (defonce comp-path [:component :settings])
@@ -93,10 +94,10 @@
              :dispatch [::ht-event/set-busy? true]
              :service/update-plant-settings
              {:client-id (:id client)
-              :plant-id (:id plant)
-              :change-id (:change-id plant)
-              :settings (archive-settings (get-in db data-path) (:settings plant))
-              :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}})
+                :plant-id (:id plant)
+                :change-id (:change-id plant)
+                :settings (archive-settings (get-in db data-path) (:settings plant))
+                :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-db
@@ -148,3 +149,67 @@
          missing? (not (some #(= pid (:id %)) pyrometers))]
      {:db (assoc-in db data-path (assoc data :pyrometers pyrometers))
       :dispatch-n (list (if missing? [::set-field [:pyrometer-id] nil true]))})))
+
+(rf/reg-event-db
+ ::set-tube-prefs
+ (fn [db [_ tube-prefs]]
+   (let [firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])
+         path (case firing
+                "side" (conj data-path :sf-settings :chambers)
+                "top" (conj data-path :tf-settings :tube-rows))]
+     (update-in db path
+                (fn [old]
+                  (mapv (fn [m prefs]
+                          (assoc m :tube-prefs prefs)) old tube-prefs))))))
+
+(rf/reg-event-db
+ ::set-emissivity-type
+ (fn [db [_ path value required?]]
+   (let [has-custom-emissivity @(rf/subscribe [::subs/has-custom-emissivity?])
+         data @(rf/subscribe [::subs/data])]
+     (if (and (nil? has-custom-emissivity) (= value "custom"))
+       (assoc-in db (into form-path path)
+                 {:value value
+                  :valid? false
+                  :error
+                  (translate [::settings :custom-emissivity :error]
+                             "Please provide each tube emissivity")})
+       (set-field db path value data data-path form-path required?)))))
+
+
+;; set custom emissivity
+;; in custom emissivity dialog, it has been tried to homogenize the handling of
+;; emissivity data by considering side fired as top fired with one level
+
+(rf/reg-event-db
+ ::set-custom-emissivity
+ (fn [db [_ emissivity-data]]
+   (let [data @(rf/subscribe [::subs/data])
+         firing (get-in @(rf/subscribe [::app-subs/plant]) [:config :firing])]
+     (-> db
+         (assoc-in data-path
+                   (case firing
+                     "side" (update-in data [:sf-settings :chambers]
+                                       (fn [chs]
+                                         (let [new-chs (get-in emissivity-data
+                                                               [:levels 0 :tube-rows])]
+                                           (mapv merge
+                                                 (or chs (repeat (count new-chs) nil))
+                                                 new-chs))))
+                     "top" (update-in
+                            data [:tf-settings :levels]
+                            (fn [levels]
+                              (let [new-levels (:levels emissivity-data)]
+                                (mapv
+                                 (fn [level new-level]
+                                   (update
+                                    level :tube-rows
+                                    (fn [rows]
+                                      (let [new-rows (:tube-rows new-level)]
+                                        (mapv merge
+                                              (or rows (repeat (count new-rows) nil))
+                                              new-rows)))))
+                                 (or levels (repeat (count new-levels) nil))
+                                 new-levels))))))
+         (assoc-in (conj form-path :emissivity-type) {:value "custom"
+                                                      :valid? true})))))

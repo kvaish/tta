@@ -42,4 +42,4 @@
                                     :vertical-align "top"
                                     :margin-left 50
                                     :background app-style/widget-fg}}
-                      [tube-list]]]))}]])
+                      ]]))}]])

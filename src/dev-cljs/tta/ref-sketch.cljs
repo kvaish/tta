@@ -40,9 +40,11 @@
                                :bottom? true}}}))
 
 
-(def my-state (r/atom {:data {:name "abc"
+(def my-state (r/atom {:data {:classes "ab cd"
+                              :name "abc"
                               :list [{:x 0, :y 0, :w 10, :h 10}
-                                     {:x 10, :y 10, :w 10, :h 10}]}}))
+                                     {:x 10, :y 10, :w 10, :h 10}]}
+                       :chart {:points []}}))
 
 (def my-sketch
   {:width "200px", :height "300px"
@@ -53,7 +55,7 @@
           :attr {:fill "none"
                  :stroke "none"}
           :class :root
-          :on-off-classes {:on "reformer", :off "reactor"}
+          :classes :classes
           :nodes [{:tag :rect, :class :back
                    :attr {:x 0, :y 0, :width 200, :height 300
                            :fill "aliceblue"}}
@@ -76,9 +78,26 @@
                                                            js/d3.event.pageY])}
                    :did-update #(js/console.log "updated rect")}]}})
 
+(def my-chart
+  {:width "300px", :height "200px"
+   :view-box "0 0 300 200"
+   :style {:color "white"
+           :font-size "32px"}
+   :node {:tag :g
+          :attr {:fill "none", :stroke "none"}
+          :class :root
+          :nodes [{:tag :rect, :class :point
+                   :attr {:width 3, :height 3
+                          :x :x, :y :y
+                          :fill "aliceblue"}
+                   :multi? true
+                   :data :points}]}})
+
 (defn d3-sketch []
-  [d3-svg (assoc my-sketch
-           :data (:data @my-state))])
+  #_[d3-svg (assoc my-sketch
+                   :data (:data @my-state))]
+  [d3-svg (assoc my-chart
+                 :data (:chart @my-state))])
 
 (defn save-image []
   (let [svg-string (d3-svg-2-string (-> my-sketch
@@ -102,3 +121,15 @@
                       :config @reformer-data-tf}]
    #_[ui/flat-button {:label "Save"
                     :on-click #(dwg/save-image {:config @reformer-data-tf})}]])
+
+(defn gen-chart [n]
+  (let [xi 0, xe 300
+        yi 0, ye 200
+        n (or n 100)
+        x (random-sample 0.5 (range n))
+        y (repeatedly (count x) #(rand-int ye))
+        f (fn [i e x] (+ i (* x (/ (- e i) n))))]
+    (mapv (fn [x y]
+            {:x (f xi xe x)
+             :y y})
+          x y)))

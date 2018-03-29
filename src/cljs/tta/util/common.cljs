@@ -145,15 +145,17 @@
 ;; field setters
 (defn set-field [db path value data data-path form-path required?]
   (cond-> db
-    :always (assoc-in data-path (assoc-in data path value))
-    required? (update-in form-path assoc-in path (if (some? value)
+    data-path (assoc-in data-path (assoc-in data path value))
+    (and required? form-path) (update-in form-path assoc-in path
+                                         (if (some? value)
                                                    (make-field value)
                                                    (missing-field)))))
 
 (defn set-field-text [db path value data data-path form-path required?]
   (cond-> db
-    :always (assoc-in data-path (assoc-in data path value))
-    required? (update-in form-path assoc-in path (if (not-empty value)
+          data-path (assoc-in data-path (assoc-in data path value))
+          (and required? form-path) (update-in form-path assoc-in path
+                                               (if (not-empty value)
                                                    (make-field value)
                                                    (missing-field)))))
 
@@ -177,8 +179,8 @@
           ;; blank!
           (treat-blank required?))]
     (cond-> db
-      f? (update-in form-path assoc-in path field)
-      d? (assoc-in data-path (assoc-in data path value)))))
+            (and f? form-path) (update-in form-path assoc-in path field)
+            (and d? data-path) (assoc-in data-path (assoc-in data path value)))))
 
 (defn set-field-number
   ([db path value data data-path form-path required?]
@@ -197,8 +199,8 @@
            ;; blank!
            (treat-blank required?))]
      (cond-> db
-       f? (update-in form-path assoc-in path field)
-       d? (assoc-in data-path (assoc-in data path value))))))
+             (and f? form-path) (update-in form-path assoc-in path field)
+             (and d? data-path) (assoc-in data-path (assoc-in data path value))))))
 
 (defn set-field-decimal [db path value data data-path form-path required?
                          {:keys [max min precision]}]
@@ -217,8 +219,8 @@
           ;; blank!
           (treat-blank required?))]
     (cond-> db
-      f? (update-in form-path assoc-in path field)
-      d? (assoc-in data-path (assoc-in data path value)))))
+            (and f? form-path) (update-in form-path assoc-in path field)
+            (and d? data-path) (assoc-in data-path (assoc-in data path value)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; react-motion
