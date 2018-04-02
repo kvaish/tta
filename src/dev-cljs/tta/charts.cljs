@@ -17,6 +17,7 @@
           x)))
 
 (defn charts []
-  [:div {:style {:padding "20px"
-                 :background "white"}} 
-    [ht-charts/d3-chart {:data (gen-chart 100)}]])
+  (let [data {:points (gen-chart 1000)}]
+    [:div {:style { :padding "20px"
+                    :background "white"}} 
+    [ht-charts/d3-chart {:data data}]]))
