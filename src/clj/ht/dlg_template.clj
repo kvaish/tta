@@ -9,8 +9,13 @@
 (ns tta.dialog.my-dlg.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [day8.re-frame.forward-events-fx]
+            [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]))
+
+;; Do NOT use rf/subscribe
+;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
 
 (rf/reg-event-db
  ::open
@@ -46,10 +51,10 @@
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
-            [ht.style :as ht]
-            [ht.app.style :as ht-style
-             :refer [color color-hex color-rgba vendors]]
-            [tta.app.style :as app-style]))"
+            [ht.style :as ht :refer [color color-hex color-rgba]]
+            [ht.app.style :as ht-style :refer [vendors]]
+            [tta.app.style :as app-style]))
+"
 
    :subs
    ";; subscriptions for dialog my-dlg
@@ -57,6 +62,10 @@
   (:require [re-frame.core :as rf]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]))
+
+;; Do NOT use rf/subscribe
+;; instead add input signals like :<- [::query-id]
+;; or use reaction or make-reaction (refer reagent docs)
 
 ;; primary signals
 (rf/reg-sub

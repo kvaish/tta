@@ -23,7 +23,8 @@
             [tta.dialog.choose-plant.view :refer [choose-plant]]
             [tta.component.home.view :refer [home]]
             [tta.component.config.view :refer [config]]
-            [tta.component.settings.view :refer [settings]]))
+            [tta.component.settings.view :refer [settings]]
+            [tta.component.dataset.view :refer [dataset]]))
 
 ;;; language-menu ;;;
 
@@ -80,8 +81,7 @@
              :label-fn #(translate [:root :menu :logout] "Logout")
              :event-id ::event/logout}]
    :middle {:home tta.component.home.view/context-menu
-            :dataset-creator []
-            :dataset-analyzer []
+            :dataset []
             :trendline []
             :config []
             :settings []
@@ -195,22 +195,20 @@
        [:span]
        (doall
          (map
-           (fn [[id label target]]
-             (let [target (or target id)
-                   active? (= target active-content)]
+           (fn [[id label]]
+             (let [active? (= id active-content)]
                ^{:key id}
                [:a
                 (merge (use-sub-style style/hot-links
                                       (if active? :active-link :link))
                        {:href "#"
                         :on-click (if-not active?
-                                    #(rf/dispatch [::event/activate-content target]))})
+                                    #(rf/dispatch [::event/activate-content id]))})
                 label]))
            [[:home
              (translate [:quick-launch :home :label] "Home")]
             [:dataset
-             (translate [:quick-launch :dataset :label] "Dataset")
-             @(rf/subscribe [::subs/active-dataset-action])]
+             (translate [:quick-launch :dataset :label] "Dataset")]
             [:trendline
              (translate [:quick-launch :trendline :label] "Trendline")]]))))])
 
@@ -261,17 +259,16 @@
                   assoc :height (app-style/content-height view-size))
      (if content-allowed?
        (case active-content
-         :home             [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
          ;; primary
-         :dataset-creator  [:div "dataset-creator"]
-         :dataset-analyzer [:div "dataset-analyzer"]
-         :trendline        [:div "trendline"]
+         :dataset        [dataset]
+         :trendline      [:div "trendline"]
          ;; secondary
-         :config            [config]
-         :settings          [settings]
-         :goldcup           [:div "goldcup"]
-         :config-history    [:div "config-history"]
-         :logs              [:div "logs"])
+         :config         [config]
+         :settings       [settings]
+         :goldcup        [:div "goldcup"]
+         :config-history [:div "config-history"]
+         :logs           [:div "logs"])
        ;; have no rights!!
        [no-access])]))
 

@@ -7,6 +7,7 @@
              :plant-id         "plantId"
              :data-date        (u/date-field "dataDate")
              :topsoe?          "isTopsoeInternal"
+             :gold-cup?        "hasGoldCup"
              :reformer-version "reformerVersion"
              :summary          {:name   "summary"
                                 :schema ::summary}

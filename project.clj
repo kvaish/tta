@@ -102,7 +102,8 @@
                     :preloads             [devtools.preload
                                            re-frisk.preload]
                     :external-config      {:devtools/config
-                                           {:features-to-install :all}}}}
+                                           {:features-to-install
+                                            [:formatters :hints]}}}}
 
     {:id           "min"
      :source-paths ["src/cljs" "src/cljc" "src/prd-cljs"]

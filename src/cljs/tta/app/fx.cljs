@@ -89,3 +89,28 @@
                        :settings settings}
      :evt-success evt-success
      :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/fetch-dataset
+ (fn [{:keys [client-id plant-id dataset-id
+             evt-success evt-failure]}]
+   (svc/fetch-dataset
+    {:client-id client-id
+     :plant-id plant-id
+     :dataset-id dataset-id
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/search-dataset
+ (fn [{:keys [client-id plant-id from-data to-date]}]
+   ))
+
+(rf/reg-fx
+ :service/fetch-latest-dataset
+ (fn [{:keys [client-id plant-id evt-success evt-failure]}]
+   (svc/fetch-latest-dataset
+    {:client-id client-id
+     :plant-id plant-id
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))

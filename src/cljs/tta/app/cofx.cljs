@@ -3,5 +3,3 @@
             [ht.util.common :as u]))
 
 ;; registry id policy: no namespace qualification on keyword
-
-

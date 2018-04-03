@@ -86,10 +86,14 @@
  :<- [::dirty?]
  :<- [::valid?]
  :<- [:tta.dialog.edit-pyrometer.subs/warn-on-close?]
- (fn [[config? dirty? valid? pyro-warn?] _]
+ :<- [:tta.dialog.custom-emissivity.subs/warn-on-close?]
+ :<- [:tta.dialog.tube-prefs.subs/warn-on-close?]
+ (fn [[config? dirty? valid? pyro-warn? em-warn? pref-warn?] _]
    (if config?
      (or dirty? (not valid?)
-         pyro-warn?))))
+         pyro-warn?
+         em-warn?
+         pref-warn?))))
 
 (defn has-emissivity? [data ekey]
   (if-let [chs (get-in data [:sf-settings :chambers])]

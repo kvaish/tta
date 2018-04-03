@@ -29,7 +29,8 @@
         :event-id ::event/show-license})]))
 
 (defn card [props]
-  (let [{:keys [id primary? access on-select title buttons icon desc]} props
+  (let [{:keys [id primary? access on-select action
+                title buttons icon desc]} props
         card-style (if primary? style/card-primary style/card-secondary)]
     [ui/paper (merge (use-style
                       (if (= access :enabled)
@@ -37,7 +38,7 @@
                             (style/set-clickable card-style))
                         (style/disable-card card-style)))
                      (if (and (= access :enabled) (not buttons))
-                       {:on-click #(on-select id)}))
+                       {:on-click (or action #(on-select id))}))
      [:div (use-sub-style card-style :title) title]
      [:hr (use-sub-style card-style :hr)]
      [:p (use-sub-style card-style :desc) desc]
@@ -45,23 +46,20 @@
 
 (defn card-with-buttons [props]
   (let [{:keys [access buttons]} props]
-    (case access
-      (:enabled :disabled)
-      (->
-       [:div (use-style style/card-with-buttons)
-        (card props)]
-       (into
-        (if buttons
-          (map (fn [{:keys [label action] btn-access :access}]
-                 (let [enabled? (= :enabled access btn-access)]
-                   [ui/paper
-                    (merge (use-style (if enabled?
-                                        (style/set-clickable style/card-button)
-                                        (style/disable-card style/card-button)))
-                           (if enabled? {:on-click action}))
-                    [:span (use-sub-style style/card-button :title) label]]))
-               buttons))))
-      :hidden nil)))
+    (->
+     [:div (use-style style/card-with-buttons)
+      (card props)]
+     (into
+      (if buttons
+        (map (fn [{:keys [label action] btn-access :access}]
+               (let [enabled? (= :enabled access btn-access)]
+                 [ui/paper
+                  (merge (use-style (if enabled?
+                                      (style/set-clickable style/card-button)
+                                      (style/disable-card style/card-button)))
+                         (if enabled? {:on-click action}))
+                  [:span (use-sub-style style/card-button :title) label]]))
+             buttons))))))
 
 (defn home [props]
   (let [{:keys [on-select]} props
@@ -72,7 +70,8 @@
     [:div (use-style style/home)
      [:div (use-sub-style style/home :primary-row)
       (doall
-       (->> [{:id :dataset-creator
+       (->> [{:id :dataset
+              :key :dataset-creator
               :primary? true
               :title (translate [:home-card :dataset-creator :title]
                                 "Create Dataset")
@@ -92,7 +91,7 @@
                                    "Print logsheet pdf")
                  :action #(action-fn % ::event/print-logsheet)}])
               :icon "images/create-dataset.svg"}
-             {:id :dataset-analyzer
+             {:id :dataset
               :primary? true
               :title (translate [:home-card :dataset-analyzer :title]
                                 "Analyze Dataset")
@@ -108,8 +107,12 @@
               :icon "images/trendline-graph.svg"}]
             (map #(assoc % :access (get-in access-rule [:card (:id %)])
                          :on-select on-select))
+            (remove #(= :hidden (:access %)))
             (map (fn [props]
-                   ^{:key (:id props)} [card-with-buttons props]))))]
+                   ^{:key (or (:key props)
+                              (:id props))}
+                   [card-with-buttons props]))))]
+
      [:div (use-sub-style style/home :secondary-row)
       (doall
        (->>
@@ -123,7 +126,8 @@
           :title (translate [:home-card :gold-cup :title]
                             "GoldCup")
           :desc (translate [:home-card :gold-cup :description] "")
-          :icon "images/goldcup.svg"}
+          :icon "images/goldcup.svg"
+          :action #(rf/dispatch [::event/nav-gold-cup])}
          {:id :config
           :title (translate [:home-card :config :title]
                             "Configure Plant")
@@ -144,5 +148,6 @@
           :icon "images/logs.svg"}]
         (map #(assoc % :access (get-in access-rule [:card (:id %)])
                      :on-select on-select))
+        (remove #(= :hidden (:access %)))
         (map (fn [props]
                ^{:key (:id props)} [card props]))))]]))

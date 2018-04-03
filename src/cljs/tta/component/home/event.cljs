@@ -11,12 +11,11 @@
    {:dispatch [:tta.dialog.user-agreement.event/open
                {:then {:on-decline [::ht-event/exit]}}]}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::nav-data-entry
- (fn [db _]
-   ;;TODO:
-   (js/console.log "not implemented ::nav-data-entry")
-   db))
+ (fn [_ _]
+   {:dispatch [:tta.component.root.event/activate-content :dataset
+               {:mode :edit}]}))
 
 (rf/reg-event-db
  ::nav-import-logger
@@ -31,3 +30,9 @@
    ;;TODO:
    (js/console.log "not implemented ::print-logsheet")
    db))
+
+(rf/reg-event-fx
+ ::nav-gold-cup
+ (fn [_ _]
+   {:dispatch [:tta.component.root.event/activate-content :dataset
+               {:gold-cup? true}]}))
