@@ -85,7 +85,8 @@
      label (if show-err? error)
      [date-picker {:date (to-date-map value)
                    :valid? valid?
-                   :on-select #(rf/dispatch [::event/set-po-field path
+                   :max (to-date-map (js/Date.))
+                   :on-change #(rf/dispatch [::event/set-po-field path
                                              (from-date-map %) true])}])))
 
 (defn make-props []
@@ -163,10 +164,10 @@
     [ui/dialog {:open @(rf/subscribe [::subs/open?])
                 :title (translate [:pyrometer :manage :title] "Manage IR pyrometers")}
      [:div (use-style style/body)
+      (if edit? [edit])
       (if (not-empty pms) [scroll-box {:style {:height h}}
                            (into [ui/menu {:value index}]
                                  (map item pms (range)))])
-      (if edit? [edit])
       [:div (use-sub-style style/body :btns)
        [app-comp/button {:icon ic/plus
                          :disabled? edit?

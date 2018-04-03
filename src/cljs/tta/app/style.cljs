@@ -42,6 +42,7 @@
 
 (def popover
   {:border-radius "8px !important"
+   :left "-99999px" ;; to hide initial flashing
    :margin-top "8px !important"
    :overflow-y "visible !important"
    :box-shadow "0 0 16px 4px rgba(0,0,0,0.24), 0 0 2px 2px rgba(0,0,0,0.12) !important"

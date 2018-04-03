@@ -57,7 +57,6 @@
   (let [open? @(rf/subscribe [::subs/open?])
         tube-prefs @(rf/subscribe [::subs/data])
         title (translate [:tube-preference :dialog :title] "Tube Preference")] 
-    
     [ui/dialog
      {:open open?
       :modal true
@@ -65,12 +64,11 @@
 
       :actions (r/as-element
                 [:div
-                 [app-comp/button {:icon ic/cancel
-                                   :label (translate [:action :cancel :label] "Cancel")
-                                   :on-click #(rf/dispatch [::event/close])}]
-                 
                  [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
                                    :icon ic/accept
                                    :label (translate [:action :done :label] "Done")
-                                   :on-click #(rf/dispatch [::event/submit])}]])}
+                                   :on-click #(rf/dispatch [::event/submit])}]
+                 [app-comp/button {:icon ic/cancel
+                                   :label (translate [:action :cancel :label] "Cancel")
+                                   :on-click #(rf/dispatch [::event/close])}]])}
      [tube-prefs-component tube-prefs]]))
