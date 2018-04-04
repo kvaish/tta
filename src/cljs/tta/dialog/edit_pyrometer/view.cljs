@@ -8,7 +8,7 @@
             [cljs-react-material-ui.core :as ui-core]
             [cljs-time.core :as t]
             [cljs-time.format :as tf]
-            [cljs-time.coerce :as tc]
+            [ht.util.common :refer [to-date-map from-date-map]]
             [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
@@ -65,18 +65,6 @@
       {:on-change #(rf/dispatch [::event/set-po-decimal path % true
                                  {:max max, :min min, :precision precision}])
        :value value, :valid? (if show-err? valid? true)}])))
-
-(defn to-date-map [date]
-  (let [d (tc/from-date date)]
-    {:year (t/year d)
-     :month (t/month d)
-     :day (t/day d)}))
-
-(defn from-date-map [date]
-  (let [{:keys [year month day]} date]
-    (-> (t/local-date year month day)
-        (t/from-utc-time-zone)
-        (tc/to-date))))
 
 (defmethod prop-field :date [{:keys [label path]}]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
