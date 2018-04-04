@@ -20,7 +20,9 @@
             [tta.tube-list]
             [tta.tube-prefs]
             [tta.tab]
-            [tta.wall-list]))
+            [tta.wall-list]
+            [tta.component.tf-reformer-interactive.view
+             :refer [tf-reformer-interactive]]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -32,6 +34,8 @@
                 :on-close #(rf/dispatch [::event/close])
                 :close-tooltip "close"}))}
      (case (:work-key @(rf/subscribe [::subs/data]))
+       :tta/tf-reformer-interactive
+       [tf-reformer-interactive {:width  700, :height 600}]
        :tta/icons [tta.icon-set/icon-set]
        :tta/comps [tta.comp-set/comp-set]
        :tta/scroll [tta.scroll/scroll-test]
