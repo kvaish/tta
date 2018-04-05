@@ -1,5 +1,6 @@
 (ns ht.app.subs
   (:require [re-frame.core :as rf]
+            [reagent.ratom :refer [reaction]]
             [clojure.string :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -9,6 +10,10 @@
 (rf/reg-sub
  ::about-app
  (fn [db _] (:about db)))
+
+(rf/reg-sub
+ ::app-roles
+ (fn [db _] (:roles db)))
 
 (rf/reg-sub
  ::app-features
@@ -156,3 +161,30 @@
  ::topsoe?
  :<- [::auth-claims]
  (fn [claims _] (:topsoe? claims)))
+
+(rf/reg-sub
+ ::roles ;; list of all roles
+ :<- [::app-roles]
+ :<- [::active-language]
+ (fn [[roles lang] _]
+   (->> roles
+        (map (fn [[id role]]
+               (let [{n :name, d :description}
+                     (get-in role [:about lang])]
+                 {:id (name id)
+                  :internal? (:isInternal role)
+                  :name n
+                  :description d}))))))
+
+(rf/reg-sub
+ ::user-roles ;; list of roles for current user
+ :<- [::roles]
+ :<- [::auth-claims]
+ (fn [[roles claims] _]
+   (let [admin? (some-fn :admin? :app-admin? :app-owner?)]
+     (cond
+       (admin? claims) roles
+       (:client-admin? claims) (remove :internal? roles)
+       :default
+       (let [chk (set (:roles claims))]
+         (filter #(-> % :id keyword chk) roles))))))

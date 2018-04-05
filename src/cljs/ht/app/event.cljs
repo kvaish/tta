@@ -79,5 +79,36 @@
                               :fetched? true))}
        delay (assoc :dispatch-later [{:ms delay
                                       :dispatch [::fetch-auth false]}])
-       init? (update :dispatch-n conj [:app/init])
+       init? (update :dispatch-n conj
+                     [:app/init]
+                     [::fetch-translation]
+                     [::fetch-app-roles])
        with-busy? (update :dispatch-n conj [::set-busy? false])))))
+
+(rf/reg-event-fx
+ ::fetch-translation
+ (fn [_ _]
+   {:service/fetch-translation {}}))
+
+(rf/reg-event-fx
+ ::set-translation
+ (fn [{:keys [db]} [_ translation]]
+   ;;TODO:
+   ))
+
+(rf/reg-event-fx
+ ::fetch-app-roles
+ (fn [_ _]
+   {:service/fetch-app-roles {}}))
+
+(rf/reg-event-db
+ ::set-app-roles
+ (fn [db [_ roles]]
+   ;; structure of roles
+   ;; {<role id>
+   ;;  {:isInternal <true/false>,
+   ;;   :about {<language id> {:name <name>,
+   ;;                          :description <description>}
+   ;;           ..}}
+   ;;  ..}
+   (assoc db :roles roles)))
