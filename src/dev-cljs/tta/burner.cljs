@@ -81,11 +81,83 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
        [:div (stylefy/use-sub-style style (keyword (or value "off")))]
        [sf-burner-popup {:state state}]])))
 
+(def tf-burner-style
+  (let [circle {:width "24px", :height "24px"
+                :position "absolute"
+                :top "12px", :left "12px"
+                :border-radius "50%"
+                :background (color-hex :white)
+                :box-shadow "inset -6px -6px 10px rgba(0,0,0,0.3)"}
+        palette-unit {}]
+    {:height "48px", :width "96px"
+     :display "inline-block"
+     :background "#eee"
+     :position "relative"
+     ::stylefy/sub-styles
+     {:circle (assoc circle
+                :top "12px", :left "12px"
+                :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")
+      :palette {:width "48px"}
+      :palette-unit {:display "inline-block" :width "24px" :height "50px"}
+      :temp-scale {:vertical-align "top" :margin-left "5px" :font-size "12px"}}}))
+
+(defn opening->color [opening]
+  "r 255 => 0, g 0 => 255 => 0, b 0 => 255 "
+  (if (and opening (not= opening ""))
+    (let [distribution [15 30 45 60 75 90]]
+      (some (fn [i]
+              (if (<= opening i)
+                (let [r (js/Math.floor (- 255 (* i 2.84)))
+                      g (if (<= i 45)
+                          (js/Math.floor (* i 5.67))
+                          (js/Math.floor (- 255 (* (- i 45) 5.67))))
+                      b (js/Math.floor (* 2.84 i))]
+                  (str "rgb(" r "," g "," b ")"))
+                nil)) distribution))
+    "rgb(255,255,255)"))
+
+(defn color-palette []
+  (let [style tf-burner-style
+        distribution [90 75 60 45 30 15]]
+    [:div (stylefy/use-sub-style style :palette)
+     (map (fn [i]
+            [:div {:style {:height "50px"}}
+             [:div (merge (stylefy/use-sub-style style :palette-unit)
+                          {:style {:background (opening->color i)}})]
+             [:span (stylefy/use-sub-style style :temp-scale) (str i "°")]])
+          distribution)
+     [:span (merge (stylefy/use-sub-style style :temp-scale)
+                   {:style {:float "right"
+                            :padding-right "6px"
+                            }}) "0°"]]))
+
+(defn tf-burner [{:keys [value on-change] :as props}]
+  (let [state (r/atom props)
+        style tf-burner-style]
+    (fn [{:keys [value]}]
+      [:div (stylefy/use-style style)
+       [:div (merge (stylefy/use-sub-style style :circle)
+                    {:style {:background (opening->color (:value @state))}})]
+       [:span {:style {:margin-left "35px"}}
+        [app-comp/text-input
+         {:width     40
+          :value     (:value @state)
+          :on-change (fn [val]
+                       (if (<= 0 val 90)
+                         (swap! state assoc :value val)))}]]])))
+
 (defn burner []
   [:div {:style {:height 300
                  :padding "50px"}}
-   [sf-burner {:value (get-in @my-state [:sf :burner])
-               :on-change #(swap! my-state assoc-in [:sf :burner] %)}]
-   [sf-burner {:value (get-in @my-state [:sf :burner])
-               :on-change #(swap! my-state assoc-in [:sf :burner] %)
-               :dual-nozzle? true}]])
+   [color-palette]
+   [:div
+    {:style {:float "left"}}
+    [sf-burner {:value     (get-in @my-state [:sf :burner])
+                :on-change #(swap! my-state assoc-in [:sf :burner] %)}]
+
+    [sf-burner {:value        (get-in @my-state [:sf :burner])
+                :on-change    #(swap! my-state assoc-in [:sf :burner] %)
+                :dual-nozzle? true}] [:br]
+
+    [tf-burner {:value     (get-in @my-state [:tf :burner])
+                :on-change #(swap! my-state assoc-in [:tf :burner] %)}]]])
