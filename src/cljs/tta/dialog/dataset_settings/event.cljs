@@ -19,15 +19,10 @@
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
 
-#_(defonce ^:const dlg-path [:dialog :dataset-settings])
-#_(defonce ^:const draft-path (conj dlg-path :draft))
-#_(defonce ^:const data-path (conj dlg-path :data))
-#_(defonce ^:const form-path (conj dlg-path :form))
-
-(def  dlg-path [:dialog :dataset-settings])
-(def  draft-path (conj dlg-path :draft))
-(def  data-path (conj dlg-path :data))
-(def  form-path (conj dlg-path :form))
+(defonce ^:const dlg-path [:dialog :dataset-settings])
+(defonce ^:const draft-path (conj dlg-path :draft))
+(defonce ^:const data-path (conj dlg-path :data))
+(defonce ^:const form-path (conj dlg-path :form))
 
 (defn parse-logger-data [logger-data]
   ;;TODO:
@@ -54,7 +49,7 @@
                   :emissivity-type (or (:emissivity-type draft)
                                        (:emissivity-type plant-settings))
                   :emissivity (:emissivity draft)
-                  :emissivity-setting (:emissivity-setting pyrometer) 
+                  :emissivity-setting (:emissivity-setting pyrometer)
                   :shift  (:shift draft)
                   :comment (:comment draft)
                   :operator (:operator draft)
@@ -85,17 +80,15 @@
  (fn [{:keys [db ::subs/active-pyrometer
              ::subs/emissivity-type
              ::subs/emissivity]} _]
-   (let [tube-emissivity (:tube-emissivity active-pyrometer)
-         emissivity-field (if (or tube-emissivity emissivity) (make-field emissivity) (missing-field))]
-     (js/console.log emissivity-type)
-     {:db (cond (= "common" emissivity-type)
-                (assoc-in db (conj form-path :emissivity) emissivity-field)
-                (not (= "common" emissivity-type))
-                (-> db
-                    (update-in form-path #(dissoc % :emissivity))
-                    (update-in data-path #(dissoc % :emissivity)))
-                "default" db
-                )})))
+   (let [tube-emissivity (:tube-emissivity active-pyrometer)]
+     ;; (js/console.log emissivity-type)
+     {:db (if (= "common" emissivity-type)
+            ;; in case of common ensure tube-emissivity
+            (cond-> db
+              (not (or tube-emissivity emissivity))
+              (assoc-in (conj form-path :emissivity) (missing-field)))
+            ;; otherwise emissivity override not applicable
+            (update-in db form-path dissoc :emissivity))})))
 
 (rf/reg-event-fx
  ::close
@@ -107,21 +100,31 @@
 
 (rf/reg-event-fx
  ::submit
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} _]
-   (let [draft (merge data (get-in db draft-path))]
-     {:dispatch-n (list
-                   [::close]
-                   [:tta.component.dataset.event/init {:dataset draft}])
-      :storage/set {:key :draft :value draft}})))
-
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/can-submit?])]
+ (fn [{:keys [db ::subs/data ::subs/can-submit?]} _]
+   (merge
+    (when can-submit?
+      (let [draft (-> (get-in db draft-path)
+                      (merge
+                       (select-keys data [:data-date :topsoe? :pyrometer
+                                          :emissivity-type :emissivity
+                                          :shift :comment :operator
+                                          :role-type]))
+                      (update :data-date htu/from-date-time-map)
+                      (assoc-in [:pyromerter :emissivity-setting]
+                                (:emissivity-setting data)))]
+        {:dispatch-n (list
+                      [::close]
+                      [:tta.component.dataset.event/init {:dataset draft}])
+         :storage/set {:key :draft :value draft}}))
+    {:db (update-in db dlg-path assoc :show-error? true)})))
 
 (rf/reg-event-fx
  ::set-field
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ path value required?]]
    {:db (set-field db path value data data-path form-path required?)}))
-
 
 (rf/reg-event-fx
  ::set-override-emissivity
@@ -133,12 +136,12 @@
                              required?
                              {:min 0.01 :max 0.99})})))
 
-
 (rf/reg-event-fx
  ::set-emissivity-setting
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ value]]
-   {:db (set-field-decimal db [:emissivity-setting] value data data-path form-path true
+   {:db (set-field-decimal db [:emissivity-setting]
+                           value data data-path form-path true
                            {:min 0.01 :max 1})}))
 
 (rf/reg-event-fx
@@ -148,19 +151,9 @@
    {:dispatch [::validate-emissivity-type]
     :db (set-field db [:emissivity-type] value data data-path form-path true)}))
 
-
-(rf/reg-event-fx
- ::set-field
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ path value required?]]
-   {:db (set-field db path value data data-path form-path required?)}))
-
 (rf/reg-event-fx
  ::set-pyrometer
- [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/pyrometers])]
- (fn [{:keys [db ::subs/data ::subs/pyrometers]} [_ id]]
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ pyrometer]]
    {:dispatch [::validate-emissivity-type]
-    :db (set-field db [:pyrometer]
-                   (some #(if (= id (:id %)) %) pyrometers)
-                   data data-path form-path true)}))
+    :db (set-field db [:pyrometer] pyrometer data data-path form-path true)}))

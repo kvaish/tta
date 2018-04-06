@@ -19,7 +19,8 @@
             [tta.dialog.dataset-settings.subs :as subs]
             [tta.dialog.dataset-settings.event :as event]))
 
-(defn show-error? [] true #_@(rf/subscribe [::subs/show-error?]))
+(defn show-error? []
+  @(rf/subscribe [::subs/show-error?]))
 
 (defn query-id [query-id & params]
   (let [{:keys [value error valid?]} @(rf/subscribe (into [query-id] params))
@@ -118,7 +119,7 @@
        :selected selected-pyro
        :value-fn :id  :label-fn :name
        :items pyrometers
-       :on-select #(rf/dispatch [::event/set-pyrometer (:id %)])}]]))
+       :on-select #(rf/dispatch [::event/set-pyrometer %])}]]))
 
 (defn emissivity-type [style]
   (let [{:keys [value error valid?]} (query-id ::subs/field [:emissivity-type])
@@ -220,30 +221,31 @@ setting you should always use 1.0")]
     [form-cell-1 style error
      (translate [:dataset-settings :comments :label] "Comments")
      [app-comp/text-area
-      {:width 500 
+      {:width 500
        :text value
        :height 100
        :on-change #(rf/dispatch [::event/set-field [:comments] % false])}]]))
 
 (defn dataset-settings []
   (let [open? @(rf/subscribe [::subs/open?])
-        topsoe-user? @(rf/subscribe [:ht.app.subs/topsoe?])
+        topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
         title (translate [:dataset-settings :dialog :title] "Dataset settings")
         style (style/body 1400 1400)]
     [ui/dialog
-     {:open open? 
+     {:open open?
       :modal true
       :title title
-      :actions (r/as-element
-                [:div
-                 [app-comp/button {:icon ic/cancel
-                                   :label (translate [:action :cancel :label] "Cancel")
-                                   :on-click #(rf/dispatch [::event/close])}]
-                 [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
-                                   :icon ic/accept
-                                   :label (translate [:action :done :label] "Done")
-                                   :on-click #(rf/dispatch [::event/submit])}]])}
-     
+      :actions
+      (r/as-element
+       [:div
+        [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+                          :icon ic/accept
+                          :label (translate [:action :done :label] "Done")
+                          :on-click #(rf/dispatch [::event/submit])}]
+        [app-comp/button {:icon ic/cancel
+                          :label (translate [:action :cancel :label] "Cancel")
+                          :on-click #(rf/dispatch [::event/close])}]])}
+
      [:div
       (date-time-of-reading style)]
      [:div (if topsoe-user?
@@ -252,12 +254,14 @@ setting you should always use 1.0")]
       (select-pyrometer style)
       (emissivity-setting style)]
      [:div (pyrometer-emissivity-warning style)]
-     [:div (emissivity-type style)
+     [:div
+      (emissivity-type style)
       (tube-emissivity style)]
      [:div (use-sub-style style :form-heading-label)
       (translate [:dataset-settings :aditional-settings :label]
                  "Additional Settings")]
-     [:div (roles style)
+     [:div
+      (roles style)
       (operator style)
       (shift style)]
      [:div (comments style)]]))
