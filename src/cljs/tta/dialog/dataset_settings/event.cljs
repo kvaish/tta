@@ -125,10 +125,13 @@
 
 (rf/reg-event-fx
  ::set-override-emissivity
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ value]]
-   {:db (set-field-decimal db [:emissivity] value data data-path form-path true
-                           {:min 0.01 :max 0.99})}))
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/active-pyrometer])]
+ (fn [{:keys [db ::subs/data ::subs/active-pyrometer]} [_ value]]
+   (let [required? (if-not (:tube-emissivity active-pyrometer) true false)]
+     {:db (set-field-decimal db [:emissivity] value data data-path form-path
+                             required?
+                             {:min 0.01 :max 0.99})})))
 
 
 (rf/reg-event-fx
