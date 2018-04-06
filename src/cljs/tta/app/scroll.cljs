@@ -574,19 +574,23 @@
                                                    :height   height :width width})
                                        corner-renderer (if corner-renderer
                                                          corner-renderer
-                                                         (fn [] [:div {:style {:height "inherit"
-                                                                               :border-right  "1px solid"
-                                                                               :border-bottom "1px solid"}}
-                                                                 [:svg {:height col-header-height
-                                                                        :width  row-header-width
-                                                                        :style  {:font-size "10px"}}
-                                                                  [:text {:x (- (/ row-header-width 2) 5)
-                                                                          :y "8" :fill "darkslategrey"} label-column]
-                                                                  [:line {:x1    "0" :y1 "0" :x2 row-header-width
-                                                                          :y2    col-header-height
-                                                                          :style {:stroke "darkslategrey" :stroke-width "1"}}]
-                                                                  [:text {:x 10 :y (- col-header-height 5) :fill "darkslategrey"}
-                                                                   label-row]]]))]
+                                                         (fn []
+                                                           (if (and label-column
+                                                                    label-row)
+                                                             [:div {:style {:height        "inherit"
+                                                                            :border-right  "1px solid"
+                                                                            :border-bottom "1px solid"}}
+                                                              [:svg {:height col-header-height
+                                                                     :width  row-header-width
+                                                                     :style  {:font-size "10px"}}
+                                                               [:text {:x (- (/ row-header-width 2) 5)
+                                                                       :y "8" :fill "darkslategrey"} label-column]
+                                                               [:line {:x1    "0" :y1 "0" :x2 row-header-width
+                                                                       :y2    col-header-height
+                                                                       :style {:stroke "darkslategrey" :stroke-width "1"}}]
+                                                               [:text {:x 10 :y (- col-header-height 5) :fill "darkslategrey"}
+                                                                label-row]]]
+                                                             [:div])))]
                                    [:div {:style (set-area [top left height width])}
                                     ;; Rows of tables
                                     (map (fn [table-row-no] ^{:key table-row-no}
