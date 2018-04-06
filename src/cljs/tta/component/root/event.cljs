@@ -51,7 +51,7 @@
  (fn [{:keys [db]} [_ close-id init-id init-params]]
    (let [{:keys [event/close]} (get all-contents close-id)
          {:keys [event/init]} (if-let [e (get all-contents init-id)]
-                                (conj e init-params))]
+                                (update e :event/init conj init-params))]
      {:db (assoc-in db [:component :root :content :active] init-id)
       :dispatch-n (list init close)})))
 

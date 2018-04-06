@@ -12,8 +12,14 @@
             [tta.app.event :as app-event]
             [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
-            [tta.component.dataset.event :as event]))
+            [tta.component.dataset.event :as event]
+            [tta.dialog.dataset-settings.view :refer [dataset-settings]]))
 
 (defn dataset [props]
+  
   [:div ;; (use-style style/dataset)
-   "dataset"])
+   "dataset"
+   
+   ;;dataset settings dialog
+   (if @(rf/subscribe [:tta.dialog.dataset-settings.subs/open?])
+     [dataset-settings])])

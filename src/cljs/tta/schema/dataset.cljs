@@ -19,7 +19,9 @@
                                 :schema ::side-fired}
              :top-fired        {:name   "topFired"
                                 :schema ::top-fired}
-             :role-type        "roleType" ;; TODO: remove later :PKPA
+             :role-type         {:name "roleType"
+                                 :schema {:id "id"
+                                          :name "name"}}
              :shift            "shift"
              :comment          "comment"
              :operator         "operator"

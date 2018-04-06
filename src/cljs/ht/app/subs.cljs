@@ -169,9 +169,13 @@
  (fn [[roles lang] _]
    (->> roles
         (map (fn [[id role]]
-               (let [{n :name, d :description}
-                     (get-in role [:about lang])]
-                 {:id (name id)
+               (let [id (name id)
+                     n (or (get-in role [:about lang :name])
+                           (get-in role [:about :en :name])
+                           id)
+                     d (or (get-in role [:about lang :description])
+                           (get-in role [:about :en :description]))]
+                 {:id id
                   :internal? (:isInternal role)
                   :name n
                   :description d}))))))

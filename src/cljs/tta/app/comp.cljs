@@ -203,3 +203,36 @@
                              :disabled (disabled?-fn item)
                              :value (value-fn item)}])
                          items (range)))])]))})))
+
+#_(defn textarea [{:keys [read-only? valid? align width value on-change rows cols
+                          height]
+                   :or {valid? true, width 96, align "left"}}]
+    (let [style (app-style/text-input read-only? valid?)]
+      [:span (use-style style)
+       [:textarea (-> (use-sub-style style :main)
+                      (update :style assoc
+                              :width width
+                              :height height
+                              :text-align align)
+                      (merge {
+                              :text value
+                              :rows rows
+                              :cols cols
+                              :on-change #(on-change (i/oget-in % [:target :value]))
+                              }))]]))
+(defn text-area [{:keys [read-only? valid? align width value
+                         on-change rows cols height]
+                   :or {valid? true, width 96, align "left"}}]
+  (let [style (app-style/text-input read-only? valid?)]
+    [:span (use-style style)
+     [:textarea (-> (use-sub-style style :main)
+                 (update :style assoc
+                         :width width
+                         :height height
+                         :text-align align)
+                 (merge {:type "text"
+                         :rows (or rows 5)
+                         :cols (or cols 10)
+                         :text (or value "")
+                         :on-change #(on-change (i/oget-in % [:target :value]))
+                         :read-only read-only?}))]]))

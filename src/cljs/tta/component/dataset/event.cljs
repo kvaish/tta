@@ -36,12 +36,12 @@
        {:db (assoc-in db (conj comp-path :dataset) dataset)}
        (cond
          dataset-id
-         {:dispatch [:service/fetch-dataset
-                     (assoc fetch-params :dataset-id dataset-id)]
+         {:service/fetch-dataset
+          (assoc fetch-params :dataset-id dataset-id)
           :db (assoc-in db (conj view-path :mode) :read)}
 
          (= mode :read)
-         {:dispatch [:service/fetch-latest-dataset fetch-params]
+         {:service/fetch-latest-dataset fetch-params
           :db (assoc-in db (conj view-path :mode) :read)}
 
          logger-data
@@ -52,27 +52,29 @@
          (or gold-cup? (= mode :edit))
          (-> {:db (assoc-in db (conj view-path :mode) :edit)}
              (assoc :dispatch
-              (if draft
-                [::init {:dataset (cond-> draft
-                                    gold-cup? (assoc :gold-cup? true))}]
-                [:tta.dialog.dataset-settings.event/open
-                 {:gold-cup? gold-cup?}])))
+                    (if draft
+                      [::init {:dataset (cond-> draft
+                                          gold-cup? (assoc :gold-cup? true))}]
+                      [:tta.dialog.dataset-settings.event/open
+                       {:gold-cup? gold-cup?}])))
 
          :default
          {:dispatch [::init {:mode (if draft :edit :read)}]})))))
 
-(rf/reg-event-fx
+(rf/reg-event-db
  ::close
- (fn [{:keys [db]} _]
-   ))
+ (fn [db _] (assoc-in db comp-path nil)))
 
 (rf/reg-event-fx
  ::fetch-success
- (fn []))
+ (fn [_ [_ dataset]]
+   {:dispatch [::init {:dataset dataset}]}))
 
 (rf/reg-event-fx
  ::fetch-failure
- (fn []))
+ (fn [_ [_ & params]]
+   {:dispatch-n (list (into [::ht-event/service-failure false] params)
+                      [:tta.component.root.event/activate-content :home])}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -90,3 +92,8 @@
  ::select-level
  (fn [db [_ level]]
    (assoc-in db (conj view-path :selected-level) level)))
+
+(rf/reg-event-fx
+ ::set-dataset-setting
+ (fn [_ [_ data]]
+   (js/console.log data)))

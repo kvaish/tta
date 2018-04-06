@@ -14,7 +14,7 @@
                   :design   "design"}
         settings {:gold-cup-wavelength "goldCupWavelength"
                   :emissivity-type     "emissivityType"
-                  :emissivity          "emissivity"
+                  :emissivity          "emissivity" ;; TODO: remove later
                   :role-types          "roleTypes"  ;; TODO: remove later :PKPA
                   :role-type-id        "roleTypeId" ;; TODO: remove later :PKPA
                   :pyrometer-id        "pyrometerId"
