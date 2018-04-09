@@ -6,6 +6,7 @@
             [cljs-react-material-ui.reagent :as ui]
             [ht.app.comp :as ht-comp]
             [ht.util.common :refer [to-date-time-map from-date-time-map]]
+            [ht.util.interop :as i]
             [ht.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -51,11 +52,6 @@
 (defn form-cell-3
   ([style label widgets] (form-cell style :form-cell-3 label widgets))
   ([style error label widget] (form-cell style :form-cell-3 error label widget)))
-
-
-(defn form-cell-4x3
-  ([style label widgets] (form-cell style :form-cell-4x3 label widgets))
-  ([style error label widget] (form-cell style :form-cell-4x3 error label widget)))
 
 (defn date-time-of-reading [style]
   (let [date (update
@@ -226,42 +222,65 @@ setting you should always use 1.0")]
        :height 100
        :on-change #(rf/dispatch [::event/set-field [:comments] % false])}]]))
 
-(defn dataset-settings []
-  (let [open? @(rf/subscribe [::subs/open?])
-        topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
-        title (translate [:dataset-settings :dialog :title] "Dataset settings")
-        style (style/body 1400 1400)]
-    [ui/dialog
-     {:open open?
-      :modal true
-      :title title
-      :actions
-      (r/as-element
-       [:div
-        [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
-                          :icon ic/accept
-                          :label (translate [:action :done :label] "Done")
-                          :on-click #(rf/dispatch [::event/submit])}]
-        [app-comp/button {:icon ic/cancel
-                          :label (translate [:action :cancel :label] "Cancel")
-                          :on-click #(rf/dispatch [::event/close])}]])}
+(def container (r/atom {}))
+(defn- dataset-settings-component []
+  (r/create-class
+   {:component-did-mount
+    (fn [this]
+      
+      (swap! container  assoc
+             :width (i/oget-in this [:refs :container :offsetWidth]))
 
-     [:div
-      (date-time-of-reading style)]
-     [:div (if topsoe-user?
-             (internal-dataset style))]
-     [:div
-      (select-pyrometer style)
-      (emissivity-setting style)]
-     [:div (pyrometer-emissivity-warning style)]
-     [:div
-      (emissivity-type style)
-      (tube-emissivity style)]
-     [:div (use-sub-style style :form-heading-label)
-      (translate [:dataset-settings :aditional-settings :label]
-                 "Additional Settings")]
-     [:div
-      (roles style)
-      (operator style)
-      (shift style)]
-     [:div (comments style)]]))
+      (js/console.log @container)  
+      )
+    :reagent-render 
+    (fn []
+      [:div {:ref "container"}
+       (let [open? @(rf/subscribe [::subs/open?])
+             topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
+             title (translate [:dataset-settings :dialog :title] "Dataset settings")
+               style (style/body  1400 400)
+             et @(rf/subscribe [::subs/emissivity-type])]
+         [ui/dialog
+          {:open open?
+           :modal true
+           :title title
+           :actions
+           (r/as-element
+            [:div
+             [app-comp/button {:disabled? (if (show-error?)
+                                            (not @(rf/subscribe [::subs/can-submit?]))
+                                            (not @(rf/subscribe [::subs/dirty?])))
+                               :icon ic/accept
+                               :label (translate [:action :done :label] "Done")
+                               :on-click #(rf/dispatch [::event/submit])}]
+             [app-comp/button {:icon ic/cancel
+                               :label (translate [:action :cancel :label] "Cancel")
+                               :on-click #(rf/dispatch [::event/close])}]])}
+          [:div
+           [:div
+            (date-time-of-reading style)]
+           [:div (if topsoe-user?
+                   (internal-dataset style))]
+           [:div
+            (select-pyrometer style)
+            (emissivity-setting style)]
+           [:div (pyrometer-emissivity-warning style)]
+           [:div
+            (emissivity-type style)
+            (if (= "common" et)
+              (tube-emissivity style))]
+           
+           [:div (use-sub-style style :form-heading-label)
+            (translate [:dataset-settings :aditional-settings :label]
+                       "Additional Settings")]
+           [:div
+            (roles style)
+            (operator style)
+            (shift style)]]
+          [:div (comments style)]])]
+      
+      )}))
+
+(defn dataset-settings []
+  [dataset-settings-component])

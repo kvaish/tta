@@ -92,10 +92,10 @@
 
 (rf/reg-event-fx
  ::close
- (fn [{:keys [db]} _]
+ (fn [{:keys [db]} [_ success?]]
    (cond->
        {:db (assoc-in db [:dialog :dataset-settings] nil)}
-     (get-in db (conj draft-path :draft?))
+     (and (not success?) (get-in db (conj draft-path :draft?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
 (rf/reg-event-fx
@@ -115,7 +115,7 @@
                       (assoc-in [:pyromerter :emissivity-setting]
                                 (:emissivity-setting data)))]
         {:dispatch-n (list
-                      [::close]
+                      [::close true]
                       [:tta.component.dataset.event/init {:dataset draft}])
          :storage/set {:key :draft :value draft}}))
     {:db (update-in db dlg-path assoc :show-error? true)})))

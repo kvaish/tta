@@ -34,7 +34,7 @@
                         (let [{:keys [start-tube end-tube]
                                label :name}
                               (or
-                               (get-in plant [:config :sf-config :chambers i])
+                                (get-in plant [:config :sf-config :chambers i])
                                (get-in plant [:config :tf-config :tube-rows i]))]
                           [list-tube-prefs {:label label
                                             :height height
