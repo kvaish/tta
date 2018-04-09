@@ -15,6 +15,15 @@
             [tta.component.dataset.event :as event]
             [tta.dialog.dataset-settings.view :refer [dataset-settings]]))
 
+;; dataset: date | time
+;; last saved: date | time (hide when nil)
+
+;; buttons array:
+;; mode :read - upload (disable if not dirty), excel report, pdf report
+;;              publish goldcup (if goldcup? and internal? user), (disable if not 100% or not uploaded)
+;; mode :edit - settings, save, upload
+;; mode selector : disabled when reformer version not current
+
 (defn dataset [props]
   
   [:div ;; (use-style style/dataset)

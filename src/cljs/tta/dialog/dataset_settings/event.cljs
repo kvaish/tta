@@ -118,11 +118,16 @@
                                           :role-type :reformer-version]))
                       (update :data-date htu/from-date-time-map)
                       (assoc-in [:pyrometer :emissivity-setting]
-                                (:emissivity-setting data)))]
-        {:dispatch-n (list
-                      [::close true]
-                      [:tta.component.dataset.event/init {:dataset draft}])
-         :storage/set {:key :draft :value draft}}))
+                                (:emissivity-setting data)))
+            draft (cond-> draft
+                    (:draft? draft) (assoc draft :last-saved (js/Date.)))]
+        (cond->
+            {:dispatch-n (list
+                          [::close true]
+                          [:tta.component.dataset.event/init {:dataset draft}])}
+          ;; in case of draft, also save to local storage
+          (:draft? draft)
+          (assoc :storage/set {:key :draft :value draft}))))
     {:db (update-in db dlg-path assoc :show-error? true)})))
 
 (rf/reg-event-fx

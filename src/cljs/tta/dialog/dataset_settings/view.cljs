@@ -253,6 +253,7 @@ setting you should always use 1.0")]
              [app-comp/button {:icon ic/cancel
                                :label (translate [:action :cancel :label] "Cancel")
                                :on-click #(rf/dispatch [::event/close])}]])}
+
           [:div
            [:div
             (date-time-of-reading style)]
@@ -266,7 +267,6 @@ setting you should always use 1.0")]
             (emissivity-type style)
             (if (= "common" et)
               (tube-emissivity style))]
-           
            [:div (use-sub-style style :form-heading-label)
             (translate [:dataset-settings :aditional-settings :label]
                        "Additional Settings")]

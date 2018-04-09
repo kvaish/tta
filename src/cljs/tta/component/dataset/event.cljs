@@ -92,8 +92,3 @@
  ::select-level
  (fn [db [_ level]]
    (assoc-in db (conj view-path :selected-level) level)))
-
-(rf/reg-event-fx
- ::set-dataset-setting
- (fn [_ [_ data]]
-   (js/console.log data)))

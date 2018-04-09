@@ -114,6 +114,9 @@
  :<- [::firing]
  :<- [::app-subs/plant]
  (fn [[data-date firing plant] _]
+   ;; ensures correct tube-prefs(pinch) and design/target temp
+   ;; as on the date the reading was taken (data-date)
+   ;;
    ;; returns nil when data not ready
    (when-let [data-date (tc/from-date data-date)]
      (let [{:keys [settings]} plant
@@ -161,13 +164,24 @@
 
 ;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(rf/reg-sub-raw
+ ::mode-opts
+ (fn [_ _]
+   (reaction
+    (let [mode-read (translate [:dataset :mode :read] "Graph")
+          mode-edit (translate [:dataset :mode :edit] "Data")]
+      [{:id :view
+        :label mode-read}
+       {:id :edit
+        :label mode-edit}]))))
+
 (rf/reg-sub
  ::mode
  :<- [::view]
  (fn [view _] (:mode view)))
 
 (rf/reg-sub-raw
- ::area-opts
+ ::area-opts ;; the top tab selection options
  (fn [_ _]
    (reaction
     (let [firing @(rf/subscribe [::firing])
@@ -191,12 +205,12 @@
            (filter :show?))))))
 
 (rf/reg-sub
- ::selected-area
+ ::selected-area ;; the top tab selected
  :<- [::view]
  (fn [view _] (:selected-area view)))
 
 (rf/reg-sub-raw
- ::level-opts
+ ::level-opts ;; bottom tab selection options
  (fn [_ _]
    (reaction
     (let [config @(rf/subscribe [::config])]
@@ -215,7 +229,7 @@
              (filter :show?)))))))
 
 (rf/reg-sub
- ::selected-level
+ ::selected-level ;; bottom tab selected
  :<- [::view]
  (fn [view _] (:selected-level view)))
 
@@ -239,7 +253,7 @@
  (fn [data _] (:gold-cup? data)))
 
 (rf/reg-sub
- ::burner?
+ ::burner? ;; whether the dataset has burner data
  :<- [::data]
  (fn [data _]))
 
@@ -247,3 +261,9 @@
  ::reformer-version
  :<- [::data]
  (fn [data _] (:reformer-version data)))
+
+(rf/reg-sub
+ ::last-saved
+ :<- [::data]
+ (fn [data _]
+   ((some-fn :last-saved :date-modified :date-created) data)))
