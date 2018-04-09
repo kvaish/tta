@@ -227,19 +227,15 @@ setting you should always use 1.0")]
   (r/create-class
    {:component-did-mount
     (fn [this]
-      
       (swap! container  assoc
-             :width (i/oget-in this [:refs :container :offsetWidth]))
-
-      (js/console.log @container)  
-      )
+             :width (i/oget-in this [:refs :container :offsetWidth])))
     :reagent-render 
     (fn []
       [:div {:ref "container"}
        (let [open? @(rf/subscribe [::subs/open?])
              topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
              title (translate [:dataset-settings :dialog :title] "Dataset settings")
-               style (style/body  1400 400)
+             style (style/body 1500 400)
              et @(rf/subscribe [::subs/emissivity-type])]
          [ui/dialog
           {:open open?
@@ -278,9 +274,7 @@ setting you should always use 1.0")]
             (roles style)
             (operator style)
             (shift style)]]
-          [:div (comments style)]])]
-      
-      )}))
+          [:div (comments style)]])])}))
 
 (defn dataset-settings []
   [dataset-settings-component])

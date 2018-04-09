@@ -38,7 +38,7 @@
                           {:draft? true})
                 gold-cup? (assoc :gold-cup? true))
 
-        pyrometer (or (:pyromerter draft)
+        pyrometer (or (:pyrometer draft)
                       (first (filter #(= (:pyrometer-id plant-settings)
                                          (:id %))
                                      (:pyrometers plant-settings))))
@@ -117,7 +117,7 @@
                                           :shift :comment :operator
                                           :role-type :reformer-version]))
                       (update :data-date htu/from-date-time-map)
-                      (assoc-in [:pyromerter :emissivity-setting]
+                      (assoc-in [:pyrometer :emissivity-setting]
                                 (:emissivity-setting data)))]
         {:dispatch-n (list
                       [::close true]
