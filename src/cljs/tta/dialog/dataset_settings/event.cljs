@@ -14,7 +14,8 @@
                                             validate-field parse-value]]
             [ht.util.common :as htu]
             [tta.app.event :as app-event]
-            [tta.dialog.dataset-settings.subs :as subs]))
+            [tta.dialog.dataset-settings.subs :as subs]
+            [tta.app.subs :as app-subs]))
 
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
@@ -29,8 +30,9 @@
   {})
 
 (defn parse [{:keys [gold-cup? dataset logger-data]}
-             plant-settings topsoe? user-roles]
-  (let [draft (cond-> (or dataset
+             plant topsoe? user-roles]
+  (let [plant-settings (:settings plant)
+        draft (cond-> (or dataset
                           (if logger-data (-> (parse-logger-data logger-data)
                                               (assoc :draft? true)))
                           {:draft? true})
@@ -54,18 +56,21 @@
                   :comment (:comment draft)
                   :operator (:operator draft)
                   :role-type (or (:role-type draft)
-                                 (first user-roles))}
+                                 (first user-roles))
+                  :reformer-version (or (:reformer-version dataset)
+                                        (get-in plant [:config :version]))}
+        
         form {:emissivity-setting (if-not (:emissivity-setting settings)
                                     (missing-field))}]
     {:draft draft, :settings settings, :form form}))
 
 (rf/reg-event-fx
  ::open
- [(inject-cofx ::inject/sub [::subs/settings])
+ [(inject-cofx ::inject/sub [::app-subs/plant])
   (inject-cofx ::inject/sub [::ht-subs/topsoe?])
   (inject-cofx ::inject/sub [::ht-subs/user-roles])]
- (fn [{:keys [db ::subs/settings ::ht-subs/topsoe? ::ht-subs/user-roles]} [_ params]]
-   (let [{:keys [draft settings form]} (parse params settings topsoe? user-roles)]
+ (fn [{:keys [db ::app-subs/plant ::ht-subs/topsoe? ::ht-subs/user-roles]} [_ params]]
+   (let [{:keys [draft settings form]} (parse params plant topsoe? user-roles)]
      {:dispatch [::validate-emissivity-type]
       :db (assoc-in db [:dialog :dataset-settings] {:open? true
                                                     :draft draft
@@ -110,7 +115,7 @@
                        (select-keys data [:data-date :topsoe? :pyrometer
                                           :emissivity-type :emissivity
                                           :shift :comment :operator
-                                          :role-type]))
+                                          :role-type :reformer-version]))
                       (update :data-date htu/from-date-time-map)
                       (assoc-in [:pyromerter :emissivity-setting]
                                 (:emissivity-setting data)))]
