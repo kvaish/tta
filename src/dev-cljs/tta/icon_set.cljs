@@ -30,4 +30,6 @@
               ["delete" ic/delete]
               ["dataset" ic/dataset]
               ["report" ic/report]
-              ["datasheet" ic/datasheet ]])))
+              ["datasheet" ic/datasheet ]
+              ["dataset-inadequate" ic/dataset-inadequate true]
+              ["dataset-incomplete" ic/dataset-incomplete true]])))

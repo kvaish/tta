@@ -167,3 +167,21 @@ m4,0 v-12 m4,0 v12"}]]))
     [:path {:d "M5,10 h5 m-5,3 h5 m-5,3 h5"}]
     [:circle {:cx "17" :cy "12" :r "5"}]
     [:path {:d "M17,12 m-3,4 l-1,7 l4,-3 l4,3 l-1,-7"}]]))
+
+(defn dataset-inadequate
+  ([] (dataset-inadequate nil))
+  ([props]
+    [icon props
+     [:path {:d "M12,20 a1,1 0 0,10 -16,0"
+             :stroke "red" :stroke-width "2px"}]
+     [:path {:d "M12,4 a1,1 0 0,10 16,0"
+             :fill "red" :stroke "red" :stroke-width "2px"}]]))
+
+(defn dataset-incomplete
+  ([] (dataset-inadequate nil))
+  ([props]
+   [icon props
+    [:path {:d "M12,20 a1,1 0 0,10 -16,0"
+            :stroke "#002856" :stroke-width "2px"}]
+    [:path {:d "M12,4 a1,1 0 0,10 16,0"
+            :fill "#002856" :stroke "#002856" :stroke-width "2px"}]]))
