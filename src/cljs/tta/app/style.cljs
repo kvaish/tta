@@ -169,6 +169,20 @@
            :color (if valid? widget-bg-e widget-err)
            :background-color widget-fg}}})
 
+;; (120+)*x48
+(defn text-area [read-only? valid?]
+  {:display "inline-block"
+   :padding "8px 12px"
+   :vertical-align "top"
+   ::stylefy/sub-styles
+   {:main {:border (str "1px solid " (if valid? widget-bg-e widget-err))
+           :border-radius "16px"
+           :resize "none"
+           :padding "12px 12px"
+           :font-size "12px"
+           :color (if valid? widget-bg-e widget-err)
+           :background-color widget-fg}}})
+
 ;; (120+)x48
 (defn action-label-box [left-disabled? right-disabled?]
   (let [widget-bg widget-bg-e

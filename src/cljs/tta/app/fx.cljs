@@ -114,3 +114,13 @@
      :plant-id plant-id
      :evt-success evt-success
      :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/create-dataset
+ (fn [{:keys [dataset client-id plant-id evt-success evt-failure]}]
+   (svc/create-dataset
+    {:client-id client-id
+     :plant-id plant-id
+     :dataset dataset
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))

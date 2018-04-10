@@ -149,3 +149,10 @@
                      :dataset-id dataset-id}
         :on-success (dispatch-one evt-success :datset)
         :evt-failure evt-failure}))
+
+(defn create-dataset [{:keys [dataset client-id plant-id evt-success evt-failure]}]
+  (run {:method http/post
+        :api-key :create-dataset
+        :data {:json-params (to-api :dataset dataset)}
+        :on-success (dispatch-one evt-success :res/create)
+        :evt-failure evt-failure}))

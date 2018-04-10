@@ -174,7 +174,7 @@
         (translate [:dataset-settings :emissivity-warning :message]
                    "Please check the latest calibration report. 
 If nothing is stated about a specific emissivity (
-setting you should always use 1.0")]
+setting you should always use 1.0 )")]
        ])))
 
 (defn roles [style]

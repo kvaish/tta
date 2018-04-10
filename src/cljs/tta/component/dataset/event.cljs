@@ -116,8 +116,18 @@
    (if (and valid? dirty?) {:storage/set {:key :draft :value data}})))
 
 (rf/reg-event-fx
+ ::create-dataset-success
+ (fn [_ [_ dataset-id]]
+   (js/console.log "dataet-id" dataset-id)
+   {:dispatch [::init {:dataset-id (:new-id dataset-id)}]}))
+
+(rf/reg-event-fx
  ::upload
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} _]
-   ;;TODO: upload data
-   (js/console.log "upload" data)))
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::app-subs/plant])
+  (inject-cofx ::inject/sub [::app-subs/client])]
+ (fn [{:keys [db ::subs/data ::app-subs/client ::app-subs/plant]} _]
+   {:service/create-dataset {:client (:id client)
+                             :plant-id (:id plant)
+                             :dataset data
+                             :evt-success [::create-dataset-success]}}))
