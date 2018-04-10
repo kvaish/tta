@@ -119,8 +119,8 @@
                       (update :data-date htu/from-date-time-map)
                       (assoc-in [:pyrometer :emissivity-setting]
                                 (:emissivity-setting data)))
-            draft (cond-> draft
-                    (:draft? draft) (assoc draft :last-saved (js/Date.)))]
+           draft (cond-> draft
+                    (:draft? draft) (assoc :last-saved (js/Date.)))]
         (cond->
             {:dispatch-n (list
                           [::close true]
