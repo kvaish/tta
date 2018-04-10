@@ -254,21 +254,25 @@
 (defn content []
   (let [view-size        @(rf/subscribe [::ht-subs/view-size])
         active-content   @(rf/subscribe [::subs/active-content])
-        content-allowed? @(rf/subscribe [::subs/content-allowed?])]
+        content-allowed? @(rf/subscribe [::subs/content-allowed?])
+        content-height (app-style/content-height view-size)
+        content-size {:width (:width view-size)
+                      :height content-height}]
     [:div (update (use-style style/content) :style
-                  assoc :height (app-style/content-height view-size))
+                  assoc :height content-height)
      (if content-allowed?
        (case active-content
-         :home [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         :home [home {:on-select #(rf/dispatch [::event/activate-content %])
+                      :size content-size}]
          ;; primary
-         :dataset        [dataset]
-         :trendline      [:div "trendline"]
+         :dataset        [dataset {:size content-size}]
+         :trendline      [:div {:size content-size} "trendline"]
          ;; secondary
-         :config         [config]
-         :settings       [settings]
-         :goldcup        [:div "goldcup"]
-         :config-history [:div "config-history"]
-         :logs           [:div "logs"])
+         :config         [config {:size content-size}]
+         :settings       [settings {:size content-size}]
+         :goldcup        [:div {:size content-size} "goldcup"]
+         :config-history [:div {:size content-size} "config-history"]
+         :logs           [:div {:size content-size} "logs"])
        ;; have no rights!!
        [no-access])]))
 

@@ -92,3 +92,32 @@
  ::select-level
  (fn [db [_ level]]
    (assoc-in db (conj view-path :selected-level) level)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-event-fx
+ ::excel
+ (fn [_ _])
+ ;;TODO: excel report
+ )
+
+(rf/reg-event-fx
+ ::pdf
+ (fn [_ _])
+ ;;TODO: pdf report
+ )
+
+(rf/reg-event-fx
+ ::save-draft
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/valid?])
+  (inject-cofx ::inject/sub [::subs/dirty?])]
+ (fn [{:keys [db ::subs/data ::subs/valid? ::subs/dirty?]} _]
+   (if (and valid? dirty?) {:storage/set {:key :draft :value data}})))
+
+(rf/reg-event-fx
+ ::upload
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} _]
+   ;;TODO: upload data
+   (js/console.log "upload" data)))

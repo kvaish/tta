@@ -77,7 +77,7 @@
   ([props]
    [icon props
     [:circle {:cx "12", :cy "12", :r "3.5"}]
-    [:path {:d "M4,4 l"}]]))
+    [:path {:d "M4,4 l 5,5"}]]))
 
 (defn pyrometer+
   ([] (pyrometer+ nil))

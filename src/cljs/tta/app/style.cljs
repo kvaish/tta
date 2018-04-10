@@ -409,6 +409,7 @@
       ::stylefy/sub-styles
       {:div2 {:position "absolute", :left 0
               :border (str "1px solid " widget-bg-e)
+              :background (color-hex :white)
               :border-radius
               (str (if top-tabs? "0 0" "8p 8px")
                    (if bot-tabs? "0 8px" "8px 8px"))

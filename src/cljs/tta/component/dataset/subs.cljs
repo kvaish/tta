@@ -1,4 +1,3 @@
-;; subscriptions for component dataset
 (ns tta.component.dataset.subs
   (:require [re-frame.core :as rf]
             [reagent.ratom :refer [reaction]]
@@ -8,23 +7,6 @@
             [tta.app.subs :as app-subs]
             [tta.util.common :as au]
             [tta.util.auth :as auth]))
-
-;; Do NOT use rf/subscribe
-;; instead add input signals like :<- [::query-id]
-;; or use reaction or make-reaction (refer reagent docs
-
-;; DATA STRUCTURE (primary keys)
-;; :view - map representing view state
-;;         :mode -> :read or :edit
-;;         :selected-area -> options = :twt, :overall, :burner, :gold-cup
-;;         :selected-level -> options = :top, :bottom, :middle, :reformer
-;;
-;; :dataset - the dataset
-;;               published dataset fetched from db
-;;            or draft dataset loaded from local storage
-;;
-;; :data - working dataset
-;; :form - raw working dataset and any validation fields
 
 ;; primary signals
 (rf/reg-sub
@@ -70,11 +52,22 @@
  :<- [::form]
  (fn [form _] (not (au/some-invalid form))))
 
+
 (rf/reg-sub
  ::can-submit?
  :<- [::dirty?]
  :<- [::valid?]
  (fn [[dirty? valid?] _] (and dirty? valid?)))
+
+
+(rf/reg-sub
+ ::can-upload?
+ :<- [::dirty?]
+ :<- [::valid?]
+ :<- [::data]
+ (fn [[dirty? valid? data] _]
+   (and valid?
+        (or dirty? (:draft? data)))))
 
 (rf/reg-sub
  ::warn-on-close?
@@ -190,12 +183,15 @@
           burner? @(rf/subscribe [::burner?])]
       (->> [{:id :overall
              :label (translate [:data-analyzer :area :overall] "Overall")
-             :show? (and (= mode :read) (= firing "top"))}
+             :show? (and (= mode :view) (= firing "top"))}
             {:id :twt
              :label (case mode
-                      :read (translate [:data-entry :area :twt] "TWT")
+                      :view (translate [:data-entry :area :twt] "TWT")
                       (translate [:data-analyzer :area :twt] "Tube/Wall"))
              :show? true}
+            {:id :burner-status
+             :label (translate [:data-entry :area :burner] "Burner Status")
+             :show? (or (= mode :read))}
             {:id :burner
              :label (translate [:data-entry :area :burner] "Burners")
              :show? (or (= mode :edit) burner?)}
@@ -232,8 +228,6 @@
  ::selected-level ;; bottom tab selected
  :<- [::view]
  (fn [view _] (:selected-level view)))
-
-
 
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
