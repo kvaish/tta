@@ -111,6 +111,7 @@
    ;; as on the date the reading was taken (data-date)
    ;;
    ;; returns nil when data not ready
+
    (when-let [data-date (tc/from-date data-date)]
      (let [{:keys [settings]} plant
            pinch-old (some #(if (t/before? data-date
@@ -261,3 +262,49 @@
  :<- [::data]
  (fn [data _]
    ((some-fn :last-saved :date-modified :date-created) data)))
+
+;;top-sired ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-sub
+ ::tf-config
+ :<- [::app-subs/plant]
+ (fn [plant _]
+   (get-in plant [:config :tf-config])))
+
+;;corresponding tube entry from dataset 
+(rf/reg-sub
+ ::tf-dataset-tube
+ :<- [::data]
+ :<- [::form] 
+ (fn [[data form] [_ level index side]]
+   (get-field [:top-fired :levels level :rows index :sides side] form data)))
+
+;;wall temps for given level and side (:east,:west,:north,:south)
+(rf/reg-sub
+ ::tf-wall-temps
+ :<- [::data]
+ (fn [data [_ level side]]
+   (get-in data [:top-fired level :wall-temps :side])))
+
+;;wall temps for given level
+(rf/reg-sub
+ ::tf-ceiling-temps
+ :<- [::data]
+ (fn [data [_ level]]
+   (get-in data [:top-fired level :ceiling-temps])))
+
+;;ceiling temps for given level
+(rf/reg-sub
+ ::tf-floor-temps
+ :<- [::data]
+ (fn [data [_ level]]
+   (get-in data [:top-fired level :ceiling-temps])))
+
+(rf/reg-sub
+ ::tube-prefs
+ :<- [::settings]
+ :<- [::firing]
+ (fn [[settings firing] _]
+   (case  firing
+     "top" (get-in settings [:tf-settings :tube-rows])
+     "side" (get-in settings [:sf-settings :chambers]))))

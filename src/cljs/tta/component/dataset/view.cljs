@@ -135,23 +135,27 @@
            :width width, :height height
            :content
            (fn [{:keys [width height selected]}]
-             
              (let [mode @(rf/subscribe [::subs/mode])
                    top (first selected)
-                   bottom (second selected)]
+                   bottom (second selected)
+                   view-area {:width width
+                              :height height}]
                (cond
                  (and (= top 0) (= "top" firing))
-                 (if (= :edit mode) [twt-entry bottom] [overall-graph])
+                 (if (= :edit mode) [twt-entry {:level bottom
+                                                :view-size view-area}]
+                     [overall-graph])
 
                  (and (= top 0) (= "side" firing))
-                 (if (= :edit mode) [twt-entry bottom] [twt-graph])
+                 (if (= :edit mode) [twt-entry {:level bottom
+                                                :view-size view-area}]
+                     [twt-graph])
                  
                  (and (= top 1) (= "top" firing))
                  (if (= :edit mode) [burner-entry] [twt-graph])
 
                  (and (= top 1) (= "side" firing))
-                 (if (= :edit mode) [burner-entry] [burner-status]))))}]]))})) 
-
+                 (if (= :edit mode) [burner-entry] [burner-status]))))}]]))}))
 ;; dataset: date | time
 ;; last saved: date | time (hide when nil)
 

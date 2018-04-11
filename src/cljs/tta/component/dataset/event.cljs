@@ -7,7 +7,12 @@
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
             [tta.app.subs :as app-subs]
-            [tta.component.dataset.subs :as subs]))
+            [tta.component.dataset.subs :as subs]
+            [tta.util.common :as au :refer [make-field missing-field
+                                            set-field set-field-text
+                                            set-field-number
+                                            set-field-temperature
+                                            validate-field parse-value]]))
 
 (def ^:const comp-path [:component :dataset])
 (def ^:const view-path (conj comp-path :view))
@@ -131,3 +136,13 @@
                              :plant-id (:id plant)
                              :dataset data
                              :evt-success [::create-dataset-success]}}))
+
+;;Top fired TWT entry;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-event-db
+ ::set-temp
+ (fn [db [_ path value required?]]
+   (let [data @(rf/subscribe [::subs/data])
+         temp-unit @(rf/subscribe [::app-subs/temp-unit])]
+     (set-field-temperature db path value data data-path form-path required? temp-unit))))
+
