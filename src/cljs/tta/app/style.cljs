@@ -80,6 +80,7 @@
                   :color (if on? widget-fg widget-bg)
                   :transition (:std widget-transition)}
       :label {:display "block"
+              :user-select "none"
               :font-size "12px"
               :font-weight 300
               :margin "0 10px 0 10px"
@@ -127,6 +128,7 @@
   (let [widget-bg (if disabled? widget-bg-d widget-bg-e)
         label {:position "absolute"
                :display "inline-block"
+               :user-select "none"
                :overflow "hidden"
                :font-size "12px"
                :height "24px"
@@ -207,6 +209,7 @@
              :padding "4px 4px"
              :background-color widget-bg}
       :span {:display "inline-block"
+             :user-select "none"
              :overflow "hidden"
              :vertical-align "top"
              :font-size "12px"
@@ -241,6 +244,7 @@
              :padding "3px 4px"
              :background-color widget-fg}
       :span {:display "inline-block"
+             :user-select "none"
              :overflow "hidden"
              :vertical-align "top"
              :font-size "12px"
@@ -323,8 +327,10 @@
                   :padding "14px 20px"
                   :font-weight 700}
       :title {:display "block"
+              :user-select "none"
               :font-size "16px"}
       :sub-title {:display "block"
+                  :user-select "none"
                   :font-size "10px"}
       :head-right {:padding "12px 24px"}
       :body {:height (px bh)
@@ -349,6 +355,7 @@
                           :background widget-bg-d
                           :color widget-fg)
         tube-label {:display "inline-block"
+                    :user-select "none"
                     :border-radius "50%"
                     :border (str "1px solid " widget-border)
                     :font-size "10px"
@@ -390,6 +397,7 @@
                   :width "24px"
                   :height "24px"}
         add-label {:color "#fff"
+                   :user-select "none"
                    :font-size "12px"
                    :padding "0 1px"
                    :overflow "hidden"
@@ -451,6 +459,7 @@
      :border-radius (case position
                       :top "8px 8px 0 0"
                       :bottom "0 0 8px 8px")
+     :user-select "none"
      :font-size "12px"
      :line-height "24px"
      :text-align "center"
