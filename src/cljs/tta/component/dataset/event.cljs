@@ -81,7 +81,7 @@
    {:dispatch-n (list (into [::ht-event/service-failure false] params)
                       [:tta.component.root.event/activate-content :home])}))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-db
  ::set-mode
@@ -97,6 +97,45 @@
  ::select-level
  (fn [db [_ level]]
    (assoc-in db (conj view-path :selected-level) level)))
+
+(rf/reg-event-db
+ ::set-twt-entry-mode
+ (fn [db [_ mode]]
+   (assoc-in db (conj view-path :twt-entry-mode) mode)))
+
+(rf/reg-event-db
+ ::set-twt-entry-scope
+ (fn [db [_ scope]]
+   (assoc-in db (conj view-path :twt-entry-scope) scope)))
+
+(rf/reg-event-db
+ ::set-twt-entry-index
+ (fn [db [_ scope index]]
+   (-> db
+       (assoc-in (conj view-path :twt-entry-index scope) index)
+       (assoc-in (conj view-path :twt-entry-scope) scope))))
+
+(rf/reg-event-fx
+ ::move-twt-entry-index
+ [(inject-cofx ::inject/sub [::subs/twt-entry-scope])
+  (inject-cofx ::inject/sub [::subs/twt-entry-index])]
+ (fn [{:keys [::subs/twt-entry-scope
+             ::subs/twt-entry-index]}
+     [_ dir]] ;; dir = :prev, :next
+   (let [index (if (= twt-entry-scope :wall)
+                 (if (= dir :next)
+                   (case twt-entry-index
+                     :north :east
+                     :east :south
+                     :south :west
+                     :west :north)
+                   (case twt-entry-index
+                     :north :west
+                     :east :north
+                     :south :east
+                     :west :south))
+                 ((if (= dir :next) inc dec) twt-entry-index))]
+     {:dispatch [::set-twt-entry-index twt-entry-scope index]})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -139,10 +178,46 @@
 
 ;;Top fired TWT entry;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::set-temp
- (fn [db [_ path value required?]]
-   (let [data @(rf/subscribe [::subs/data])
-         temp-unit @(rf/subscribe [::app-subs/temp-unit])]
-     (set-field-temperature db path value data data-path form-path required? temp-unit))))
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::app-subs/temp-unit])]
+ (fn [{:keys [db ::subs/data ::app-subs/temp-unit]}
+     [_ path value required?]]
+   {:db (set-field-temperature db path value data data-path form-path
+                               required? temp-unit)}))
 
+(rf/reg-event-fx
+ ::clear-raw-temps
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ row-path]]
+   (let [clean (fn [sides]
+                 (mapv (fn [s]
+                         (->> (:tubes s)
+                              (mapv #(dissoc % :raw-temp))))
+                       sides))]
+     {:db (-> db
+               (assoc-in data-path
+                         (update-in data (conj row-path :sides) clean))
+               (update-in (concat form-path row-path [:sides]) clean))})))
+
+(rf/reg-event-fx
+ ::add-temp-field
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ path]]
+   {:db (-> db
+            (assoc-in data-path
+                      (update-in data path
+                                 #(conj (or % []) nil)))
+            (update-in (concat form-path path)
+                       #(conj (or % []) nil)))}))
+
+(rf/reg-event-fx
+ ::clear-wall-temps
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ path]]
+   (let [a (vec (repeat 5 nil))]
+     {:db (-> db
+              (assoc-in data-path
+                        (assoc-in data path a))
+              (assoc-in (concat form-path path) a))})))

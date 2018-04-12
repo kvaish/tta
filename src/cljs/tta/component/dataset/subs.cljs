@@ -204,7 +204,7 @@
 (rf/reg-sub
  ::selected-area ;; the top tab selected
  :<- [::view]
- (fn [view _] (:selected-area view)))
+ (fn [view _] (or (:selected-area view) 0)))
 
 (rf/reg-sub-raw
  ::level-opts ;; bottom tab selection options
@@ -223,12 +223,73 @@
               {:id :bottom
                :label (translate [:data-entry :levels :bottom] "Bottom")
                :show? (get-in config [:tf-config :measure-levels :bottom?])}]
-             (filter :show?)))))))
+             (filter :show?)
+             (vec)))))))
 
 (rf/reg-sub
  ::selected-level ;; bottom tab selected
  :<- [::view]
- (fn [view _] (:selected-level view)))
+ (fn [view _] (or (:selected-level view) 0)))
+
+(rf/reg-sub
+ ::selected-level-key
+ :<- [::selected-level]
+ :<- [::level-opts]
+ (fn [[index opts] _] (get-in opts [index :id])))
+
+(rf/reg-sub
+ ::level-key
+ :<- [::level-opts]
+ (fn [opts [_ index]] (get-in opts [index :id])))
+
+(rf/reg-sub
+ ::twt-entry-mode ;; :partial or :full
+ :<- [::view]
+ (fn [view _] (or (:twt-entry-mode view) :partial)))
+
+(rf/reg-sub-raw
+ ::twt-entry-scope-opts
+ (fn [_ _]
+   (reaction
+    (let [level @(rf/subscribe [::selected-level-key])]
+      [{:id :tube
+        :label (translate [:data-entry :twt-scope :tube] "Tube")
+        :show? true}
+       {:id :wall
+        :label (translate [:data-entry :twt-scope :wall] "Wall")
+        :show? true}
+       {:id :ceiling
+        :label (translate [:data-entry :twt-scope :ceiling] "Ceiling")
+        :show? (= level :top)}
+       {:id :floor
+        :label (translate [:data-entry :twt-scope :floor] "Floor")
+        :show? (= level :bottom)}]))))
+
+(rf/reg-sub
+ ::twt-entry-scope
+ :<- [::view]
+ (fn [view _] (or (:twt-entry-scope view) :tube)))
+
+(rf/reg-sub
+ ::twt-entry-index
+ :<- [::view]
+ (fn [view [_ scope]] (get-in view [:twt-entry-index scope]
+                             (if (= scope :wall) :north 0))))
+
+(rf/reg-sub
+ ::twt-entry-nav-disabled?
+ :<- [::config]
+ :<- [::twt-entry-scope]
+ :<- [::twt-entry-index]
+ (fn [[config scope index] [_  dir]]
+   (if (= scope :wall) false
+       (case dir
+         :next (let [tc (get-in config [:tf-config :tube-row-count])
+                     n (if (= scope :tube) (dec tc) tc)]
+                 (= n index))
+
+         :prev (= 0 index)
+         nil))))
 
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -263,28 +324,47 @@
  (fn [data _]
    ((some-fn :last-saved :date-modified :date-created) data)))
 
-;;top-sired ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;top-fired ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn get-field-temp [path form data temp-unit]
+  (get-field path form data #(au/to-temp-unit % temp-unit)))
 
 (rf/reg-sub
- ::tf-config
- :<- [::app-subs/plant]
- (fn [plant _]
-   (get-in plant [:config :tf-config])))
-
-;;corresponding tube entry from dataset 
-(rf/reg-sub
- ::tf-dataset-tube
+ ::field-temp
+ :<- [::form]
  :<- [::data]
- :<- [::form] 
- (fn [[data form] [_ level index side]]
-   (get-field [:top-fired :levels level :rows index :sides side] form data)))
+ :<- [::app-subs/temp-unit]
+ (fn [[form data temp-unit] [_ path]]
+   (get-field-temp path form data temp-unit)))
+
+(rf/reg-sub
+ ::has-raw-temp
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ row-path]]
+   (->> [data form]
+        (some (fn [d]
+                (->> (get-in d (conj row-path :sides))
+                     (some (fn [side]
+                             (->> (:tubes side)
+                                  (some :raw-temp))))))))))
 
 ;;wall temps for given level and side (:east,:west,:north,:south)
 (rf/reg-sub
- ::tf-wall-temps
+ ::tf-wall-temps-count
  :<- [::data]
- (fn [data [_ level side]]
-   (get-in data [:top-fired level :wall-temps :side])))
+ (fn [data [_ index]]
+   (count (get-in data [:top-fired :wall-temps index :temps]))))
+
+(rf/reg-sub
+ ::has-wall-temps
+ :<- [::data]
+ :<- [::form]
+ (fn [[data form] [_ path]]
+   (->> [data form]
+        (some (fn [d]
+                (->> (get-in d path)
+                     (some some?)))))))
 
 ;;wall temps for given level
 (rf/reg-sub
@@ -304,7 +384,7 @@
  ::tube-prefs
  :<- [::settings]
  :<- [::firing]
- (fn [[settings firing] _]
+ (fn [[settings firing] [_ row-index]]
    (case  firing
-     "top" (get-in settings [:tf-settings :tube-rows])
-     "side" (get-in settings [:sf-settings :chambers]))))
+     "top" (get-in settings [:tf-settings :tube-rows row-index :tube-prefs])
+     "side" (get-in settings [:sf-settings :chambers row-index :tube-prefs]))))

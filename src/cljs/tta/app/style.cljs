@@ -300,7 +300,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn vertical-line [height]
-  {:margin "20px"
+  {:margin "10px"
    :border "none"
    :border-left (str "1px solid " widget-bg-e)
    :width "0"

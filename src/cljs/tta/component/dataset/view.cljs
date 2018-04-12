@@ -39,7 +39,7 @@
   [ui/font-icon (update props :class-name str " fa fa-cog")])
 
 ;;visible only when creating draft
-(defn action-save []   
+(defn action-save []
   [app-comp/button {:disabled?
                     (not @(rf/subscribe [::subs/can-submit?]))
                     :icon ic/save
@@ -113,49 +113,74 @@
       (conj actions action-report action-excel))))
 
 (defn body [{:keys [width height]}]
-  (r/create-class
-   {:component-did-mount
-    (fn [this])
-    :reagent-render
-    (fn []
-      (let [area-opts @(rf/subscribe [::subs/area-opts])
-            selected-area @(rf/subscribe [::subs/selected-area])
-            level-opts @(rf/subscribe [::subs/level-opts])
-            selected-level @(rf/subscribe [::subs/selected-level])
-            firing @(rf/subscribe [::subs/firing])]
+  (let [area-opts @(rf/subscribe [::subs/area-opts])
+        selected-area @(rf/subscribe [::subs/selected-area])
+        level-opts @(rf/subscribe [::subs/level-opts])
+        selected-level @(rf/subscribe [::subs/selected-level])
+        firing @(rf/subscribe [::subs/firing])]
+    [app-view/tab-layout
+     {:top-tabs {:selected (or selected-area 0)
+                 :on-select #(rf/dispatch [::event/select-area %])
+                 :labels (mapv :label area-opts)}
+      :bottom-tabs {:selected (or selected-level 0)
+                    :on-select #(rf/dispatch [::event/select-level %])
+                    :labels (mapv :label level-opts)}
+      :width width, :height height
+      :content
+      (fn [{:keys [width height selected]}]
+        (let [mode @(rf/subscribe [::subs/mode])
+              [sel-top sel-bottom] selected
+              view-size {:width width
+                         :height height}]
+          (cond
+            ;; topfired
+            (= "top" firing)
+            (cond
+              (= :edit mode) ;; twt-entry, burner, gold-cup
+              (case sel-top
+                0 ;; twt-entry
+                [twt-entry {:level sel-bottom
+                            :view-size view-size}]
+                1 ;; burner-entry
+                [burner-entry {:view-size view-size}]
+                2 ;; gold-cup-entry
+                [:div {:style view-size} "gold-cup entry topfired"])
 
-        [:div {:ref "container"}
-         [app-view/tab-layout
-          {:top-tabs {:selected (or selected-area 0) 
-                      :on-select #(rf/dispatch [::event/select-area %])
-                      :labels (mapv :label area-opts)}
-           :bottom-tabs {:selected (or selected-level 0)
-                         :on-select #(rf/dispatch [::event/select-level %])
-                         :labels (mapv :label level-opts)}
-           :width width, :height height
-           :content
-           (fn [{:keys [width height selected]}]
-             (let [mode @(rf/subscribe [::subs/mode])
-                   top (first selected)
-                   bottom (second selected)
-                   view-area {:width width
-                              :height height}]
-               (cond
-                 (and (= top 0) (= "top" firing))
-                 (if (= :edit mode) [twt-entry {:level bottom
-                                                :view-size view-area}]
-                     [overall-graph])
+              (= :read mode)
+              (case sel-top
+                0 ;; overall
+                [overall-graph {:level sel-bottom
+                                :view-size view-size}]
+                1 ;; twt-graph
+                [twt-graph {:level sel-bottom
+                            :view-size view-size}]
+                2 ;; burner-status
+                [burner-status {:view-size view-size}]
+                3 ;; gold-cup-view
+                [:div {:style view-size} "gold-cup view topfired"]))
 
-                 (and (= top 0) (= "side" firing))
-                 (if (= :edit mode) [twt-entry {:level bottom
-                                                :view-size view-area}]
-                     [twt-graph])
-                 
-                 (and (= top 1) (= "top" firing))
-                 (if (= :edit mode) [burner-entry] [twt-graph])
+            ;; sidefired
+            (= "side" firing)
+            (cond
+              (= :edit mode)
+              (case sel-top
+                0 ;; twt-entry
+                [twt-entry {:level sel-bottom
+                            :view-size view-size}]
+                1 ;; burner-entry
+                [burner-entry {:view-size view-size}]
+                2 ;; gold-cup-entry
+                [:div {:style view-size} "gold-cup entry sidefired"])
 
-                 (and (= top 1) (= "side" firing))
-                 (if (= :edit mode) [burner-entry] [burner-status]))))}]]))}))
+              (= :read mode)
+              (case sel-top
+                0 ;; twt-graph
+                [twt-graph {:view-size view-size}]
+                1 ;; burner-status
+                [burner-status {:view-size view-size}]
+                2 ;; gold-cup-view
+                [:div {:style view-size} "gold-cup view sidefired"])))))}]))
+
 ;; dataset: date | time
 ;; last saved: date | time (hide when nil)
 
