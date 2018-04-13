@@ -111,7 +111,22 @@
      (and (not success?) (get-in db (conj draft-path :draft?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
-(defn init-sf-dataset [draft plant])
+(defn init-sf-dataset [draft plant]
+  (let [sf-config (get-in plant [:config :sf-config])
+        [ch-count tube-count]
+        [(count (get-in sf-config [:chambers]))
+         (get-in sf-config [:chambers 0 :tube-count])]]
+    {:chambers (mapv (fn [ch]
+                       {:sides (mapv (fn [side]
+                                       {:tubes  (map (fn [tubes]
+                                                       {:raw-temp nil})
+                                                     (repeat tube-count []) )
+                                        :wall-temps (map (fn [] {:avg nil
+                                                                :temps [nil nil]})
+                                                         (repeat 5 []))
+                                        })
+                                     (repeat 2 []))})
+                     (repeat ch-count []))}))
 
 
 ;; initialize top-fired with 5 empty wall entries 
@@ -132,19 +147,16 @@
            {:levels
             (mapv (fn [level lvl-ind]
                     {:rows
-                     (mapv (fn [tube-count row row-ind]
+                     (mapv (fn [tube-count row]
                              {:sides
                               (mapv (fn [side]
                                       {:tubes
-                                       (mapv (fn [tube tube-ind]
+                                       (mapv (fn [tube]
                                                {:raw-temp nil})
-                                             (repeat tube-count {})
-                                             (range 0 tube-count ))})
-                                    (repeat 2 {})
-                                    )})
+                                             (repeat tube-count {}))})
+                                    (repeat 2 {}))})
                            tube-counts
-                           (repeat row-count {})
-                           (range 0 row-count))} )
+                           (repeat row-count {}))} )
                   (repeat level-count {})
                   (range 0 level-count))
             :wall-temps {:north wall-temp
@@ -174,7 +186,7 @@
             draft (cond-> draft
                     (:draft? draft) (assoc :last-saved (js/Date.)))
 
-            draft (if (or (:top-fired draft) (:sf-config draft))
+            draft (if (or (:top-fired draft) (:side-fired draft))
                     draft
                     (case firing
                       "side" (init-sf-dataset draft plant)
