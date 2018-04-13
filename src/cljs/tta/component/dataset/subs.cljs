@@ -249,26 +249,29 @@
 
 (rf/reg-sub-raw
  ::twt-entry-scope-opts
- (fn [_ _]
+ (fn [_ [_ level-key]]
    (reaction
-    (let [level @(rf/subscribe [::selected-level-key])]
-      [{:id :tube
-        :label (translate [:data-entry :twt-scope :tube] "Tube")
-        :show? true}
-       {:id :wall
-        :label (translate [:data-entry :twt-scope :wall] "Wall")
-        :show? true}
-       {:id :ceiling
-        :label (translate [:data-entry :twt-scope :ceiling] "Ceiling")
-        :show? (= level :top)}
-       {:id :floor
-        :label (translate [:data-entry :twt-scope :floor] "Floor")
-        :show? (= level :bottom)}]))))
+    (->> (let [level-key (or level-key @(rf/subscribe [::selected-level-key]))]
+           [{:id :tube
+             :label (translate [:data-entry :twt-scope :tube] "Tube")
+             :show? true}
+            {:id :wall
+             :label (translate [:data-entry :twt-scope :wall] "Wall")
+             :show? true}
+            {:id :ceiling
+             :label (translate [:data-entry :twt-scope :ceiling] "Ceiling")
+             :show? (= level-key :top)}
+            {:id :floor
+             :label (translate [:data-entry :twt-scope :floor] "Floor")
+             :show? (= level-key :bottom)}])
+         (filter :show?)))))
 
 (rf/reg-sub
  ::twt-entry-scope
  :<- [::view]
- (fn [view _] (or (:twt-entry-scope view) :tube)))
+ :<- [::level-key]
+ (fn [[view current-level-key] [_ level-key]]
+   (get-in view [(or level-key current-level-key) :twt-entry-scope] :tube)))
 
 (rf/reg-sub
  ::twt-entry-index
@@ -278,10 +281,10 @@
 
 (rf/reg-sub
  ::twt-entry-nav-disabled?
- :<- [::config]
- :<- [::twt-entry-scope]
- :<- [::twt-entry-index]
- (fn [[config scope index] [_  dir]]
+ (fn [[_ scope _] _]
+   [(rf/subscribe [::config])
+    (rf/subscribe [::twt-entry-index scope])])
+ (fn [[config index] [_ scope dir]]
    (if (= scope :wall) false
        (case dir
          :next (let [tc (get-in config [:tf-config :tube-row-count])
@@ -349,13 +352,14 @@
                              (->> (:tubes side)
                                   (some :raw-temp))))))))))
 
-;;wall temps for given level and side (:east,:west,:north,:south)
+;; wall temps count given the path to the array
 (rf/reg-sub
- ::tf-wall-temps-count
+ ::wall-temps-count
  :<- [::data]
- (fn [data [_ index]]
-   (count (get-in data [:top-fired :wall-temps index :temps]))))
+ (fn [data [_ path]]
+   (count (get-in data path))))
 
+;; check if has any wall temp given the path to the array
 (rf/reg-sub
  ::has-wall-temps
  :<- [::data]
@@ -366,20 +370,6 @@
                 (->> (get-in d path)
                      (some some?)))))))
 
-;;wall temps for given level
-(rf/reg-sub
- ::tf-ceiling-temps
- :<- [::data]
- (fn [data [_ level]]
-   (get-in data [:top-fired level :ceiling-temps])))
-
-;;ceiling temps for given level
-(rf/reg-sub
- ::tf-floor-temps
- :<- [::data]
- (fn [data [_ level]]
-   (get-in data [:top-fired level :ceiling-temps])))
-
 (rf/reg-sub
  ::tube-prefs
  :<- [::settings]
@@ -387,4 +377,5 @@
  (fn [[settings firing] [_ row-index]]
    (case  firing
      "top" (get-in settings [:tf-settings :tube-rows row-index :tube-prefs])
-     "side" (get-in settings [:sf-settings :chambers row-index :tube-prefs]))))
+     "side" (get-in settings [:sf-settings :chambers row-index :tube-prefs])
+     nil)))

@@ -32,7 +32,6 @@
 
 (defn parse [{:keys [gold-cup? dataset logger-data]}
              plant topsoe? user-roles client-id]
-  
   (let [plant-settings (:settings plant)
         draft (cond-> (or dataset
                           (if logger-data (-> (parse-logger-data logger-data)
@@ -64,7 +63,6 @@
                                  (first user-roles))
                   :reformer-version (or (:reformer-version dataset)
                                         (get-in plant [:config :version]))}
-        
         form {:emissivity-setting (if-not (:emissivity-setting settings)
                                     (missing-field))}]
     {:draft draft, :settings settings, :form form}))
@@ -111,58 +109,45 @@
      (and (not success?) (get-in db (conj draft-path :draft?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
+
+
 (defn init-sf-dataset [draft plant]
   (let [sf-config (get-in plant [:config :sf-config])
-        [ch-count tube-count]
-        [(count (get-in sf-config [:chambers]))
-         (get-in sf-config [:chambers 0 :tube-count])]]
-    {:chambers (mapv (fn [ch]
-                       {:sides (mapv (fn [side]
-                                       {:tubes  (map (fn [tubes]
-                                                       {:raw-temp nil})
-                                                     (repeat tube-count []) )
-                                        :wall-temps (map (fn [] {:avg nil
-                                                                :temps [nil nil]})
-                                                         (repeat 5 []))
-                                        })
-                                     (repeat 2 []))})
-                     (repeat ch-count []))}))
+        ch-count (count (:chambers sf-config))
+        tube-count (get-in sf-config [:chambers 0 :tube-count])]
+    (assoc draft :side-fired
+           {:chambers
+            (->> {:sides (->> {:tubes (vec (repeat tube-count nil))
+                               :wall-temps {:temps (vec (repeat 5 nil))}}
+                              (repeat 2)
+                              (vec))}
+                 (repeat ch-count)
+                 (vec))})))
 
-
-;; initialize top-fired with 5 empty wall entries 
 (defn init-tf-dataset [draft plant]
   (let [tf-config (get-in plant [:config :tf-config])
-        wall-temp (map (fn [] {:avg nil
-                              :temps [nil nil]})
-                       (repeat 5 []))
-
-        [level-count row-count tube-counts wall-names]
-        [(->> (:measure-levels tf-config)
-              (filter val)
-              (count))
-         (:tube-row-count tf-config)
-         (map :tube-count (:tube-rows tf-config))
-         (map key (:wall-names tf-config))]]
+        temps {:temps (vec (repeat 5 nil))}
+        {:keys [top? middle? bottom?]} (:measure-levels tf-config)
+        row-count (get-in plant [:config :tf-config :tube-row-count])
+        tube-counts (map :tube-count (:tube-rows tf-config))
+        level {:rows
+               (mapv (fn [tube-count]
+                       {:sides (->> {:tubes (vec (repeat tube-count nil))}
+                                    (repeat 2)
+                                    (vec))})
+                     tube-counts)}]
     (assoc draft :top-fired
-           {:levels
-            (mapv (fn [level lvl-ind]
-                    {:rows
-                     (mapv (fn [tube-count row]
-                             {:sides
-                              (mapv (fn [side]
-                                      {:tubes
-                                       (mapv (fn [tube]
-                                               {:raw-temp nil})
-                                             (repeat tube-count {}))})
-                                    (repeat 2 {}))})
-                           tube-counts
-                           (repeat row-count {}))} )
-                  (repeat level-count {})
-                  (range 0 level-count))
-            :wall-temps {:north wall-temp
-                         :east wall-temp
-                         :west wall-temp
-                         :south wall-temp}})))
+           (cond->
+               {:levels (cond-> {}
+                          top? (assoc :top level)
+                          middle? (assoc :middle level)
+                          bottom? (assoc :bottom level))
+                :wall-temps {:north temps
+                             :east temps
+                             :west temps
+                             :south temps}}
+             top? (assoc :ceiling-temps (vec (repeat (inc row-count) temps)))
+             bottom? (assoc :floor-temps (vec (repeat (inc row-count) temps)))))))
 
 (rf/reg-event-fx
  ::submit
@@ -175,7 +160,7 @@
     (when can-submit?
       (let [draft (-> (get-in db draft-path)
                       (merge
-                       (select-keys data [:plant-id :client-id :summary 
+                       (select-keys data [:plant-id :client-id :summary
                                           :data-date :topsoe? :gold-cup?
                                           :reformer-version
                                           :pyrometer :shift :comment :operator
@@ -185,7 +170,6 @@
                                 (:emissivity-setting data)))
             draft (cond-> draft
                     (:draft? draft) (assoc :last-saved (js/Date.)))
-
             draft (if (or (:top-fired draft) (:side-fired draft))
                     draft
                     (case firing
@@ -197,7 +181,8 @@
                           [:tta.component.dataset.event/init {:dataset draft}])}
           ;; in case of draft, also save to local storage
           (:draft? draft)
-          (assoc :storage/set {:key :draft :value draft}))))
+          (assoc :storage/set {:key :draft
+                               :value (au/dataset-to-storage draft)}))))
     {:db (update-in db dlg-path assoc :show-error? true)})))
 
 (rf/reg-event-fx

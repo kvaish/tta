@@ -22,6 +22,48 @@
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
 
+(defn init-form [dataset]
+  {:top-fired
+   {:levels
+    (reduce-kv (fn [m k lvl]
+                 (assoc m k
+                        {:rows
+                         (mapv (fn [r]
+                                 {:sides
+                                  (mapv (fn [s]
+                                          {:tubes (vec (repeat (count (:tubes s))
+                                                               nil))})
+                                        (:sides r))})
+                               (:rows lvl))}))
+               {}
+               (get-in dataset [:top-fired :levels]))
+    :wall-temps
+    (reduce-kv (fn [m k temps]
+                 (assoc m k
+                        {:temps (vec (repeat (count (:temps temps)) nil))}))
+               {}
+               (get-in dataset [:top-fired :wall-temps]))
+    :ceiling-temps
+    (mapv (fn [temps]
+            {:temps (vec (repeat (count (:temps temps)) nil))})
+          (get-in dataset [:top-fired :ceiling-temps]))
+    :floor-temps
+    (mapv (fn [temps]
+            {:temps (vec (repeat (count (:temps temps)) nil))})
+          (get-in dataset [:top-fired :floor-temps]))}
+
+   :side-fired
+   {:chambers
+    (mapv (fn [ch]
+            {:sides
+             (mapv (fn [s]
+                     {:tubes (vec (repeat (count (:tubes s)) nil))
+                      :wall-temps
+                      {:temps (vec (repeat (count (get-in s [:wall-temps :temps]))
+                                           nil))}})
+                   (:sides ch))})
+          (get-in dataset [:side-fired :chambers]))}})
+
 (rf/reg-event-fx
  ::init
  [(inject-cofx :storage :draft)
@@ -34,14 +76,16 @@
                        (:id plant))
                     (= (:reformer-version draft)
                        (get-in plant [:config :version])))
-                 draft)
+                 (au/dataset-from-storage draft))
          {:keys [client-id], plant-id :id} plant
          fetch-params {:client-id client-id
                        :plant-id plant-id
                        :evt-success [::fetch-success]
                        :evt-failure [::fetch-failure]}]
      (if dataset
-       {:db (assoc-in db (conj comp-path :dataset) dataset)}
+       {:db (-> db
+                (assoc-in (conj comp-path :dataset) dataset)
+                (assoc-in form-path (init-form dataset)))}
        (cond
          dataset-id
          {:service/fetch-dataset
@@ -108,8 +152,8 @@
 
 (rf/reg-event-db
  ::set-twt-entry-scope
- (fn [db [_ scope]]
-   (assoc-in db (conj view-path :twt-entry-scope) scope)))
+ (fn [db [_ level-key scope]]
+   (assoc-in db (conj view-path level-key :twt-entry-scope) scope)))
 
 (rf/reg-event-db
  ::set-twt-entry-index
@@ -120,25 +164,24 @@
 
 (rf/reg-event-fx
  ::move-twt-entry-index
- [(inject-cofx ::inject/sub [::subs/twt-entry-scope])
-  (inject-cofx ::inject/sub [::subs/twt-entry-index])]
- (fn [{:keys [::subs/twt-entry-scope
-             ::subs/twt-entry-index]}
-     [_ dir]] ;; dir = :prev, :next
-   (let [index (if (= twt-entry-scope :wall)
+ [(inject-cofx ::inject/sub (fn [[_ scope _]]
+                              [::subs/twt-entry-index scope]))]
+ (fn [{:keys [::subs/twt-entry-index]}
+     [_ scope dir]] ;; dir = :prev, :next
+   (let [index (if (= scope :wall)
                  (if (= dir :next)
                    (case twt-entry-index
                      :north :east
                      :east :south
                      :south :west
-                     :west :north)
+                     :north)
                    (case twt-entry-index
                      :north :west
                      :east :north
                      :south :east
-                     :west :south))
+                     :south))
                  ((if (= dir :next) inc dec) twt-entry-index))]
-     {:dispatch [::set-twt-entry-index twt-entry-scope index]})))
+     {:dispatch [::set-twt-entry-index scope index]})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
