@@ -55,12 +55,14 @@
                       :padding "0 0 6px 0"
                       :position "relative"}
       :form-heading-label {:color (color-hex :royal-blue)
-                   :font-size "14px"
-                   :font-weight 400
-                   :display "block"
-                   :padding "14px 12px 0 12px"
-                   :vertical-align "top"}
+                           :user-select "none"
+                           :font-size "14px"
+                           :font-weight 400
+                           :display "block"
+                           :padding "14px 12px 0 12px"
+                           :vertical-align "top"}
       :form-label {:color (color-hex :royal-blue)
+                   :user-select "none"
                    :font-size "12px"
                    :font-weight 300
                    :display "inline-block"

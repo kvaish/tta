@@ -36,6 +36,7 @@
                     :padding "0 0 6px 0"
                     :position "relative"}
       :form-label {:color (color-hex :royal-blue)
+                   :user-select "none"
                    :font-size "12px"
                    :font-weight 300
                    :display "inline-block"

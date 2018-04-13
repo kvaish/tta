@@ -178,7 +178,7 @@
 ;;; sub-header ;;;
 
 (defn app-logo [props]
-  [:div props
+  [:div (assoc-in props [:style :user-select] "none")
    [:span {:style {:font-family "arial"
                    :font-weight "900"
                    :font-size "18px"}} "True"]
