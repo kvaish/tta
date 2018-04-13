@@ -29,8 +29,11 @@
  (fn [{:keys [db ::app-subs/plant]
       {:keys [draft]} :storage}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
-   (let [draft (if (= (:reformer-version draft)
-                      (get-in plant [:config :version]))
+   (let [draft (if (and
+                    (= (:plant-id draft)
+                       (:id plant))
+                    (= (:reformer-version draft)
+                       (get-in plant [:config :version])))
                  draft)
          {:keys [client-id], plant-id :id} plant
          fetch-params {:client-id client-id
@@ -162,7 +165,6 @@
 (rf/reg-event-fx
  ::create-dataset-success
  (fn [_ [_ dataset-id]]
-   (js/console.log "dataet-id" dataset-id)
    {:dispatch [::init {:dataset-id (:new-id dataset-id)}]}))
 
 (rf/reg-event-fx
@@ -197,9 +199,9 @@
                               (mapv #(dissoc % :raw-temp))))
                        sides))]
      {:db (-> db
-               (assoc-in data-path
-                         (update-in data (conj row-path :sides) clean))
-               (update-in (concat form-path row-path [:sides]) clean))})))
+              (assoc-in data-path
+                        (update-in data (conj row-path :sides) clean))
+              (update-in (concat form-path row-path [:sides]) clean))})))
 
 (rf/reg-event-fx
  ::add-temp-field

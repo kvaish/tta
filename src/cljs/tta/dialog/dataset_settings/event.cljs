@@ -15,6 +15,7 @@
             [ht.util.common :as htu]
             [tta.app.event :as app-event]
             [tta.dialog.dataset-settings.subs :as subs]
+            [tta.component.dataset.subs :as dataset-subs]
             [tta.app.subs :as app-subs]))
 
 ;; Do NOT use rf/subscribe
@@ -30,7 +31,8 @@
   {})
 
 (defn parse [{:keys [gold-cup? dataset logger-data]}
-             plant topsoe? user-roles]
+             plant topsoe? user-roles client-id]
+  
   (let [plant-settings (:settings plant)
         draft (cond-> (or dataset
                           (if logger-data (-> (parse-logger-data logger-data)
@@ -42,7 +44,10 @@
                       (first (filter #(= (:pyrometer-id plant-settings)
                                          (:id %))
                                      (:pyrometers plant-settings))))
-        settings {:data-date (htu/to-date-time-map (or (:data-date draft)
+        settings {:plant-id (:id plant)
+                  :client-id client-id
+                  :summary nil
+                  :data-date (htu/to-date-time-map (or (:data-date draft)
                                                        (js/Date.)))
                   :topsoe?    (if dataset (:topsoe? draft)
                                   topsoe?)
@@ -68,9 +73,12 @@
  ::open
  [(inject-cofx ::inject/sub [::app-subs/plant])
   (inject-cofx ::inject/sub [::ht-subs/topsoe?])
-  (inject-cofx ::inject/sub [::ht-subs/user-roles])]
- (fn [{:keys [db ::app-subs/plant ::ht-subs/topsoe? ::ht-subs/user-roles]} [_ params]]
-   (let [{:keys [draft settings form]} (parse params plant topsoe? user-roles)]
+  (inject-cofx ::inject/sub [::ht-subs/user-roles])
+  (inject-cofx ::inject/sub [::app-subs/client])]
+ (fn [{:keys [db ::app-subs/plant ::ht-subs/topsoe?
+             ::ht-subs/user-roles ::app-subs/client]} [_ params]]
+   (let [{:keys [draft settings form]} (parse params plant topsoe?
+                                              user-roles (:id client))]
      {:dispatch [::validate-emissivity-type]
       :db (assoc-in db [:dialog :dataset-settings] {:open? true
                                                     :draft draft
@@ -103,24 +111,74 @@
      (and (not success?) (get-in db (conj draft-path :draft?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
+(defn init-sf-dataset [draft plant])
+
+
+;; initialize top-fired with 5 empty wall entries 
+(defn init-tf-dataset [draft plant]
+  (let [tf-config (get-in plant [:config :tf-config])
+        wall-temp (map (fn [] {:avg nil
+                              :temps [nil nil]})
+                       (repeat 5 []))
+
+        [level-count row-count tube-counts wall-names]
+        [(->> (:measure-levels tf-config)
+              (filter val)
+              (count))
+         (:tube-row-count tf-config)
+         (map :tube-count (:tube-rows tf-config))
+         (map key (:wall-names tf-config))]]
+    (assoc draft :top-fired
+           {:levels
+            (mapv (fn [level lvl-ind]
+                    {:rows
+                     (mapv (fn [tube-count row row-ind]
+                             {:sides
+                              (mapv (fn [side]
+                                      {:tubes
+                                       (mapv (fn [tube tube-ind]
+                                               {:raw-temp nil})
+                                             (repeat tube-count {})
+                                             (range 0 tube-count ))})
+                                    (repeat 2 {})
+                                    )})
+                           tube-counts
+                           (repeat row-count {})
+                           (range 0 row-count))} )
+                  (repeat level-count {})
+                  (range 0 level-count))
+            :wall-temps {:north wall-temp
+                         :east wall-temp
+                         :west wall-temp
+                         :south wall-temp}})))
+
 (rf/reg-event-fx
  ::submit
  [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/can-submit?])]
- (fn [{:keys [db ::subs/data ::subs/can-submit?]} _]
+  (inject-cofx ::inject/sub [::subs/can-submit?])
+  (inject-cofx ::inject/sub [::app-subs/plant])
+  (inject-cofx ::inject/sub [::subs/firing])]
+ (fn [{:keys [db ::subs/data ::app-subs/plant ::subs/can-submit? ::subs/firing]} _]
    (merge
     (when can-submit?
       (let [draft (-> (get-in db draft-path)
                       (merge
-                       (select-keys data [:data-date :topsoe? :pyrometer
-                                          :emissivity-type :emissivity
-                                          :shift :comment :operator
+                       (select-keys data [:plant-id :client-id :summary 
+                                          :data-date :topsoe? :gold-cup?
+                                          :reformer-version
+                                          :pyrometer :shift :comment :operator
                                           :role-type :reformer-version]))
                       (update :data-date htu/from-date-time-map)
                       (assoc-in [:pyrometer :emissivity-setting]
                                 (:emissivity-setting data)))
-           draft (cond-> draft
-                    (:draft? draft) (assoc :last-saved (js/Date.)))]
+            draft (cond-> draft
+                    (:draft? draft) (assoc :last-saved (js/Date.)))
+
+            draft (if (or (:top-fired draft) (:sf-config draft))
+                    draft
+                    (case firing
+                      "side" (init-sf-dataset draft plant)
+                      "top" (init-tf-dataset draft plant)))]
         (cond->
             {:dispatch-n (list
                           [::close true]
