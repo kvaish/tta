@@ -6,17 +6,16 @@
             [vimsical.re-frame.cofx.inject :as inject]
             [cljs-time.core :as t]
             [cljs-time.coerce :as tc]
+            [ht.util.common :as u]
             [ht.app.event :as ht-event]
             [ht.app.subs :as ht-subs]
             [tta.util.common :as au :refer [make-field missing-field
                                             set-field set-field-text
                                             set-field-decimal
                                             validate-field parse-value]]
-            [ht.util.common :as htu]
+            [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
-            [tta.dialog.dataset-settings.subs :as subs]
-            [tta.component.dataset.subs :as dataset-subs]
-            [tta.app.subs :as app-subs]))
+            [tta.dialog.dataset-settings.subs :as subs]))
 
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
@@ -38,7 +37,6 @@
                                               (assoc :draft? true)))
                           {:draft? true})
                 gold-cup? (assoc :gold-cup? true))
-
         pyrometer (or (:pyrometer draft)
                       (first (filter #(= (:pyrometer-id plant-settings)
                                          (:id %))
@@ -46,11 +44,12 @@
         settings {:plant-id (:id plant)
                   :client-id client-id
                   :summary nil
-                  :data-date (htu/to-date-time-map (or (:data-date draft)
-                                                       (js/Date.)))
-                  :topsoe?    (if dataset (:topsoe? draft)
-                                  topsoe?)
-
+                  :data-date (if-let [date (:data-date draft)]
+                               (u/to-date-time-map date)
+                               (-> (u/to-date-time-map (js/Date.))
+                                   (update :minute #(* 5 (quot % 5)))
+                                   (assoc :second 0)))
+                  :topsoe? (if dataset (:topsoe? draft) topsoe?)
                   :pyrometer pyrometer
                   :emissivity-type (or (:emissivity-type draft)
                                        (:emissivity-type plant-settings))
@@ -63,8 +62,9 @@
                                  (first user-roles))
                   :reformer-version (or (:reformer-version dataset)
                                         (get-in plant [:config :version]))}
-        form {:emissivity-setting (if-not (:emissivity-setting settings)
-                                    (missing-field))}]
+        form {:pyrometer {:emissivity-setting (if-not (:emissivity-setting settings)
+                                                (missing-field))}}]
+    ;; (js/console.log settings)
     {:draft draft, :settings settings, :form form}))
 
 (rf/reg-event-fx
@@ -75,13 +75,18 @@
   (inject-cofx ::inject/sub [::app-subs/client])]
  (fn [{:keys [db ::app-subs/plant ::ht-subs/topsoe?
              ::ht-subs/user-roles ::app-subs/client]} [_ params]]
+   ;; (js/console.log "dialog open")
    (let [{:keys [draft settings form]} (parse params plant topsoe?
                                               user-roles (:id client))]
      {:dispatch [::validate-emissivity-type]
-      :db (assoc-in db [:dialog :dataset-settings] {:open? true
-                                                    :draft draft
-                                                    :settings settings
-                                                    :form form})})))
+      :db (assoc-in db [:dialog :dataset-settings]
+                    (assoc {:open? true
+                            ;; whether starting totally new
+                            :new? (not (:dataset params))
+                            :draft draft
+                            :form form}
+                           (if (:dataset params) :src-data :data)
+                           settings))})))
 
 (rf/reg-event-fx
  ::validate-emissivity-type
@@ -106,7 +111,7 @@
  (fn [{:keys [db]} [_ success?]]
    (cond->
        {:db (assoc-in db [:dialog :dataset-settings] nil)}
-     (and (not success?) (get-in db (conj draft-path :draft?)))
+     (and (not success?) (get-in db (conj dlg-path :new?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
 
@@ -114,11 +119,14 @@
 (defn init-sf-dataset [draft plant]
   (let [sf-config (get-in plant [:config :sf-config])
         ch-count (count (:chambers sf-config))
+        pd-count (get-in sf-config [:chambers 0 :peep-door-count])
         tube-count (get-in sf-config [:chambers 0 :tube-count])]
     (assoc draft :side-fired
            {:chambers
             (->> {:sides (->> {:tubes (vec (repeat tube-count nil))
-                               :wall-temps {:temps (vec (repeat 5 nil))}}
+                               :wall-temps (->> {:temps (vec (repeat 5 nil))}
+                                                (repeat pd-count)
+                                                (vec))}
                               (repeat 2)
                               (vec))}
                  (repeat ch-count)
@@ -165,16 +173,16 @@
                                           :reformer-version
                                           :pyrometer :shift :comment :operator
                                           :role-type :reformer-version]))
-                      (update :data-date htu/from-date-time-map)
-                      (assoc-in [:pyrometer :emissivity-setting]
-                                (:emissivity-setting data)))
+                      (update :data-date u/from-date-time-map))
             draft (cond-> draft
-                    (:draft? draft) (assoc :last-saved (js/Date.)))
-            draft (if (or (:top-fired draft) (:side-fired draft))
-                    draft
-                    (case firing
-                      "side" (init-sf-dataset draft plant)
-                      "top" (init-tf-dataset draft plant)))]
+                    ;; draft dataset also saved to storage
+                    ;; hence update the last saved time to current time
+                    (:draft? draft) (assoc :last-saved (js/Date.))
+                    ;; when not initialized add either :top-fired or :side-fired
+                    (and (= firing "side") (not (:side-fired draft)))
+                    (init-sf-dataset plant)
+                    (and (= firing "top") (not (:top-fired draft)))
+                    (init-tf-dataset plant))]
         (cond->
             {:dispatch-n (list
                           [::close true]
@@ -192,7 +200,7 @@
    {:db (set-field db path value data data-path form-path required?)}))
 
 (rf/reg-event-fx
- ::set-override-emissivity
+ ::set-emissivity
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::subs/active-pyrometer])]
  (fn [{:keys [db ::subs/data ::subs/active-pyrometer]} [_ value]]
@@ -200,14 +208,6 @@
      {:db (set-field-decimal db [:emissivity] value data data-path form-path
                              required?
                              {:min 0.01 :max 0.99})})))
-
-(rf/reg-event-fx
- ::set-emissivity-setting
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ value]]
-   {:db (set-field-decimal db [:emissivity-setting]
-                           value data data-path form-path true
-                           {:min 0.01 :max 1})}))
 
 (rf/reg-event-fx
  ::set-emissivity-type
@@ -221,4 +221,15 @@
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [db ::subs/data]} [_ pyrometer]]
    {:dispatch [::validate-emissivity-type]
-    :db (set-field db [:pyrometer] pyrometer data data-path form-path true)}))
+    :db (-> db
+            (assoc-in data-path (assoc data :pyrometer pyrometer))
+            (assoc-in (conj form-path :pyrometer :emissivity-setting)
+                      (missing-field)))}))
+
+(rf/reg-event-fx
+ ::set-pyrometer-emissivity-setting
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ value]]
+   {:db (set-field-decimal db [:pyrometer :emissivity-setting]
+                           value data data-path form-path true
+                           {:min 0.01 :max 1})}))

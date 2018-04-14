@@ -59,8 +59,9 @@
              (mapv (fn [s]
                      {:tubes (vec (repeat (count (:tubes s)) nil))
                       :wall-temps
-                      {:temps (vec (repeat (count (get-in s [:wall-temps :temps]))
-                                           nil))}})
+                      (mapv (fn [pd]
+                              {:temps (vec (repeat (count (:temps pd)) nil))})
+                            (:wall-temps s))})
                    (:sides ch))})
           (get-in dataset [:side-fired :chambers]))}})
 
@@ -72,10 +73,8 @@
       {:keys [draft]} :storage}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
    (let [draft (if (and
-                    (= (:plant-id draft)
-                       (:id plant))
-                    (= (:reformer-version draft)
-                       (get-in plant [:config :version])))
+                    (= (:plant-id draft) (:id plant))
+                    (= (:reformer-version draft) (get-in plant [:config :version])))
                  (au/dataset-from-storage draft))
          {:keys [client-id], plant-id :id} plant
          fetch-params {:client-id client-id
@@ -153,20 +152,20 @@
 (rf/reg-event-db
  ::set-twt-entry-scope
  (fn [db [_ level-key scope]]
-   (assoc-in db (conj view-path level-key :twt-entry-scope) scope)))
+   (assoc-in db (conj view-path :twt-entry-scope level-key) scope)))
 
 (rf/reg-event-db
  ::set-twt-entry-index
- (fn [db [_ scope index]]
+ (fn [db [_ level-key scope index]]
    (-> db
        (assoc-in (conj view-path :twt-entry-index scope) index)
-       (assoc-in (conj view-path :twt-entry-scope) scope))))
+       (assoc-in (conj view-path :twt-entry-scope level-key) scope))))
 
 (rf/reg-event-fx
  ::move-twt-entry-index
  [(inject-cofx ::inject/sub (fn [[_ scope _]]
                               [::subs/twt-entry-index scope]))]
- (fn [{:keys [::subs/twt-entry-index]}
+ (fn [{:keys [db ::subs/twt-entry-index]}
      [_ scope dir]] ;; dir = :prev, :next
    (let [index (if (= scope :wall)
                  (if (= dir :next)
@@ -181,7 +180,7 @@
                      :south :east
                      :south))
                  ((if (= dir :next) inc dec) twt-entry-index))]
-     {:dispatch [::set-twt-entry-index scope index]})))
+     {:db (assoc-in db (conj view-path :twt-entry-index scope) index)})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -198,12 +197,21 @@
  )
 
 (rf/reg-event-fx
+ ::clear-draft
+ (fn [{:keys [db]} _]
+   (let [{:keys [gold-cup?]} (get-in db (conj comp-path :dataset))]
+     {:storage/set {:key :draft, :value nil}
+      :db (update-in db comp-path dissoc :dataset :data :form)
+      :dispatch [:tta.dialog.dataset-settings.event/open
+                 {:gold-cup? gold-cup?}]})))
+
+(rf/reg-event-fx
  ::save-draft
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::subs/valid?])
   (inject-cofx ::inject/sub [::subs/dirty?])]
- (fn [{:keys [db ::subs/data ::subs/valid? ::subs/dirty?]} _]
-   (if (and valid? dirty?) {:storage/set {:key :draft :value data}})))
+ (fn [{:keys [::subs/data ::subs/valid? ::subs/dirty?]} _]
+   (if (and valid? dirty?) {:storage/set {:key :draft, :value data}})))
 
 (rf/reg-event-fx
  ::create-dataset-success
@@ -215,7 +223,7 @@
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::app-subs/plant])
   (inject-cofx ::inject/sub [::app-subs/client])]
- (fn [{:keys [db ::subs/data ::app-subs/client ::app-subs/plant]} _]
+ (fn [{:keys [::subs/data ::app-subs/client ::app-subs/plant]} _]
    {:service/create-dataset {:client (:id client)
                              :plant-id (:id plant)
                              :dataset data
@@ -238,8 +246,9 @@
  (fn [{:keys [db ::subs/data]} [_ row-path]]
    (let [clean (fn [sides]
                  (mapv (fn [s]
-                         (->> (:tubes s)
-                              (mapv #(dissoc % :raw-temp))))
+                         (update s :tubes
+                                 (fn [tubes]
+                                   (mapv #(dissoc % :raw-temp) tubes))))
                        sides))]
      {:db (-> db
               (assoc-in data-path

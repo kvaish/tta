@@ -6,6 +6,7 @@
                   :exclusions [cljsjs/react
                                cljsjs/react-dom
                                cljsjs/react-dom-server]]
+                 [reagent-utils "0.3.1"]
                  [re-frame "0.10.5"] ;; "0.10.2"
                  [re-frame-utils "0.1.0"]
                  [day8.re-frame/forward-events-fx "0.0.5"]

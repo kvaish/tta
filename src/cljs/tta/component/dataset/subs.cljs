@@ -59,21 +59,19 @@
  :<- [::valid?]
  (fn [[dirty? valid?] _] (and dirty? valid?)))
 
-
-(rf/reg-sub
- ::can-upload?
- :<- [::dirty?]
- :<- [::valid?]
- :<- [::data]
- (fn [[dirty? valid? data] _]
-   (and valid?
-        (or dirty? (:draft? data)))))
-
 (rf/reg-sub
  ::warn-on-close?
  :<- [::dirty?]
  :<- [::valid?]
  (fn [[dirty? valid?] _] (or dirty? (not valid?))))
+
+(rf/reg-sub
+ ::can-edit?
+ (fn [_ _] true))
+
+(rf/reg-sub
+ ::can-delete?
+ (fn [_ _] true))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -271,7 +269,7 @@
  :<- [::view]
  :<- [::level-key]
  (fn [[view current-level-key] [_ level-key]]
-   (get-in view [(or level-key current-level-key) :twt-entry-scope] :tube)))
+   (get-in view [:twt-entry-scope (or level-key current-level-key)] :tube)))
 
 (rf/reg-sub
  ::twt-entry-index

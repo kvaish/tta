@@ -54,15 +54,11 @@
   ([style error label widget] (form-cell style :form-cell-3 error label widget)))
 
 (defn date-time-of-reading [style]
-  (let [date (update
-              (to-date-time-map (:value @(rf/subscribe [::subs/field [:data-date]])))
-              :minute #(- % (mod % 5)))
+  (let [date (:value @(rf/subscribe [::subs/field [:data-date]]))
         hour-opts @(rf/subscribe [::subs/hour-opts])
         min-opts @(rf/subscribe [::subs/min-opts])
         hr-selected (some #(if (= (:id %) (:hour date)) %) hour-opts)
-        min-selected  (some
-                       #(if (= (:id %) (:minute date))%)
-                       min-opts)]
+        min-selected (some #(if (= (:id %) (:minute date)) %) min-opts)]
     [:div (use-sub-style style :form-cell-1)
      [:div (use-sub-style style :form-label)
       (translate [:dataset-setting :reading-time :label] "Date of reading")]
@@ -70,52 +66,67 @@
                    :valid? true
                    :max (to-date-time-map (js/Date.))
                    :on-change #(rf/dispatch [::event/set-field [:data-date]
-                                             (from-date-time-map
-                                              (assoc date :day (:day %)
-                                                     :month (:month %)
-                                                     :year (:year %)))])}]
+                                             (merge date %)])}]
      [:div (use-sub-style style :form-label)
       (translate [:dataset-setting :reading-time :label] "Time (HH:MM)")]
      [app-comp/dropdown-selector
       {:item-width 50
        :selected hr-selected
        :value-fn :id
-       :label-fn :name
+       :label-fn :label
        :on-select #(rf/dispatch [::event/set-field [:data-date]
-                                 (from-date-time-map (assoc date :hour (:id %)))])
+                                 (assoc date :hour (:id %))])
        :items hour-opts}]
      [app-comp/dropdown-selector
-      {:width 10
+      {:item-width 50
        :selected min-selected
        :value-fn :id
-       :label-fn :name
+       :label-fn :label
        :on-select #(rf/dispatch [::event/set-field [:data-date]
-                                 (from-date-time-map (assoc date :minute (:id %)))])
+                                 (assoc date :minute (:id %))])
        :items min-opts}]]))
-
 
 (defn internal-dataset [style]
   (let [topsoe?  (:value @(rf/subscribe [::subs/field [:topsoe?]]))]
     [form-cell-2 style nil
      (translate [:dataset-settings :topsoe :label]
-                "HT Internal data set")
+                "HT internal dataset?")
      [app-comp/toggle
       {:value topsoe?
        :on-toggle #(rf/dispatch [::event/set-field [:topsoe?] %])}]]))
 
 (defn select-pyrometer [style]
   (let [pyrometers @(rf/subscribe [::subs/pyrometers])
-        active-pyrometer (:value @(rf/subscribe [::subs/field [:pyrometer]]))
-        selected-pyro (some #(if (= (:id active-pyrometer) (:id %))
-                               %) pyrometers)]
+        active-pyrometer @(rf/subscribe [::subs/active-pyrometer])]
     [form-cell-2 style nil
      (translate [:dataset-settings :pyrometer :label] "Select IR Pyrometer")
      [app-comp/dropdown-selector
       {:width 100
-       :selected selected-pyro
+       :selected active-pyrometer
        :value-fn :id  :label-fn :name
        :items pyrometers
        :on-select #(rf/dispatch [::event/set-pyrometer %])}]]))
+
+(defn pyrometer-emissivity-setting [style]
+  (let [{:keys [value error valid?]}
+        (query-id ::subs/field [:pyrometer :emissivity-setting])]
+    [form-cell-2 style error
+     (translate [:dataset-settings :pyrometer-emissivity-setting :label]
+                "Emissivity setting on IR Pyrometer")
+     [app-comp/text-input
+      {:width 75
+       :value value
+       :valid? valid?
+       :on-change #(rf/dispatch [::event/set-pyrometer-emissivity-setting %])}]]))
+
+(defn pyrometer-emissivity-warning [style]
+  (let [{:keys [emissivity-setting]} @(rf/subscribe [::subs/active-pyrometer])]
+    (if-not (= 1 emissivity-setting)
+      [:div (use-sub-style style :div-warning)
+       (translate [:dataset-settings :emissivity-warning :message]
+                  "* Please check the latest calibration report.
+If nothing is stated about a specific emissivity setting
+you should always use 1.0")])))
 
 (defn emissivity-type [style]
   (let [{:keys [value error valid?]} (query-id ::subs/field [:emissivity-type])
@@ -134,48 +145,18 @@
 (defn tube-emissivity [style]
   (let [pyro-emissivity  (:tube-emissivity
                           (:value @(rf/subscribe [::subs/field [:pyrometer]])))
-        emissivity (:value @(rf/subscribe [::subs/field [:emissivity]]))
         {:keys [value error valid?]} (query-id ::subs/field [:emissivity])]
-
-    [:span (use-sub-style style :form-cell-2)
-     [:span (merge (use-sub-style style :form-label)
-                   #_(if emissivity {:style {:text-decoration "line-through"}}))
-      [:div (use-sub-style style :form-error) error]
-      (str (translate [:dataset-settings :pyrometer-emissivity :label]
-                      "Tube emissivity")
-           " : "
-           pyro-emissivity
-           " "
-           (translate [:dataset-settings :override-emissivity :label]
-                      "Override emissivity"))]
-     [app-comp/text-input
-      {:width 50 
-       :value value
-       :valid? valid? 
-       :on-change #(rf/dispatch [::event/set-override-emissivity %])}]]))
-
-(defn emissivity-setting [style]
-  (let [{:keys [value error valid?]} (query-id ::subs/field [:emissivity-setting])]
     [form-cell-2 style error
-     (translate [:dataset-settings :emissivity-setting :label]
-                "Emissivity setting on IR Pyrometer") 
+     (str (translate [:dataset-settings :tube-emissivity :label]
+                     "Tube emissivity")
+          " : " pyro-emissivity
+          " " (translate [:dataset-settings :override-emissivity :label]
+                         "Override emissivity"))
      [app-comp/text-input
-      {:width 75
+      {:width 50
        :value value
-       :valid? valid? 
-       :on-change #(rf/dispatch [::event/set-emissivity-setting %])}]]))
-
-(defn pyrometer-emissivity-warning [style]
-  (let [{:keys [value]} (query-id ::subs/field [:emissivity-setting])]
-    (if-not (or (= 1 value) (= "1" value))
-      [:div (use-sub-style style :form-cell-1)
-       [:div (merge (use-sub-style style :form-label)
-                    {:style {:color (ht-style/color :red)}})
-        (translate [:dataset-settings :emissivity-warning :message]
-                   "Please check the latest calibration report. 
-If nothing is stated about a specific emissivity (
-setting you should always use 1.0 )")]
-       ])))
+       :valid? valid?
+       :on-change #(rf/dispatch [::event/set-emissivity %])}]]))
 
 (defn roles [style]
   (let [role-opts @(rf/subscribe [:ht.app.subs/user-roles])
@@ -217,64 +198,59 @@ setting you should always use 1.0 )")]
     [form-cell-1 style error
      (translate [:dataset-settings :comments :label] "Comments")
      [app-comp/text-area
-      {:width 500
+      {:width (get-in style [::stylefy/sub-styles :data :c-w-1])
        :text value
        :height 100
        :on-change #(rf/dispatch [::event/set-field [:comments] % false])}]]))
 
-(def container (r/atom {}))
-(defn- dataset-settings-component []
-  (r/create-class
-   {:component-did-mount
-    (fn [this]
-      (swap! container  assoc
-             :width (i/oget-in this [:refs :container :offsetWidth])))
-    :reagent-render 
-    (fn []
-      [:div {:ref "container"}
-       (let [open? @(rf/subscribe [::subs/open?])
-             topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
-             title (translate [:dataset-settings :dialog :title] "Dataset settings")
-             style (style/body 1500 400)
-             et @(rf/subscribe [::subs/emissivity-type])]
-         [ui/dialog
-          {:open open?
-           :modal true
-           :title title
-           :actions
-           (r/as-element
-            [:div
-             [app-comp/button {:disabled? (if (show-error?)
-                                            (not @(rf/subscribe [::subs/can-submit?]))
-                                            (not @(rf/subscribe [::subs/dirty?])))
-                               :icon ic/accept
-                               :label (translate [:action :done :label] "Done")
-                               :on-click #(rf/dispatch [::event/submit])}]
-             [app-comp/button {:icon ic/cancel
-                               :label (translate [:action :cancel :label] "Cancel")
-                               :on-click #(rf/dispatch [::event/close])}]])}
-
-          [:div
-           [:div
-            (date-time-of-reading style)]
-           [:div (if topsoe-user?
-                   (internal-dataset style))]
+(defn form []
+  (let [state (r/atom {:width 600})]
+    (r/create-class
+     {:component-did-mount
+      (fn [this]
+        (swap! state assoc
+               :width (i/oget-in this [:refs :container :offsetWidth])))
+      :reagent-render
+      (fn []
+        (let [{:keys [width]} @state
+              style (style/body width)
+              topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
+              et @(rf/subscribe [::subs/emissivity-type])]
+          [:div {:ref "container"}
+           [:div (date-time-of-reading style)]
+           [:div (if topsoe-user? (internal-dataset style))]
            [:div
             (select-pyrometer style)
-            (emissivity-setting style)]
+            (pyrometer-emissivity-setting style)]
            [:div (pyrometer-emissivity-warning style)]
            [:div
             (emissivity-type style)
-            (if (= "common" et)
-              (tube-emissivity style))]
+            (if (= "common" et) (tube-emissivity style))]
            [:div (use-sub-style style :form-heading-label)
             (translate [:dataset-settings :aditional-settings :label]
                        "Additional Settings")]
            [:div
             (roles style)
             (operator style)
-            (shift style)]]
-          [:div (comments style)]])])}))
+            (shift style)]
+           [:div (comments style)]]))})))
 
 (defn dataset-settings []
-  [dataset-settings-component])
+  (let [open? @(rf/subscribe [::subs/open?])]
+    [ui/dialog
+     {:open open?
+      :modal true
+      :title (translate [:dataset-settings :dialog :title] "Dataset settings")
+      :actions
+      (r/as-element
+       [:div
+        [app-comp/button {:disabled? (if (show-error?)
+                                       (not @(rf/subscribe [::subs/can-submit?]))
+                                       (not @(rf/subscribe [::subs/dirty?])))
+                          :icon ic/accept
+                          :label (translate [:action :accept :label] "Accept")
+                          :on-click #(rf/dispatch [::event/submit])}]
+        [app-comp/button {:icon ic/cancel
+                          :label (translate [:action :cancel :label] "Cancel")
+                          :on-click #(rf/dispatch [::event/close])}]])}
+     [form]]))

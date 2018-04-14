@@ -20,13 +20,13 @@
 (defn- tube-prefs-component [tube-prefs]
   (let [height 400]
     (r/create-class
-     {:component-did-mount 
+     {:component-did-mount
       (fn [this]
         (swap! container  assoc
                :width (i/oget-in this [:refs :container :offsetWidth])))
       :reagent-render
       (fn [tube-prefs]
-        [:div {:ref "container"}  
+        [:div {:ref "container"}
          (let [plant @(rf/subscribe [::app-subs/plant])
                items-render-fn
                (fn [indexes show-item]
@@ -37,7 +37,7 @@
                                 (get-in plant [:config :sf-config :chambers i])
                                (get-in plant [:config :tf-config :tube-rows i]))]
                           [list-tube-prefs {:label label
-                                            :height height
+                                            :height (- height 20)
                                             :start-tube start-tube
                                             :end-tube end-tube
                                             :on-clear #(rf/dispatch
@@ -56,12 +56,11 @@
 (defn tube-prefs []
   (let [open? @(rf/subscribe [::subs/open?])
         tube-prefs @(rf/subscribe [::subs/data])
-        title (translate [:tube-preference :dialog :title] "Tube Preference")] 
+        title (translate [:tube-preference :dialog :title] "Tube Preference")]
     [ui/dialog
      {:open open?
       :modal true
-      :title title 
-
+      :title title
       :actions (r/as-element
                 [:div
                  [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-submit?]))

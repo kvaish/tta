@@ -331,6 +331,7 @@
               :font-size "16px"}
       :sub-title {:display "block"
                   :user-select "none"
+                  :font-weight 400
                   :font-size "10px"}
       :head-right {:padding "12px 24px"}
       :body {:height (px bh)
@@ -433,8 +434,8 @@
               :border (str "1px solid " widget-bg-e)
               :background (color-hex :white)
               :border-radius
-              (str (if top-tabs? "0 0" "8p 8px")
-                   (if bot-tabs? "0 8px" "8px 8px"))
+              (str (if top-tabs? "0 0" "8px 8px")
+                   (if bot-tabs? " 8px 0" " 8px 8px"))
               :overflow "hidden"}
        :div3 {:position "absolute"
               :top "20px", :left "20px"

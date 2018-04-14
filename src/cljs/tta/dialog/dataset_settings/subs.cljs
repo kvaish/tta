@@ -2,6 +2,7 @@
 (ns tta.dialog.dataset-settings.subs
   (:require [re-frame.core :as rf]
             [reagent.ratom :refer [reaction]]
+            [reagent.format :refer [format]]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.util.common :as au]
             [tta.app.subs :as app-subs]))
@@ -16,25 +17,37 @@
  (fn [db _] (get-in db [:dialog :dataset-settings])))
 
 (rf/reg-sub
- ::src-data
- :<- [::dialog]
- (fn [dialog _] (:settings dialog)))
-
-(rf/reg-sub
  ::draft
  (fn [db _] (get-in db [:dialog :draft])))
 
-;;derived signals/subscriptions
+;; derived signals
+
 (rf/reg-sub
- ::open?
+ ::src-data
  :<- [::dialog]
- (fn [dialog _]
-   (:open? dialog)))
+ (fn [dialog _] (:src-data dialog)))
+
+(rf/reg-sub
+ ::data
+ :<- [::dialog]
+ :<- [::src-data]
+ (fn [[dialog src-data] _] (or (:data dialog) src-data)))
+
+(rf/reg-sub
+ ::form
+ :<- [::dialog]
+ (fn [dialog _] (:form dialog)))
 
 (rf/reg-sub
  ::show-error? ;; used for hiding errors until first click on submit
  :<- [::dialog]
  (fn [dialog _] (:show-error? dialog)))
+
+(rf/reg-sub
+ ::open?
+ :<- [::dialog]
+ (fn [dialog _]
+   (:open? dialog)))
 
 (rf/reg-sub
  ::dirty?
@@ -59,19 +72,6 @@
  :<- [::valid?]
  (fn [[dirty? valid?] _] (or dirty? (not valid?))))
 
-
-(rf/reg-sub
- ::data
- :<- [::dialog]
- :<- [::src-data]
- (fn [[dialog src-data] _]
-   (or (:data dialog)
-       src-data)))
-
-(rf/reg-sub
- ::form
- :<- [::dialog]
- (fn [dialog _] (:form dialog)))
 
 (defn get-field
   ([path form data] (get-field path form data identity))
@@ -169,9 +169,9 @@
 (rf/reg-sub
  ::hour-opts
  (fn [_ _]
-   (reduce #(conj %1  {:id %2 :name %2}) [] (range 1 25))))
+   (map #(hash-map :id % :label (format "%02d" %)) (range 24))))
 
 (rf/reg-sub
  ::min-opts
  (fn [_ _]
-   (reduce #(conj %1  {:id (* 5 %2) :name (* 5 %2)}) [] (range 1 13))))
+   (map #(hash-map :id % :label (format "%02d" %)) (range 0 60 5))))

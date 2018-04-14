@@ -1,17 +1,18 @@
 ;; view elements component dataset
 (ns tta.component.dataset.view
   (:require [reagent.core :as r]
+            [reagent.format :refer [format]]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
             [cljs-time.core :as t]
             [cljs-time.format :as tf]
-            [tta.app.icon :as ic]
             [ht.util.interop :as i]
+            [ht.util.common :as u]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
-            [ht.util.common :as htu]
+            [tta.app.icon :as ic]
             [tta.app.view :as app-view]
             [tta.app.comp :as app-comp]
             [tta.app.style :as app-style]
@@ -21,67 +22,75 @@
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
             [tta.dialog.dataset-settings.view :refer [dataset-settings]]
-            [tta.dialog.dataset-settings.event :as dataset-setting-evt]
-            [tta.component.dataset.twt-entry.view :refer [twt-entry]]
-            [tta.component.dataset.twt-graph.view :refer [twt-graph]]
-            [tta.component.dataset.burner-entry.view :refer [burner-entry]]
-            [tta.component.dataset.overall-graph.view :refer [overall-graph]]
-            [tta.component.dataset.burner-status.view
-             :refer [burner-status]]))
+            [tta.component.dataset.twt-entry :refer [twt-entry]]
+            [tta.component.dataset.twt-graph :refer [twt-graph]]
+            [tta.component.dataset.burner-entry :refer [burner-entry]]
+            [tta.component.dataset.overall-graph :refer [overall-graph]]
+            [tta.component.dataset.burner-status :refer [burner-status]]))
 
-(def date-formatter (tf/formatter "yyyy-MM-dd"))
-(defn format-date [date] (tf/unparse date-formatter (t/date-time date)))
+;; (def date-formatter (tf/formatter "yyyy-MM-dd"))
+;; (defn format-date [date] (tf/unparse date-formatter (t/date-time date)))
+
+
 
 (defn show-error? []
   @(rf/subscribe [::subs/show-error?]))
 
-(defn settings-icon [props]
-  [ui/font-icon (update props :class-name str " fa fa-cog")])
-
-;;visible only when creating draft
+;; visible only when creating draft
+;; disable when can't save
 (defn action-save []
-  [app-comp/button {:disabled?
-                    (not @(rf/subscribe [::subs/can-submit?]))
-                    :icon ic/save
-                    :on-click #(rf/dispatch [::event/save-draft])
-                    :label (translate [:dataset :action :save]
-                                      "Save")}])
-;;dataset settings visible only in read mode
-(defn action-setting [data]  
-  [app-comp/button {:disabled?
-                    (not @(rf/subscribe [::subs/can-upload?]))
-                    :icon settings-icon
-                    :label (translate [:dataset :action :settings]
-                                      "Settings")
-                    :on-click
-                    #(rf/dispatch
-                      [:tta.dialog.dataset-settings.event/open
-                       {:dataset data}])}])
+  [app-comp/button
+   {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+    :icon ic/save
+    :on-click #(rf/dispatch [::event/save-draft])
+    :label (translate [:dataset :action :save] "Save")}])
 
-;;report download 
+;;dataset settings visible only in edit mode
+(defn action-settings [data]
+  [app-comp/button
+   {:disabled? false
+    :icon ic/menu
+    :label (translate [:dataset :action :settings] "Settings")
+    :on-click #(rf/dispatch [:tta.dialog.dataset-settings.event/open
+                             {:dataset data}])}])
+
+;;discard draft, visible in edit mode and not published yet
+(defn action-clear-draft []
+  [app-comp/button
+   {:icon ic/delete
+    :label (translate [:dataset :action :clear] "Clear")
+    :on-click #(rf/dispatch [::event/clear-draft])}])
+
+;;report download, visible in read mode
 (defn action-report []
-  [app-comp/button {:disabled? false
-                    :icon ic/report
-                    :label (translate
-                            [:dataset :action :report]
-                            "Report")
-                    :on-click
-                    #(rf/dispatch [::event/report])}])
-;;excel download 
-(defn action-excel []
-  [app-comp/button {:disabled? false
-                    :icon ic/report
-                    :label (translate [:dataset :action :excel]
-                                      "Export")
-                    :on-click #(rf/dispatch [::event/excel])}])
+  [app-comp/button
+   {:disabled? false
+    :icon ic/report
+    :label (translate [:dataset :action :report] "Report")
+    :on-click #(rf/dispatch [::event/report])}])
 
-;;upload dataset if dirty and valid or dirty
+;;datasheet download, visible in read mode
+(defn action-datasheet []
+  [app-comp/button
+   {:disabled? false
+    :icon ic/datasheet
+    :label (translate [:dataset :action :excel] "Datasheet")
+    :on-click #(rf/dispatch [::event/datasheet])}])
+
+;;upload dataset if dirty and valid
 (defn action-upload []
-  [app-comp/button {:disabled? (not @(rf/subscribe [::subs/can-upload?]))
-                    :icon ic/upload
-                    :on-click #(rf/dispatch [::event/upload])
-                    :label (translate [:dataset :action :upload]
-                                      "Upload")}])
+  [app-comp/button
+   {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+    :icon ic/upload
+    :on-click #(rf/dispatch [::event/upload])
+    :label (translate [:dataset :action :upload] "Upload")}])
+
+;;delete dataset from database
+(defn action-delete []
+  [app-comp/button
+   {:icon ic/delete
+    :on-click #(rf/dispatch [::event/delete])
+    :label (translate [:dataset :action :delete] "Delete")}])
 
 ;;disabled when dataset and plant reformer version mismatched
 (defn action-selector []
@@ -99,18 +108,42 @@
                         :selected sel-mode-opt
                         :on-select #(rf/dispatch [::event/set-mode
                                                   (:id %)])}]) )
+
+;; dataset list, visible in read mode only
+(defn action-dataset-list []
+  [app-comp/button
+   {:disabled? true
+    :icon ic/dataset
+    :on-click #(js/console.log "list dataset: not implemented yet")
+    :label (translate [:dataset :action :dataset-list] "Datasets")}])
+
+(defn action-publish-gold-cup []
+  [app-comp/button
+   {:disabled? true
+    :icon ic/upload
+    :on-click #(js/console.log "publish goldcup: not implemented yet")
+    :label (translate [:dataset :action :publish-gold-cup] "Gold Cup")}])
+
 (defn get-actions []
   (let [data @(rf/subscribe [::subs/data])
-        draft? (:draft? data)
+        {:keys [draft? gold-cup?]} data
         mode @(rf/subscribe [::subs/mode])
-        actions
-        (list (action-upload)
-              (action-selector))]
-    (if (= mode :edit) 
-      (conj actions
+        topsoe? @(rf/subscribe [::ht-subs/topsoe?])
+        can-edit? @(rf/subscribe [::subs/can-edit?])
+        can-delete? @(rf/subscribe [::subs/can-delete?])]
+    (if (= mode :edit)
+      (list (if (or draft? can-edit?) (action-settings data))
+            (if draft? (action-clear-draft))
             (if draft? (action-save))
-            (action-setting data))
-      (conj actions action-report action-excel))))
+            (if (or draft? can-edit?) (action-upload))
+            (action-selector))
+      (list (action-datasheet)
+            (action-report)
+            (if (and topsoe? gold-cup?) (action-publish-gold-cup))
+            (if (or draft? can-edit?) (action-upload))
+            (if (and (not draft?) can-delete?) (action-delete))
+            (action-dataset-list)
+            (action-selector)))))
 
 (defn body [{:keys [width height]}]
   (let [area-opts @(rf/subscribe [::subs/area-opts])
@@ -186,8 +219,8 @@
 
 ;; buttons array:
 ;; mode :read - upload (disable if not dirty), excel report, pdf report
-;;              publish goldcup (if goldcup? and internal? us
-;;(disable if not 100% or not uploaded)
+;;              publish goldcup (if goldcup? and internal? user)
+;;              (disable if not 100% or not uploaded)
 ;; mode :edit - settings, save, upload
 ;; mode selector : disabled when reformer version not current
 
@@ -198,19 +231,17 @@
      [app-view/layout-main
       (str (translate [:dataset :title :text] "Dataset")
            ": "
-           (format-date (js/Date. data-date))  " | "
-           (:hour (htu/to-date-time-map last-saved)) ":"
-           (:minute (htu/to-date-time-map last-saved)))
-      (if last-saved
-        (str (translate [:dataset :title :text] "Last saved date")
-             ": "
-             (format-date (js/Date. last-saved))
-             " | "
-             (:hour (htu/to-date-time-map last-saved))
-             ":"
-             (:minute (htu/to-date-time-map last-saved)))
-        (str (translate [:dataset :title :text] "Last saved date")
-             ": "))
+           (let [{:keys [year month day hour minute]}
+                 (u/to-date-time-map data-date)]
+             (format "%4d-%02d-%02d | %02d:%02d"
+                     year month day hour minute)))
+      (str (translate [:dataset :sub-title :text] "Last saved")
+           ": "
+           (if last-saved
+             (let [{:keys [year month day hour minute second]}
+                   (u/to-date-time-map last-saved)]
+               (format "%4d-%02d-%02d | %02d:%02d:%02d"
+                       year month day hour minute second))))
 
       (get-actions)
       body]

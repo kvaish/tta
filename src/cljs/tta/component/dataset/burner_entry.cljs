@@ -1,4 +1,4 @@
-(ns tta.component.dataset.burner-entry.view
+(ns tta.component.dataset.burner-entry
   (:require [reagent.core :as r]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]

@@ -1,4 +1,4 @@
-(ns tta.component.dataset.overall-graph.view
+(ns tta.component.dataset.overall-graph
   (:require [reagent.core :as r]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
