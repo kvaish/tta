@@ -312,7 +312,12 @@
 (rf/reg-sub
  ::burner? ;; whether the dataset has burner data
  :<- [::data]
- (fn [data _]))
+ :<- [::firing]
+ (fn [[data firing] _]
+   (case firing
+     "top" (some? (get-in data [:top-fired :burners]))
+     "side" (some? (get-in data [:side-fired :chambers 0 :sides 0 :burners]))
+     nil)))
 
 (rf/reg-sub
  ::reformer-version
@@ -325,7 +330,17 @@
  (fn [data _]
    ((some-fn :last-saved :date-modified :date-created) data)))
 
-;;top-fired ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(rf/reg-sub
+ ::sf-burner
+ :<- [::data]
+ (fn [data [_ [ch-index side row col]]]
+   (get-in data [:side-fired :chambers ch-index :sides side :burners row col])))
+
+(rf/reg-sub
+ ::tf-burner
+ :<- [::data]
+ (fn [data [_ [row col]]]
+   (get-in data [:top-fired :burners row col])))
 
 (defn get-field-temp [path form data temp-unit]
   (get-field path form data #(au/to-temp-unit % temp-unit)))

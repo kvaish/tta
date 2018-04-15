@@ -143,15 +143,14 @@ you should always use 1.0")])))
        :on-select #(rf/dispatch [::event/set-emissivity-type (:id %)])}]]))
 
 (defn tube-emissivity [style]
-  (let [pyro-emissivity  (:tube-emissivity
-                          (:value @(rf/subscribe [::subs/field [:pyrometer]])))
+  (let [pyro-emissivity (:tube-emissivity @(rf/subscribe [::subs/active-pyrometer]))
         {:keys [value error valid?]} (query-id ::subs/field [:emissivity])]
     [form-cell-2 style error
      (str (translate [:dataset-settings :tube-emissivity :label]
                      "Tube emissivity")
           " : " pyro-emissivity
-          " " (translate [:dataset-settings :override-emissivity :label]
-                         "Override emissivity"))
+          " : " (translate [:dataset-settings :override-emissivity :label]
+                           "override"))
      [app-comp/text-input
       {:width 50
        :value value

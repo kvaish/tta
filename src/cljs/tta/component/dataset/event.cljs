@@ -208,10 +208,9 @@
 (rf/reg-event-fx
  ::save-draft
  [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/valid?])
-  (inject-cofx ::inject/sub [::subs/dirty?])]
- (fn [{:keys [::subs/data ::subs/valid? ::subs/dirty?]} _]
-   (if (and valid? dirty?) {:storage/set {:key :draft, :value data}})))
+  (inject-cofx ::inject/sub [::subs/can-submit?])]
+ (fn [{:keys [::subs/data ::subs/can-submit?]} _]
+   (if can-submit? {:storage/set {:key :draft, :value data}})))
 
 (rf/reg-event-fx
  ::create-dataset-success
@@ -221,15 +220,61 @@
 (rf/reg-event-fx
  ::upload
  [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/can-submit?])
   (inject-cofx ::inject/sub [::app-subs/plant])
   (inject-cofx ::inject/sub [::app-subs/client])]
- (fn [{:keys [::subs/data ::app-subs/client ::app-subs/plant]} _]
-   {:service/create-dataset {:client (:id client)
-                             :plant-id (:id plant)
-                             :dataset data
-                             :evt-success [::create-dataset-success]}}))
+ (fn [{:keys [::subs/data ::subs/can-submit? ::app-subs/client ::app-subs/plant]} _]
+   #_(if can-submit?
+     {:service/create-dataset {:client (:id client)
+                               :plant-id (:id plant)
+                               :dataset data
+                               :evt-success [::create-dataset-success]}})))
 
-;;Top fired TWT entry;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(rf/reg-event-fx
+ ::add-burners
+ [(inject-cofx ::inject/sub [::subs/config])
+  (inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/config ::subs/data]} _]
+   (let [db
+         (case (:firing config)
+           "side"
+           (let [{:keys [burner-row-count burner-count-per-row]}
+                 (get-in config [:sf-config :chambers 0])
+                 bs (vec (repeat burner-row-count
+                                 (vec (repeat burner-count-per-row nil))))]
+             (assoc-in db data-path
+                       (update-in data [:side-fired :chambers]
+                                  (fn [chs]
+                                    (mapv (fn [ch]
+                                            (update ch :sides
+                                                    (fn [sides]
+                                                      (mapv (fn [s]
+                                                              (assoc s :burners bs))
+                                                            sides))))
+                                          chs)))))
+
+           "top"
+           (let [{:keys [burner-rows]} (:tf-config config)]
+             (assoc-in db data-path
+                       (assoc-in data [:top-fired :burners]
+                                 (mapv (fn [{:keys [burner-count]}]
+                                         (vec (repeat burner-count nil)))
+                                       burner-rows)))))]
+     {:db db})))
+
+(rf/reg-event-fx
+ ::set-sf-burner
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ [ch-index side row col] value]]
+   {:db (assoc-in db data-path
+                  (assoc-in data [:side-fired :chambers ch-index :sides side
+                                  :burners row col]
+                            value))}))
+
+(rf/reg-event-db
+ ::set-tf-burner
+ (fn [db [_ [row col] value]]
+   db))
 
 (rf/reg-event-fx
  ::set-temp
