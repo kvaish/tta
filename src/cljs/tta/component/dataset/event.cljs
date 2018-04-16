@@ -15,10 +15,10 @@
                                             set-field-temperature
                                             validate-field parse-value]]))
 
-(def ^:const comp-path [:component :dataset])
-(def ^:const view-path (conj comp-path :view))
-(def ^:const data-path (conj comp-path :data))
-(def ^:const form-path (conj comp-path :form))
+(defonce comp-path [:component :dataset])
+(defonce view-path (conj comp-path :view))
+(defonce data-path (conj comp-path :data))
+(defonce form-path (conj comp-path :form))
 
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
@@ -85,6 +85,7 @@
      (if dataset
        {:db (-> db
                 (assoc-in (conj comp-path :dataset) dataset)
+                (assoc-in data-path nil)
                 (assoc-in form-path (init-form dataset)))}
        (cond
          dataset-id
