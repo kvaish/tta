@@ -1,4 +1,4 @@
-(defproject tta "1.0.0.D.8"
+(defproject tta "1.0.0.D.9"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.64"] ;;  "1.9.946"
                  [org.clojure/core.async "0.4.474"] ;; "0.3.465"
