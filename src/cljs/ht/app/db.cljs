@@ -5,6 +5,7 @@
 (defonce default-db
   (atom
    {:about nil
+    :roles nil
     :features nil
     :operations nil
     :config {}

@@ -18,12 +18,15 @@
           :search-clients "/api/client"
           :fetch-plant "/api/client/:client-id/plant/:plant-id"
           :fetch-client-plants "/api/client/:client-id/plant"
-          :fetch-client-settings "/"
           :create-client "/api/client"
           :update-client "/api/client/:client-id"
           :create-plant "/api/client/:client-id/plant"
           :update-plant-config "/api/client/:client-id/plant/:plant-id/config"
-          :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"}}))
+          :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"
+          :fetch-latest-dataset "/api/client/:client-id/plant/:plant-id/latest-dataset"
+          :fetch-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"
+          :create-dataset "/api/client/:client-id/plant/:plant-id/dataset"
+          :update-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"}}))
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -127,4 +130,29 @@
         :api-params {:client-id client-id, :plant-id plant-id}
         :data {:json-params (to-api :plant/update-settings update-settings)}
         :on-success (dispatch-one evt-success :res/update)
+        :evt-failure evt-failure}))
+
+(defn fetch-latest-dataset [{:keys [client-id plant-id
+                                    evt-success evt-failure]}]
+  (run {:method http/get
+        :api-key :fetch-latest-dataset
+        :api-params {:client-id client-id, :plant-id plant-id }
+        :on-success (dispatch-one evt-success :dataset)
+        :evt-failure evt-failure}))
+
+(defn fetch-dataset [{:keys [client-id plant-id dataset-id
+                             evt-success evt-failure]}]
+  (run {:method http/get
+        :api-key :fetch-dataset
+        :api-params {:client-id client-id
+                     :plant-id plant-id
+                     :dataset-id dataset-id}
+        :on-success (dispatch-one evt-success :datset)
+        :evt-failure evt-failure}))
+
+(defn create-dataset [{:keys [dataset client-id plant-id evt-success evt-failure]}]
+  (run {:method http/post
+        :api-key :create-dataset
+        :data {:json-params (to-api :dataset dataset)}
+        :on-success (dispatch-one evt-success :res/create)
         :evt-failure evt-failure}))

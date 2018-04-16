@@ -37,6 +37,7 @@
              :padding "0 15px 0 0"
              :margin-left "15px"}
       :link-label {:color (color :white)
+                   :user-select "none"
                    :font-size "12px"
                    :line-height "18px"
                    :display "inline-block"
@@ -65,6 +66,7 @@
 (def hot-links
   (let [{h :sub-head-row-height} ht/root-layout
         link {:text-decoration "none"
+              :user-select "none"
               :margin-left "20px"
               :font-size "12px"
               :color (color :royal-blue)}]
@@ -91,6 +93,7 @@
      ::stylefy/sub-styles
      {:p {:margin 0}
       :head {:font-weight 300
+             :user-select "none"
              :font-size "10px"
              :display "block"}
       :body {:line-height "12px"

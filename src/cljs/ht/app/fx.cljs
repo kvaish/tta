@@ -42,3 +42,15 @@
  (fn [_]
    (svc/logout {:evt-success [::event/exit]
                 :evt-failure [::event/exit]})))
+
+(rf/reg-fx
+ :service/fetch-translation
+ (fn [_]
+   (svc/fetch-translation {:evt-success [::event/set-translation]
+                           :evt-failure [::event/set-translation nil]})))
+
+(rf/reg-fx
+ :service/fetch-app-roles
+ (fn [_]
+   (svc/fetch-app-roles {:evt-success [::event/set-app-roles]
+                         :evt-failure [::event/set-app-roles nil]})))

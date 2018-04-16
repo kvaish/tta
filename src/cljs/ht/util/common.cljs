@@ -2,6 +2,10 @@
   (:require [cljs.core.async :refer [<! put! promise-chan alt! timeout]]
             [clojure.string :as str]
             [cljsjs.filesaverjs]
+            [goog.date :as g]
+            [goog.date.DateTime]
+            [goog.date.Date]
+            [goog.date.UtcDateTime]
             [ht.config :refer [config]]
             [ht.util.interop :as i])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -148,3 +152,85 @@ none matched, returns nil."
         [y top?] (if (<= vy y) [y true]
                      [(+ ay ah tym) false])]
     {:x x, :y y, :top? top?, :left? left?}))
+
+;; date time util ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn now-utc
+  "returns current time with utc timezone.
+  such as (js/Date. \"2018-04-05T20:32:22Z\") "
+  []
+  (js/Date.))
+
+(defn today-utc
+  "returns local date as js Date.
+  such as (js/Date. \"2018-04-04T00:00:00Z\") "
+  []
+  (let [d (g/Date.)]
+    (-> (g/UtcDateTime. (.getYear d) (.getMonth d) (.getDate d) 0 0 0)
+        (.valueOf)
+        (js/Date.))))
+
+(defn today-as-map
+  "returns local date as a map of day, month, year.
+  NOTE: first day of month is 1 and first month of year is 1."
+  []
+  (let [d (g/Date.)]
+    {:day (.getDate d)
+     :month (inc (.getMonth d))
+     :year (.getYear d)}))
+
+(defn now-as-map
+  "returns current local time as a map of day, month, year
+  and hour, minute, second.
+  NOTE: first day of month is 1 and first month of year is 1."
+  []
+  (let [dt (g/DateTime.)]
+    {:day (.getDate dt)
+     :month (inc (.getMonth dt))
+     :year (.getYear dt)
+     :hour (.getHours dt)
+     :minute (.getMinutes dt)
+     :second (.getSeconds dt)}))
+
+(defn to-date-map
+  "returns a map with day, month, year in local time zone.
+  NOTE: first day of month is 1 and first month of year is 1.
+  js-date is expected to be without time
+  such as (js/Date. \"2018-04-04T00:00:00Z\") "
+  [js-date]
+  (let [d (g/UtcDateTime. js-date)]
+    {:day (.getDate d)
+     :month (inc (.getMonth d))
+     :year (.getYear d)}))
+
+(defn to-date-time-map
+  "returns a map with day, month, year, hour, minute, second
+  NOTE: first day of month is 1 and first month of year is 1.
+  in local time zone."
+  [js-date-time]
+  (let [dt (g/DateTime. js-date-time)]
+    {:day (.getDate dt)
+     :month (inc (.getMonth dt))
+     :year (.getYear dt)
+     :hour (.getHours dt)
+     :minute (.getMinutes dt)
+     :second (.getSeconds dt)}))
+
+(defn from-date-map
+  "returns js Date in UTC timezone with date part only.
+  such as (js/Date. \"2018-04-04T00:00:00Z\")
+  NOTE: first day of month is 1 and first month of year is 1."
+  [{:keys [day month year]}]
+  (-> (g/UtcDateTime. year (dec month) day 0 0 0)
+      (.valueOf)
+      (js/Date.)))
+
+(defn from-date-time-map
+  "returns js Date in UTC timezone.
+  such as (js/Date. \"2018-04-04T20:30:10Z\")
+  NOTE: first day of month is 1 and first month of year is 1."
+  [{:keys [day month year hour minute second]
+    :or {hour 0, minute 0, second 0}}]
+  (-> (g/DateTime. year (dec month) day hour minute second)
+      (.valueOf)
+      (js/Date.)))

@@ -19,6 +19,7 @@
 ;;;;  :isClientAdmin <is client admin?>                          ;;;;
 ;;;;  :apps {<app id> {:features [<feature id>...]               ;;;;
 ;;;;                   :operations [<operation id>...]           ;;;;
+;;;;                   :roles [<role id>...]                     ;;;;
 ;;;;                   :isAdmin <is app admin? developer>        ;;;;
 ;;;;                   :isOwner <is app owner? business owner>}} ;;;;
 ;;;;  :exp <expiry time>}                                        ;;;;
@@ -34,6 +35,7 @@
 ;;;;  :client-admin?   <is client admin?>                        ;;;;
 ;;;;  :features        [<feature id keyword>...]                 ;;;;
 ;;;;  :operations      [<operation id keyword>...]               ;;;;
+;;;;  :roles           [<role id keyword>...]                    ;;;;
 ;;;;  :app-admin?      <is app admin?>                           ;;;;
 ;;;;  :app-owner?      <is app owner?>                           ;;;;
 ;;;;  :exp             <expiry time>}                            ;;;;
@@ -46,7 +48,8 @@
     (let [app-id (keyword (:app-id @config))
           app (get-in c [:apps app-id])
           fs  (not-empty (mapv keyword (:features app)))
-          ops (not-empty (mapv keyword (:operations app)))]
+          ops (not-empty (mapv keyword (:operations app)))
+          rs  (not-empty (mapv keyword (:roles app)))]
       (cond-> {:id        (:id c)
                :name      (:name c)
                :client-id (:clientId c)
@@ -57,6 +60,7 @@
         (:isClientAdmin c)   (assoc :client-admin? true)
         fs                   (assoc :features fs)
         ops                  (assoc :operations ops)
+        rs                   (assoc :roles rs)
         (:isAdmin app)       (assoc :app-admin? true)
         (:isOwner app)       (assoc :app-owner? true)))))
 

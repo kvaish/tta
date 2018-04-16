@@ -1,10 +1,11 @@
 (ns tta.util.common
   (:require [clojure.string :as str]
+            [reagent.core :as r]
             [re-frame.core :as rf]
             [cljsjs.react-motion] ;; required to ensure load
             [ht.app.subs :as ht-subs :refer [translate]]
-            [tta.app.subs :as app-subs]
-            [reagent.core :as r]))
+            [ht.util.schema :refer [parse-date format-date]]
+            [tta.app.subs :as app-subs]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; temperature units and conversion
@@ -240,3 +241,18 @@
 (defn spring-gentle [s] (js/ReactMotion.spring s js/ReactMotion.presets.gentle))
 (defn spring-wobbly [s] (js/ReactMotion.spring s js/ReactMotion.presets.wobbly))
 (defn spring-stiff [s] (js/ReactMotion.spring s js/ReactMotion.presets.stiff))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dataset draft conversion from/to local storage
+
+(defn dataset-from-storage [draft]
+  (-> draft
+      (update-in [:pyrometer :date-of-calibration] parse-date)
+      (update :last-saved parse-date)
+      (update :data-date parse-date)))
+
+(defn dataset-to-storage [draft]
+  (-> draft
+      (update-in [:pyrometer :date-of-calibration] format-date)
+      (update :last-saved format-date)
+      (update :data-date format-date)))

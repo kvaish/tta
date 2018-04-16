@@ -42,6 +42,7 @@
 
 (def popover
   {:border-radius "8px !important"
+   :left "-99999px" ;; to hide initial flashing
    :margin-top "8px !important"
    :overflow-y "visible !important"
    :box-shadow "0 0 16px 4px rgba(0,0,0,0.24), 0 0 2px 2px rgba(0,0,0,0.12) !important"
@@ -79,6 +80,7 @@
                   :color (if on? widget-fg widget-bg)
                   :transition (:std widget-transition)}
       :label {:display "block"
+              :user-select "none"
               :font-size "12px"
               :font-weight 300
               :margin "0 10px 0 10px"
@@ -126,6 +128,7 @@
   (let [widget-bg (if disabled? widget-bg-d widget-bg-e)
         label {:position "absolute"
                :display "inline-block"
+               :user-select "none"
                :overflow "hidden"
                :font-size "12px"
                :height "24px"
@@ -168,6 +171,20 @@
            :color (if valid? widget-bg-e widget-err)
            :background-color widget-fg}}})
 
+;; (120+)*x48
+(defn text-area [read-only? valid?]
+  {:display "inline-block"
+   :padding "8px 12px"
+   :vertical-align "top"
+   ::stylefy/sub-styles
+   {:main {:border (str "1px solid " (if valid? widget-bg-e widget-err))
+           :border-radius "16px"
+           :resize "none"
+           :padding "12px 12px"
+           :font-size "12px"
+           :color (if valid? widget-bg-e widget-err)
+           :background-color widget-fg}}})
+
 ;; (120+)x48
 (defn action-label-box [left-disabled? right-disabled?]
   (let [widget-bg widget-bg-e
@@ -192,6 +209,7 @@
              :padding "4px 4px"
              :background-color widget-bg}
       :span {:display "inline-block"
+             :user-select "none"
              :overflow "hidden"
              :vertical-align "top"
              :font-size "12px"
@@ -226,6 +244,7 @@
              :padding "3px 4px"
              :background-color widget-fg}
       :span {:display "inline-block"
+             :user-select "none"
              :overflow "hidden"
              :vertical-align "top"
              :font-size "12px"
@@ -285,7 +304,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn vertical-line [height]
-  {:margin "20px"
+  {:margin "10px"
    :border "none"
    :border-left (str "1px solid " widget-bg-e)
    :width "0"
@@ -308,8 +327,11 @@
                   :padding "14px 20px"
                   :font-weight 700}
       :title {:display "block"
+              :user-select "none"
               :font-size "16px"}
       :sub-title {:display "block"
+                  :user-select "none"
+                  :font-weight 400
                   :font-size "10px"}
       :head-right {:padding "12px 24px"}
       :body {:height (px bh)
@@ -334,6 +356,7 @@
                           :background widget-bg-d
                           :color widget-fg)
         tube-label {:display "inline-block"
+                    :user-select "none"
                     :border-radius "50%"
                     :border (str "1px solid " widget-border)
                     :font-size "10px"
@@ -375,6 +398,7 @@
                   :width "24px"
                   :height "24px"}
         add-label {:color "#fff"
+                   :user-select "none"
                    :font-size "12px"
                    :padding "0 1px"
                    :overflow "hidden"
@@ -408,9 +432,10 @@
       ::stylefy/sub-styles
       {:div2 {:position "absolute", :left 0
               :border (str "1px solid " widget-bg-e)
+              :background (color-hex :white)
               :border-radius
-              (str (if top-tabs? "0 0" "8p 8px")
-                   (if bot-tabs? "0 8px" "8px 8px"))
+              (str (if top-tabs? "0 0" "8px 8px")
+                   (if bot-tabs? " 8px 0" " 8px 8px"))
               :overflow "hidden"}
        :div3 {:position "absolute"
               :top "20px", :left "20px"
@@ -435,6 +460,7 @@
      :border-radius (case position
                       :top "8px 8px 0 0"
                       :bottom "0 0 8px 8px")
+     :user-select "none"
      :font-size "12px"
      :line-height "24px"
      :text-align "center"

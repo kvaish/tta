@@ -8,7 +8,7 @@
             [cljs-react-material-ui.core :as ui-core]
             [cljs-time.core :as t]
             [cljs-time.format :as tf]
-            [cljs-time.coerce :as tc]
+            [ht.util.common :refer [to-date-map from-date-map]]
             [ht.app.comp :as ht-comp]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
@@ -66,18 +66,6 @@
                                  {:max max, :min min, :precision precision}])
        :value value, :valid? (if show-err? valid? true)}])))
 
-(defn to-date-map [date]
-  (let [d (tc/from-date date)]
-    {:year (t/year d)
-     :month (t/month d)
-     :day (t/day d)}))
-
-(defn from-date-map [date]
-  (let [{:keys [year month day]} date]
-    (-> (t/local-date year month day)
-        (t/from-utc-time-zone)
-        (tc/to-date))))
-
 (defmethod prop-field :date [{:keys [label path]}]
   (let [{:keys [value error valid?]} @(rf/subscribe [::subs/po-field path])
         show-err? @(rf/subscribe [::subs/po-show-error?])]
@@ -85,7 +73,8 @@
      label (if show-err? error)
      [date-picker {:date (to-date-map value)
                    :valid? valid?
-                   :on-select #(rf/dispatch [::event/set-po-field path
+                   :max (to-date-map (js/Date.))
+                   :on-change #(rf/dispatch [::event/set-po-field path
                                              (from-date-map %) true])}])))
 
 (defn make-props []
@@ -163,10 +152,10 @@
     [ui/dialog {:open @(rf/subscribe [::subs/open?])
                 :title (translate [:pyrometer :manage :title] "Manage IR pyrometers")}
      [:div (use-style style/body)
+      (if edit? [edit])
       (if (not-empty pms) [scroll-box {:style {:height h}}
                            (into [ui/menu {:value index}]
                                  (map item pms (range)))])
-      (if edit? [edit])
       [:div (use-sub-style style/body :btns)
        [app-comp/button {:icon ic/plus
                          :disabled? edit?

@@ -20,8 +20,7 @@
      :home {}
 
      ;; primary
-     :dataset-creator {}
-     :dataset-analyzer {}
+     :dataset {}
      :trendline {}
 
      ;; secondary

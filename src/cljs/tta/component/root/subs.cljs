@@ -15,12 +15,6 @@
    (get-in root [:content :active])))
 
 (rf/reg-sub
- ::active-dataset-action
- (fn [db _]
-   ;; TODO: implement to choose one of dataset-creator or dataset-analyzer
-   :dataset-creator))
-
-(rf/reg-sub
  ::app-allowed?
  :<- [::ht-subs/auth-claims]
  (fn [claims _]

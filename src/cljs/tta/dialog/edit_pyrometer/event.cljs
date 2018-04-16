@@ -2,9 +2,8 @@
 (ns tta.dialog.edit-pyrometer.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
-            [cljs-time.core :as t]
-            [cljs-time.coerce :as tc]
             [ht.util.interop :as i]
+            [ht.util.common :refer [today-utc]]
             [ht.app.subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.util.common :as au :refer [make-field missing-field
@@ -99,9 +98,7 @@
          id (str (i/ocall (js/Date.) :valueOf))]
      (assoc-in db po-path {:index (count data)
                            :data {:id id
-                                  :date-of-calibration (tc/to-date
-                                                        (t/from-utc-time-zone
-                                                         (t/today)))}
+                                  :date-of-calibration (today-utc)}
                            :form {:serial-number (missing-field)
                                   :tube-emissivity (missing-field)
                                   :wavelength (missing-field)

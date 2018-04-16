@@ -2,6 +2,7 @@
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
             [stylefy.core :refer [use-style use-sub-style]]
+            [ht.style :refer [color-hex]]
             [ht.util.interop :as i]
             [ht.util.common :refer [add-event remove-event
                                     get-control-pos]]
@@ -21,8 +22,7 @@
                             l (if h? (- page-x start-x) (- page-y start-y))
                             p (+ start-pos-f (/ l length (- 1 page-f)))
                             new-pos-f (if (> 0 p) 0
-                                          (if (< 1 p) 1
-                                              p))]
+                                          (if (< 1 p) 1  p))]
                         ;; (js/console.log "new pos: " new-pos-f)
                         (on-scroll new-pos-f)))))
         end-drag (fn _ed [e]
@@ -444,6 +444,7 @@
   You can scroll to bring an item into view by calling the **show-cell**
   function which takes two arguments *row* and *col*."
   [props]
+  ;;TODO:
   (let [state (atom {})
         render-fn
         (fn [{:keys [top left]} scroll-to]
@@ -515,3 +516,131 @@
               (fn [row-list col-list show-cell]
                 (let [show-item #(show-cell 0 %)]
                   (list (items-render-fn col-list show-item))))}]) []
+
+
+(defn table-grid [{:keys [height, width,
+                          row-header-width, col-header-height,
+                          row-count, col-count,
+                          row-height, col-width,
+                          row-header-renderer, col-header-renderer,
+                          cell-renderer, corner-renderer,
+                          table-count, gutter, labels, padding]}]
+  (let [[table-count-y table-count-x] table-count
+        [padding-left padding-top padding-right padding-bottom] padding
+        [gutter-width gutter-height] gutter
+        ;; calculate scroll height
+        scroll-height (- (* table-count-y (+ col-header-height gutter-height
+                                             (* row-count row-height))) gutter-height)
+        ;; calculate scroll width
+        scroll-width (- (* table-count-x (+ row-header-width gutter-width
+                                            (* col-count col-width))) gutter-width)
+        [label-row label-column] labels]
+
+    [:div
+     [lazy-scroll-box
+      {:height        height
+       :width         width
+       :scroll-height scroll-height, :scroll-width scroll-width
+       :style         {:font-size "10px"}
+       :render-fn
+       (fn [{:keys [top left]}]
+         (let [height (- height padding-top padding-bottom)
+               width (- width padding-right padding-left)
+               table-height (/ (- height
+                                  (* gutter-height (dec table-count-y))) table-count-y)
+               table-width (/ (- width
+                                 (* gutter-width (dec table-count-x))) table-count-x)
+               max-left (- scroll-width width)
+               max-top (- scroll-height height)
+               table-render-width (* col-count col-width)
+               table-render-height (* row-count row-height)
+               scroll-x (* -1 left (/ (- table-render-width
+                                         (- table-width row-header-width)) max-left))
+               scroll-y (* -1 top (/ (- table-render-height
+                                        (- table-height col-header-height)) max-top))
+               col-render-start (min
+                                 (quot (- scroll-x) col-width) col-count)
+               col-render-end (min (+ 2 col-render-start
+                                      (quot (- table-width gutter-width row-header-width)
+                                            col-width)) col-count)
+               row-render-start (min (quot (- scroll-y)
+                                           row-height) row-count)
+               row-render-end (min (+ 2 row-render-start
+                                      (quot (- table-height gutter-height col-header-height)
+                                            row-height)) row-count)
+               label-row (if label-row label-row "Rows")
+               label-row (if label-row label-row "Rows")
+               set-area (fn [[top left height width]]
+                          {:position "absolute" :top top :left left
+                           :height   height :width width})
+
+               corner-renderer
+               (or corner-renderer
+                 (fn []
+                   (if (and label-column
+                            label-row)
+                     [:div {:style {:height        "inherit"
+                                    :border-right  "1px solid"
+                                    :border-bottom "1px solid"
+                                    :border-color (color-hex :sky-blue)}}
+                      [:svg {:height col-header-height
+                             :width  row-header-width
+                             :style  {:font-size "10px"}}
+                       [:text {:x (- (/ row-header-width 2) 5), :y 8
+                               :fill (color-hex :sky-blue)}
+                        label-column]
+                       [:line {:x1    "0" :y1 "0" :x2 row-header-width
+                               :y2    col-header-height
+                               :style {:stroke (color-hex :sky-blue)
+                                       :stroke-width "1"}}]
+                       [:text {:x 10, :y (- col-header-height 5)
+                               :fill (color-hex :sky-blue)}
+                        label-row]]]
+                     [:div])))]
+
+           [:div {:style (set-area [top left height width])}
+            ;; Rows of tables
+            (map (fn [table-row-no] ^{:key table-row-no}
+                   [:div {:style (set-area [(* table-row-no
+                                               (+ gutter-height table-height)) 0])}
+                    ;; Column of tables
+                    (map (fn [table-col-no] ^{:key table-col-no}
+                           [:div {:style (set-area [0 (* table-col-no
+                                                         (+ gutter-width table-width))])}
+                            [:div {:style {:height col-header-height}}
+                             [:div {:style (set-area [padding-top padding-left
+                                                      col-header-height row-header-width])}
+                              [corner-renderer]]
+                             [:div {:style (merge {:overflow "hidden"}
+                                                  (set-area [padding-top
+                                                             (+ padding-left row-header-width) col-header-height
+                                                             (- table-width row-header-width)]))}
+                              [:div {:style (set-area [nil scroll-x nil table-render-width])}
+                               (map (fn [%] ^{:key %}
+                                      [:div {:style (set-area [nil (* % col-width) col-header-height col-width])}
+                                       [col-header-renderer % [table-row-no table-col-no]]])
+                                    (range col-render-start col-render-end))]]]
+                            [:div
+                             [:div {:style (merge {:overflow "hidden"}
+                                                  (set-area [(+ col-header-height padding-top)
+                                                             padding-left (- table-height col-header-height)
+                                                             row-header-width]))}
+                              [:div {:style (set-area [scroll-y nil table-render-height row-header-width])}
+                               (map (fn [%] ^{:key %}
+                                      [:div {:style (set-area [(* % row-height) nil row-height col-width])}
+                                       [row-header-renderer % [table-row-no table-col-no]]])
+                                    (range row-render-start row-render-end))]]
+                             [:div {:style (merge {:overflow "hidden"}
+                                                  (set-area [(+ col-header-height padding-top) (+ row-header-width padding-left)
+                                                             (- table-height col-header-height) (- table-width row-header-width)]))}
+                              [:div {:style (set-area [scroll-y scroll-x table-render-height table-render-width])}
+                               (map (fn [rowno]
+                                      (map (fn [colno]
+                                             ^{:key (str rowno "-" colno)}
+                                             [:div {:style (set-area [(* rowno row-height)
+                                                                      (* colno col-width) row-height col-width])}
+                                              [cell-renderer rowno colno [table-row-no table-col-no]]])
+                                           (range col-render-start col-render-end)))
+                                    (range row-render-start row-render-end))]]]])
+                         (range table-count-x))])
+                 (range table-count-y))]))}]]))

@@ -56,7 +56,7 @@
         items-render-fn
         (fn [indexes show-item]
           (map (fn [i]
-                 [tube-col sel-level (- height 10) i (get tube-configs i)])
+                 [tube-col sel-level (- height 20) i (get tube-configs i)])
                indexes))]
     [lazy-cols {:height          height
                 :width           (- (:width @container) 30)
