@@ -634,8 +634,9 @@
                                                   (set-area [(+ col-header-height padding-top) (+ row-header-width padding-left)
                                                              (- table-height col-header-height) (- table-width row-header-width)]))}
                               [:div {:style (set-area [scroll-y scroll-x table-render-height table-render-width])}
-                               (map (fn [rowno] ^{:key rowno}
-                                      (map (fn [colno] ^{:key colno}
+                               (map (fn [rowno]
+                                      (map (fn [colno]
+                                             ^{:key (str rowno "-" colno)}
                                              [:div {:style (set-area [(* rowno row-height)
                                                                       (* colno col-width) row-height col-width])}
                                               [cell-renderer rowno colno [table-row-no table-col-no]]])

@@ -60,6 +60,13 @@
  (fn [[dirty? valid?] _] (and dirty? valid?)))
 
 (rf/reg-sub
+ ::can-upload?
+ :<- [::dirty?]
+ :<- [::valid?]
+ :<- [::data]
+ (fn [[dirty? valid? data] _] (and (or dirty? (:draft? data)) valid?)))
+
+(rf/reg-sub
  ::warn-on-close?
  :<- [::dirty?]
  :<- [::valid?]
@@ -334,13 +341,14 @@
  ::sf-burner
  :<- [::data]
  (fn [data [_ [ch-index side row col]]]
-   (get-in data [:side-fired :chambers ch-index :sides side :burners row col])))
+   (get-in data [:side-fired :chambers ch-index :sides side
+                 :burners row col :state])))
 
 (rf/reg-sub
  ::tf-burner
  :<- [::data]
  (fn [data [_ [row col]]]
-   (get-in data [:top-fired :burners row col])))
+   (get-in data [:top-fired :burners row col :deg-open])))
 
 (defn get-field-temp [path form data temp-unit]
   (get-field path form data #(au/to-temp-unit % temp-unit)))

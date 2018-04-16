@@ -1,5 +1,6 @@
 (ns tta.component.dataset.burner-entry
   (:require [reagent.core :as r]
+            [reagent.validation :as rv]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
@@ -29,12 +30,12 @@
                 :color (color-hex :white)}]
     {:height   "48px", :width "120px"
      ::stylefy/sub-styles
-               {:circle       circle
-                :palette      {:width "48px"}
-                :palette-unit {:display "inline-block"
-                               :width "24px", :height "50px"}
-                :temp-scale   {:vertical-align "top"
-                               :margin-left "5px", :font-size "12px"}}}))
+     {:circle       circle
+      :palette      {:width "48px"}
+      :palette-unit {:display "inline-block"
+                     :width "24px", :height "50px"}
+      :temp-scale   {:vertical-align "top"
+                     :margin-left "5px", :font-size "12px"}}}))
 (def opening-color-map
   {15 (color-hex :red)
    30 (color-hex :orange)
@@ -56,24 +57,34 @@
         distribution [90 75 60 45 30 15]]
     [:div (stylefy/use-sub-style style :palette)
      (doall
-       (map (fn [i] ^{:key i}
-       [:div {:style {:height "50px"}}
-        [:div (merge (stylefy/use-sub-style style :palette-unit)
-                     {:style {:background (opening->color i)}})]
-        [:span (stylefy/use-sub-style style :temp-scale) (str i "°")]])
-            distribution))
+      (map (fn [i] ^{:key i}
+             [:div {:style {:height "50px"}}
+              [:div (merge (stylefy/use-sub-style style :palette-unit)
+                           {:style {:background (opening->color i)}})]
+              [:span (stylefy/use-sub-style style :temp-scale) (str i "°")]])
+           distribution))
      [:span (merge (stylefy/use-sub-style style :temp-scale)
                    {:style {:float "right"
                             :padding-right "6px"
                             :margin-top "-7px"}}) "0°"]]))
 
-(defn tf-burner [{:keys [value-fn label-fn on-change row col] :as props}]
-  (let [state (r/atom props)
-        style tf-burner-style
-        on-change #(on-change row col %)]
-    (fn [{:keys [value-fn label-fn]}]
-      (let [value (value-fn row col)
-            label (label-fn row col)]
+(defn tf-burner-parse [value]
+  (if (and (rv/valid-number? value) (not-empty value))
+    (let [v (js/Number value)]
+      (if (and (<= 0 v 90)
+               (= v (js/Math.ceil v)))
+        v))))
+
+(defn tf-burner [{:keys [value-fn label-fn on-change row col]}]
+  (let [style tf-burner-style
+        value-fn #(value-fn row col)
+        label (label-fn row col)
+        on-change #(if-let [v (tf-burner-parse %)]
+                     (on-change row col v)
+                     (if (empty? %)
+                       (on-change row col nil)))]
+    (fn [_]
+      (let [value (value-fn)]
         [:div (stylefy/use-style style)
          [:div (merge (stylefy/use-sub-style style :circle)
                       {:style {:background (opening->color value)}})
@@ -88,28 +99,65 @@
   **value-fn**
   **label-fn**
   **on-change**"
-  [width height row-count col-count value-fn label-fn on-change ]
-  [:div {:style {:height 300 :padding "10px"}}
-   [:div {:style {:font-weight "600"}} "Burner Rows"] [:br]
-   [:div {:style {:width "80%" :float "left"}}
-    [scroll/table-grid
-     {:height              height :width width
-      :row-header-width    0 :col-header-height 30
-      :row-count           row-count :col-count col-count
-      :row-height          48 :col-width 120
-      :table-count         [1 1]
-      :padding             [3 3 15 15]
-      :row-header-renderer (fn [row [t-row t-col]]
-                             nil)
-      :col-header-renderer (fn [col [t-row t-col]]
-                             [:div {:style {:text-align "center"}}
-                              (inc col)])
-      :cell-renderer       (fn [row col [t-row t-col]]
-                             [tf-burner {:value-fn  value-fn
-                                         :label-fn  label-fn
-                                         :on-change on-change}])}]]
-   [:div {:style {:width "15%" :float "left" :margin-left "20px"}}
-    [color-palette]]])
+  [width height
+   burner-row-count burner-count-per-row
+   value-fn label-fn on-change
+   wall-labels]
+  (let [w2 200
+        w1 (- width w2)
+        h1 60
+        h2 (- height h1 h1)]
+    [:div {:style {:height    height
+                   :width     width
+                   :font-size "12px"}}
+     [:div {:style {:width          w1, :height height
+                    :display        "inline-block"
+                    :vertical-align "top"}}
+      [:div {:style {:width       w1
+                     :height      h1
+                     :padding-top "25px"}}
+       [:div {:style {:color      (color-hex :royal-blue)
+                      :text-align "center"}}
+        (:north wall-labels)]
+       [:div {:style {:font-size "10px"
+                      :color     (color-hex :sky-blue)}}
+        (translate [:data-entry :burner-row :label]
+                   "Burner Row")]]
+      [:div {:style {:width w1, :height h2}}
+       (let [col-width 120
+             w (* col-width burner-row-count)
+             w (if (> (+ w 20)  w1) w1 w)]
+         [:div {:style {:width w :margin "auto"}}
+          [scroll/table-grid
+           {:height              h2
+            :width               w
+            :row-header-width    0
+            :col-header-height   30
+            :row-count           burner-count-per-row
+            :col-count           burner-row-count
+            :row-height          48
+            :col-width           120
+            :table-count         [1 1]
+            :padding             [1 1 1 1]
+            :row-header-renderer (fn [row [t-row t-col]]
+                                   nil)
+            :col-header-renderer (fn [col [t-row t-col]]
+                                   [:div {:style {:text-align "center"}}
+                                    (inc col)])
+            :cell-renderer       (fn [row col [t-row t-col]]
+                                   [tf-burner {:value-fn  value-fn
+                                               :label-fn  label-fn
+                                               :on-change on-change
+                                               :row row, :col col}])}]])]
+      [:div {:style {:width w1, :height h1}}
+       [:div {:style {:color      (color-hex :royal-blue)
+                      :text-align "center"}}
+        (:south wall-labels)]]]
+     [:div {:style {:width          w2, :height height
+                    :display        "inline-block"
+                    :vertical-align "top"
+                    :padding        "60px 0 0 100px"}}
+      [color-palette]]]))
 
 
 ;; SIDE FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -142,8 +190,8 @@
               :box-shadow "0 0 10px 3px rgba(0,0,0,0.3),
 inset -3px -3px 10px rgba(0,0,0,0.3)"}
       :circle (assoc circle
-                :top "36px", :left "36px"
-                :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")}}))
+                     :top "36px", :left "36px"
+                     :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")}}))
 
 (defn sf-burner-popup [{:keys [state]}]
   (let [style sf-burner-style
@@ -224,9 +272,27 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn tf-burner-label [burner-row index]
+  (let [{:keys [start-burner end-burner]} burner-row]
+    (if (> end-burner start-burner)
+      (+ start-burner index)
+      (- start-burner index))))
+
 (defn tf-burner-entry [width height]
-  [:div {:style {:width width, :height height}} "topfired burners"]
-  #_[tf-burner-table width height row-count col-count value-fn label-fn on-change ])
+  (let [{:keys [burner-row-count burner-rows wall-names]}
+        (:tf-config @(rf/subscribe [::subs/config]))
+        burner-count (get-in burner-rows [0 :burner-count])
+        value-fn #(deref (rf/subscribe [::subs/tf-burner [%2 %1]]))
+        label-fn #(tf-burner-label (get burner-rows %2) %1)
+        on-change #(rf/dispatch [::event/set-tf-burner [%2 %1] %3])]
+    (fn [_ _]
+      [tf-burner-table
+       width height
+       burner-row-count burner-count
+       value-fn label-fn on-change
+       wall-names])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn sf-burner-legend [dual-nozzle?]
   (let [style sf-burner-style]

@@ -7,6 +7,7 @@
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
             [tta.app.subs :as app-subs]
+            [tta.util.common :as au]
             [tta.component.dataset.subs :as subs]
             [tta.util.common :as au :refer [make-field missing-field
                                             set-field set-field-text
@@ -209,8 +210,14 @@
  ::save-draft
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::subs/can-submit?])]
- (fn [{:keys [::subs/data ::subs/can-submit?]} _]
-   (if can-submit? {:storage/set {:key :draft, :value data}})))
+ (fn [{:keys [db ::subs/data ::subs/can-submit?]} _]
+   (if can-submit?
+     (let [data (assoc data :last-saved (js/Date.))]
+       {:storage/set {:key :draft
+                      :value (au/dataset-to-storage data)}
+        :db (-> db
+                (assoc-in (conj comp-path :dataset) data)
+                (assoc-in data-path data))}))))
 
 (rf/reg-event-fx
  ::create-dataset-success
@@ -268,13 +275,16 @@
  (fn [{:keys [db ::subs/data]} [_ [ch-index side row col] value]]
    {:db (assoc-in db data-path
                   (assoc-in data [:side-fired :chambers ch-index :sides side
-                                  :burners row col]
+                                  :burners row col :state]
                             value))}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::set-tf-burner
- (fn [db [_ [row col] value]]
-   db))
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ [row col] value]]
+   {:db (assoc-in db data-path
+                  (assoc-in data [:top-fired :burners row col :deg-open]
+                            value))}))
 
 (rf/reg-event-fx
  ::set-temp

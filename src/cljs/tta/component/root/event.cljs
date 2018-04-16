@@ -8,7 +8,8 @@
 
 (def all-contents
   {:dataset {:event/init [:tta.component.dataset.event/init]
-             :event/close [:tta.component.dataset.event/close]}
+             :event/close [:tta.component.dataset.event/close]
+             :subs/warn-on-close? [:tta.component.dataset.subs/warn-on-close?]}
    :trendline {}
    :config {:event/init [:tta.component.config.event/init]
             :subs/warn-on-close? [:tta.component.config.subs/warn-on-close?]

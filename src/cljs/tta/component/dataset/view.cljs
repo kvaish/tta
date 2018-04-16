@@ -80,7 +80,7 @@
 ;;upload dataset if dirty and valid
 (defn action-upload []
   [app-comp/button
-   {:disabled? (not @(rf/subscribe [::subs/can-submit?]))
+   {:disabled? (not @(rf/subscribe [::subs/can-upload?]))
     :icon ic/upload
     :on-click #(rf/dispatch [::event/upload])
     :label (translate [:dataset :action :upload] "Upload")}])
