@@ -13,7 +13,7 @@
             [tta.app.icon :as ic]
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols]]
-            [tta.app.view :as app-view :refer [vertical-line vertical-line-dataset]]
+            [tta.app.view :as app-view :refer [vertical-line]]
             [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
@@ -33,7 +33,7 @@
                                   value false]))
         on-clear #(rf/dispatch [::event/clear-raw-temps row-path])]
     (fn [height _ _ _ _]
-      [:span {:style {:float "left"}}
+      [:span
        [list-tube-both-sides
         {:label name
          :height height
@@ -44,7 +44,7 @@
          :field-fn field-fn
          :pref-fn pref-fn
          :on-change on-change}]
-       (if-not last? [vertical-line-dataset {:height height}])])))
+       (if-not last? [vertical-line {:height height}])])))
 
 (defn ceiling-floor-label [scope]
   (case scope
@@ -75,7 +75,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line-dataset {:height height}])])))
+       (if-not last? [vertical-line {:height height}])])))
 
 (defn tf-twt-entry-wall [_ label wall-key last?]
   (let [path [:top-fired :wall-temps wall-key :temps]
@@ -95,7 +95,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line-dataset {:height height}])])))
+       (if-not last? [vertical-line {:height height}])])))
 
 (defn tf-twt-entry-full [{:keys [level-key]
                           {:keys [width height]} :view-size}]
@@ -268,7 +268,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line-dataset {:height height}])])))
+       (if-not last? [vertical-line {:height height}])])))
 
 (defn sf-twt-entry [{{:keys [width height]} :view-size}]
   ;; the peep door wall temps are shown as a set of columns
