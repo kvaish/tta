@@ -23,7 +23,8 @@
           :update-client "/api/client/:client-id"
           :create-plant "/api/client/:client-id/plant"
           :update-plant-config "/api/client/:client-id/plant/:plant-id/config"
-          :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"}}))
+          :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"
+          :find-datasets "/api/client/:client-id/plant/:plant-id/dataset"}}))
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -127,4 +128,13 @@
         :api-params {:client-id client-id, :plant-id plant-id}
         :data {:json-params (to-api :plant/update-settings update-settings)}
         :on-success (dispatch-one evt-success :res/update)
+        :evt-failure evt-failure}))
+
+(defn find-datasets [{:keys [client-id plant-id start end
+                             evt-success evt-failure]}]
+  (run {:method http/get
+        :api-key :find-datasets
+        :api-params {:client-id client-id :plant-id plant-id}
+        :data {:query-params {:utcStart start :utcEnd end}}
+        :on-success (dispatch-one evt-success :dataset)
         :evt-failure evt-failure}))

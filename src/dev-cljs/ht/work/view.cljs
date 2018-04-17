@@ -20,7 +20,8 @@
             [tta.tube-list]
             [tta.tube-prefs]
             [tta.tab]
-            [tta.wall-list]))
+            [tta.wall-list]
+            [tta.component.dataset-filter.view :refer [dataset-filter]]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -42,5 +43,6 @@
        :tta/tube-prefs [tta.tube-prefs/tube-prefs]
        :tta/tab [tta.tab/tab]
        :tta/wall-list [tta.wall-list/wall-list]
+       :tta/dataset-filter [dataset-filter]
        ;; default
        [:p "empty workspace"])]))

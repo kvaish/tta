@@ -31,5 +31,5 @@
               ["dataset" ic/dataset]
               ["report" ic/report]
               ["datasheet" ic/datasheet ]
-              ["dataset-inadequate" ic/dataset-inadequate true]
-              ["dataset-incomplete" ic/dataset-incomplete true]])))
+              ["inadequate" ic/dataset-inadequate true]
+              ["incomplete" ic/dataset-incomplete true]])))
