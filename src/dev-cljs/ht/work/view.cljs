@@ -22,7 +22,8 @@
             [tta.tube-prefs]
             [tta.tab]
             [tta.wall-list]
-            [tta.burner]))
+            [tta.burner]
+            [tta.burner-status]))
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -46,5 +47,6 @@
        :tta/tab [tta.tab/tab]
        :tta/wall-list [tta.wall-list/wall-list]
        :tta/burner [tta.burner/burner]
+       :tta/burner-status [tta.burner-status/burner-status]
        ;; default
        [:p "empty workspace"])]))

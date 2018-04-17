@@ -184,6 +184,11 @@
                  ((if (= dir :next) inc dec) twt-entry-index))]
      {:db (assoc-in db (conj view-path :twt-entry-index scope) index)})))
 
+(rf/reg-event-db
+ ::set-burner-status-active-side
+ (fn [db [_ ch-index side]]
+   (assoc-in db (conj view-path :burner-status-active-side ch-index) side)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
