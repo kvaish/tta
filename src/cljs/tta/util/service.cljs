@@ -4,7 +4,8 @@
             [re-frame.core :as rf]
             [ht.config :refer [config]]
             [ht.util.service :refer [add-to-api-map run]]
-            [tta.schema.model :refer [from-api to-api]])
+            [tta.schema.model :refer [from-api to-api]]
+            [ht.util.schema :as u])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn init []
@@ -23,14 +24,12 @@
           :create-plant "/api/client/:client-id/plant"
           :update-plant-config "/api/client/:client-id/plant/:plant-id/config"
           :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"
-<<<<<<< HEAD
-          :find-datasets "/api/client/:client-id/plant/:plant-id/dataset"}}))
-=======
+          :find-datasets "/api/client/:client-id/plant/:plant-id/dataset"
           :fetch-latest-dataset "/api/client/:client-id/plant/:plant-id/latest-dataset"
           :fetch-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"
           :create-dataset "/api/client/:client-id/plant/:plant-id/dataset"
           :update-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"}}))
->>>>>>> develop
+
 
 (defn dispatch-one [evt entity-key]
   #(rf/dispatch (conj evt (from-api entity-key (:result %)))))
@@ -136,16 +135,17 @@
         :on-success (dispatch-one evt-success :res/update)
         :evt-failure evt-failure}))
 
-<<<<<<< HEAD
 (defn find-datasets [{:keys [client-id plant-id start end
                              evt-success evt-failure]}]
-  (run {:method http/get
-        :api-key :find-datasets
-        :api-params {:client-id client-id :plant-id plant-id}
-        :data {:query-params {:utcStart start :utcEnd end}}
-        :on-success (dispatch-one evt-success :dataset)
+  (run {:method      http/get
+        :api-key     :find-datasets
+        :api-params  {:client-id client-id :plant-id plant-id}
+        :data        {:query-params (to-api :dataset/query
+                                            {:utc-start start
+                                             :utc-end   end})}
+        :on-success  (dispatch-many evt-success :dataset)
         :evt-failure evt-failure}))
-=======
+
 (defn fetch-latest-dataset [{:keys [client-id plant-id
                                     evt-success evt-failure]}]
   (run {:method http/get
@@ -161,7 +161,7 @@
         :api-params {:client-id client-id
                      :plant-id plant-id
                      :dataset-id dataset-id}
-        :on-success (dispatch-one evt-success :datset)
+        :on-success (dispatch-one evt-success :dataset)
         :evt-failure evt-failure}))
 
 (defn create-dataset [{:keys [dataset client-id plant-id evt-success evt-failure]}]
@@ -170,4 +170,3 @@
         :data {:json-params (to-api :dataset dataset)}
         :on-success (dispatch-one evt-success :res/create)
         :evt-failure evt-failure}))
->>>>>>> develop

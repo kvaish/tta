@@ -26,7 +26,8 @@
             [tta.component.dataset.twt-graph :refer [twt-graph]]
             [tta.component.dataset.burner-entry :refer [burner-entry]]
             [tta.component.dataset.overall-graph :refer [overall-graph]]
-            [tta.component.dataset.burner-status :refer [burner-status]]))
+            [tta.component.dataset.burner-status :refer [burner-status]]
+            [tta.component.dataset-selector.view :refer [dataset-selector]]))
 
 ;; (def date-formatter (tf/formatter "yyyy-MM-dd"))
 ;; (defn format-date [date] (tf/unparse date-formatter (t/date-time date)))
@@ -111,11 +112,10 @@
 
 ;; dataset list, visible in read mode only
 (defn action-dataset-list []
-  [app-comp/button
-   {:disabled? true
-    :icon ic/dataset
-    :on-click #(js/console.log "list dataset: not implemented yet")
-    :label (translate [:dataset :action :dataset-list] "Datasets")}])
+  (let [disabled? (if (= :read @(rf/subscribe [::subs/mode]))
+                    false true)]
+    [dataset-selector {:selected (:id @(rf/subscribe [::subs/data]))
+                       :disabled? disabled?}]))
 
 (defn action-publish-gold-cup []
   [app-comp/button

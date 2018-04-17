@@ -1,5 +1,5 @@
-;; styles for component dataset-filter
-(ns tta.component.dataset-filter.style
+;; styles for component dataset-selector
+(ns tta.component.dataset-selector.style
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
