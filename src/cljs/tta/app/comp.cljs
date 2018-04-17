@@ -29,9 +29,11 @@
       [:div (use-sub-style style :circle)]]]))
 
 ;; 48x48, icon: 24x24, back: 32x32
-(defn icon-button-l [{:keys [disabled? icon on-click]}]
+(defn icon-button-l [{:keys [disabled? icon on-click tooltip]}]
   [ui/icon-button {:disabled disabled?
                    :on-click on-click
+                   :tooltip tooltip
+                   :tooltip-position "top-left"
                    :style {:vertical-align "top"}}
    [icon (-> (use-style (app-style/icon-button disabled?))
              (update :style assoc :padding "4px"
@@ -39,14 +41,16 @@
                      :margin "-4px"))]])
 
 ;; 48x48, icon: 24x24
-(defn icon-button [{:keys [disabled? icon on-click]}]
+(defn icon-button [{:keys [disabled? icon on-click tooltip]}]
   [ui/icon-button {:disabled disabled?
-                   :on-click on-click}
+                   :on-click on-click
+                   :tooltip tooltip}
    [icon (use-style (app-style/icon-button disabled?))]])
 
 ;; 48x48, icon: 22x22
-(defn icon-button-s [{:keys [disabled? icon on-click]}]
+(defn icon-button-s [{:keys [disabled? icon on-click tooltip]}]
   [ui/icon-button {:disabled disabled?
+                   :tooltip tooltip
                    :on-click on-click}
    [icon (-> (use-style (assoc (app-style/icon-button disabled?)
                                :width "22px" :height "22px"
@@ -203,3 +207,20 @@
                              :disabled (disabled?-fn item)
                              :value (value-fn item)}])
                          items (range)))])]))})))
+
+(defn text-area [{:keys [read-only? valid? align width value
+                         on-change rows cols height]
+                   :or {valid? true, width 96, align "left"}}]
+  (let [style (app-style/text-area read-only? valid?)]
+    [:span (use-style style)
+     [:textarea (-> (use-sub-style style :main)
+                 (update :style assoc
+                         :width width
+                         :height height
+                         :text-align align)
+                 (merge {:type "text"
+                         :rows (or rows 5)
+                         :cols (or cols 10)
+                         :text (or value "")
+                         :on-change #(on-change (i/oget-in % [:target :value]))
+                         :read-only read-only?}))]]))

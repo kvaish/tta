@@ -32,14 +32,13 @@
                    :hidden)])]
      {:card
       (->>
-       {:dataset-creator  true
-        :dataset-analyzer true
-        :trendline        true
-        :settings         true
-        :gold-cup         false
-        :config-history   false
-        :config           false
-        :logs             true}
+       {:dataset        true
+        :trendline      true
+        :settings       true
+        :gold-cup       false
+        :config-history false
+        :config         false
+        :logs           true}
        (map f)
        (into {}))
       :button

@@ -72,13 +72,6 @@
    [icon props
     [:path {:d "M14,6 l-6,6 l6,6"}]]))
 
-(defn gear
-  ([] (gear nil))
-  ([props]
-   [icon props
-    [:circle {:cx "12", :cy "12", :r "3.5"}]
-    [:path {:d "M4,4 l"}]]))
-
 (defn pyrometer+
   ([] (pyrometer+ nil))
   ([props]
@@ -185,3 +178,10 @@ m4,0 v-12 m4,0 v12"}]]))
             :stroke "#002856" :stroke-width "2px"}]
     [:path {:d "M12,4 a1,1 0 0,1 0 16,0"
             :fill "#002856" :stroke "#002856" :stroke-width "2px"}]]))
+
+(defn menu
+  ([] (menu nil))
+  ([props]
+   [icon props
+    [:path {:d "M6,8 h12 m0,4 h-12 m0,4 h12"}]]))
+

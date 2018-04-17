@@ -14,6 +14,7 @@
             [ht.app.comp :as ht-comp]
             [tta.icon-set]
             [tta.comp-set]
+            [tta.table-grid]
             [tta.scroll]
             [tta.ref-sketch]
             [tta.calendar]
@@ -21,7 +22,11 @@
             [tta.tube-prefs]
             [tta.tab]
             [tta.wall-list]
+<<<<<<< HEAD
             [tta.component.dataset-filter.view :refer [dataset-filter]]))
+=======
+            [tta.burner]))
+>>>>>>> develop
 
 (defn work []
   (if @(rf/subscribe [::subs/open?])
@@ -39,10 +44,15 @@
        :tta/ref-sketch [tta.ref-sketch/ref-sketch]
        :tta/calendar [tta.calendar/calendar-test]
        :tta/datepickers [tta.calendar/datepickers-test]
+       :tta/table [tta.table-grid/table-grid-test]
        :tta/tube-list [tta.tube-list/tube-list]
        :tta/tube-prefs [tta.tube-prefs/tube-prefs]
        :tta/tab [tta.tab/tab]
        :tta/wall-list [tta.wall-list/wall-list]
+<<<<<<< HEAD
        :tta/dataset-filter [dataset-filter]
+=======
+       :tta/burner [tta.burner/burner]
+>>>>>>> develop
        ;; default
        [:p "empty workspace"])]))

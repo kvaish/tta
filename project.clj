@@ -1,4 +1,4 @@
-(defproject tta "1.0.0.D.8"
+(defproject tta "1.0.0.D.10"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.64"] ;;  "1.9.946"
                  [org.clojure/core.async "0.4.474"] ;; "0.3.465"
@@ -6,6 +6,7 @@
                   :exclusions [cljsjs/react
                                cljsjs/react-dom
                                cljsjs/react-dom-server]]
+                 [reagent-utils "0.3.1"]
                  [re-frame "0.10.5"] ;; "0.10.2"
                  [re-frame-utils "0.1.0"]
                  [day8.re-frame/forward-events-fx "0.0.5"]
@@ -102,7 +103,8 @@
                     :preloads             [devtools.preload
                                            re-frisk.preload]
                     :external-config      {:devtools/config
-                                           {:features-to-install :all}}}}
+                                           {:features-to-install
+                                            [:formatters :hints]}}}}
 
     {:id           "min"
      :source-paths ["src/cljs" "src/cljc" "src/prd-cljs"]

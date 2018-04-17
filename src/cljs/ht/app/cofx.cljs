@@ -8,3 +8,13 @@
  :window-size
  (fn [cofx _]
    (assoc cofx :window-size (u/get-window-size))))
+
+(rf/reg-cofx
+ :storage
+ (fn [cofx key]
+   (assoc-in cofx [:storage key] (u/get-storage key))))
+
+(rf/reg-cofx
+ :storage-common ;; when common between multiple apps
+ (fn [cofx key]
+   (assoc-in cofx [:storage key] (u/get-storage key true))))

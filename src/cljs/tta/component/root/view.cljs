@@ -23,7 +23,8 @@
             [tta.dialog.choose-plant.view :refer [choose-plant]]
             [tta.component.home.view :refer [home]]
             [tta.component.config.view :refer [config]]
-            [tta.component.settings.view :refer [settings]]))
+            [tta.component.settings.view :refer [settings]]
+            [tta.component.dataset.view :refer [dataset]]))
 
 ;;; language-menu ;;;
 
@@ -80,8 +81,7 @@
              :label-fn #(translate [:root :menu :logout] "Logout")
              :event-id ::event/logout}]
    :middle {:home tta.component.home.view/context-menu
-            :dataset-creator []
-            :dataset-analyzer []
+            :dataset []
             :trendline []
             :config []
             :settings []
@@ -178,7 +178,7 @@
 ;;; sub-header ;;;
 
 (defn app-logo [props]
-  [:div props
+  [:div (assoc-in props [:style :user-select] "none")
    [:span {:style {:font-family "arial"
                    :font-weight "900"
                    :font-size "18px"}} "True"]
@@ -195,22 +195,20 @@
        [:span]
        (doall
          (map
-           (fn [[id label target]]
-             (let [target (or target id)
-                   active? (= target active-content)]
+           (fn [[id label]]
+             (let [active? (= id active-content)]
                ^{:key id}
                [:a
                 (merge (use-sub-style style/hot-links
                                       (if active? :active-link :link))
                        {:href "#"
                         :on-click (if-not active?
-                                    #(rf/dispatch [::event/activate-content target]))})
+                                    #(rf/dispatch [::event/activate-content id]))})
                 label]))
            [[:home
              (translate [:quick-launch :home :label] "Home")]
             [:dataset
-             (translate [:quick-launch :dataset :label] "Dataset")
-             @(rf/subscribe [::subs/active-dataset-action])]
+             (translate [:quick-launch :dataset :label] "Dataset")]
             [:trendline
              (translate [:quick-launch :trendline :label] "Trendline")]]))))])
 
@@ -256,22 +254,25 @@
 (defn content []
   (let [view-size        @(rf/subscribe [::ht-subs/view-size])
         active-content   @(rf/subscribe [::subs/active-content])
-        content-allowed? @(rf/subscribe [::subs/content-allowed?])]
+        content-allowed? @(rf/subscribe [::subs/content-allowed?])
+        content-height (app-style/content-height view-size)
+        content-size {:width (:width view-size)
+                      :height content-height}]
     [:div (update (use-style style/content) :style
-                  assoc :height (app-style/content-height view-size))
+                  assoc :height content-height)
      (if content-allowed?
        (case active-content
-         :home             [home {:on-select #(rf/dispatch [::event/activate-content %])}]
+         :home [home {:on-select #(rf/dispatch [::event/activate-content %])
+                      :size content-size}]
          ;; primary
-         :dataset-creator  [:div "dataset-creator"]
-         :dataset-analyzer [:div "dataset-analyzer"]
-         :trendline        [:div "trendline"]
+         :dataset        [dataset {:size content-size}]
+         :trendline      [:div {:size content-size} "trendline"]
          ;; secondary
-         :config            [config]
-         :settings          [settings]
-         :goldcup           [:div "goldcup"]
-         :config-history    [:div "config-history"]
-         :logs              [:div "logs"])
+         :config         [config {:size content-size}]
+         :settings       [settings {:size content-size}]
+         :goldcup        [:div {:size content-size} "goldcup"]
+         :config-history [:div {:size content-size} "config-history"]
+         :logs           [:div {:size content-size} "logs"])
        ;; have no rights!!
        [no-access])]))
 

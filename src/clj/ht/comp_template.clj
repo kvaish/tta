@@ -9,8 +9,13 @@
 (ns tta.component.my-comp.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [day8.re-frame.forward-events-fx]
+            [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]))
+
+;; Do NOT use rf/subscribe
+;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
 
 ;; Add some event handlers, like
 #_ (rf/reg-event-db
@@ -27,8 +32,10 @@
 ;; a effects map, like
 #_ (rf/reg-event-fx
     ::event-id
-    (fn [{:keys[db]} [_ param]]
-      {:db (assoc db :param param)}))
+    [(inject-cofx ::inject/sub [::subs/data])]
+    (fn [{:keys[db ::subs/data]} [_ param]]
+      {:db (assoc db :param param
+                  :data data)}))
 ;;
 ;; If there is a need for external data then inject them using inject-cofx
 ;; and register your external data sourcing in cofx.cljs
@@ -42,11 +49,9 @@
   (:require [stylefy.core :as stylefy]
             [garden.color :as gc]
             [garden.units :refer [px]]
-            [ht.style :as ht]
-            [ht.app.style :as ht-style
-             :refer [color color-hex color-rgba vendors]]
+            [ht.style :as ht :refer [color color-hex color-rgba]]
+            [ht.app.style :as ht-style :refer [vendors]]
             [tta.app.style :as app-style]))
-
 "
 
    :subs
@@ -56,6 +61,10 @@
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
             [tta.util.auth :as auth]))
+
+;; Do NOT use rf/subscribe
+;; instead add input signals like :<- [::query-id]
+;; or use reaction or make-reaction (refer reagent docs)
 
 ;; primary signals
 (rf/reg-sub

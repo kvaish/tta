@@ -7,6 +7,7 @@
              :plant-id         "plantId"
              :data-date        (u/date-field "dataDate")
              :topsoe?          "isTopsoeInternal"
+             :gold-cup?        "hasGoldCup"
              :reformer-version "reformerVersion"
              :summary          {:name   "summary"
                                 :schema ::summary}
@@ -18,7 +19,9 @@
                                 :schema ::side-fired}
              :top-fired        {:name   "topFired"
                                 :schema ::top-fired}
-             :role-type        "roleType" ;; TODO: remove later :PKPA
+             :role-type         {:name "roleType"
+                                 :schema {:id "id"
+                                          :name "name"}}
              :shift            "shift"
              :comment          "comment"
              :operator         "operator"
@@ -44,26 +47,27 @@
                              :schema ::summary
                              :array? true}}
 
-   ::top-fired {:levels  {:name   "levels"
-                          :array? true
-                          :schema {:rows {:name   "rows"
-                                          :array? true
-                                          :schema {:sides {:name   "sides"
-                                                           :array? true
-                                                           :schema ::tf-side}}}}}
+   ::top-fired {:levels {:name   "levels"
+                         :schema {:top {:name "top"
+                                        :schema ::tf-level}
+                                  :middle {:name "middle"
+                                           :schema ::tf-level}
+                                  :bottom {:name "bottom"
+                                           :schema ::tf-level}}}
                 :burners {:name      "burners"
                           :array?    true
                           :array-dim 2 ;; burner-row x burner
                           :schema    {:deg-open "degOpen"}}
 
-                :wall-temps    {:east  {:name   "east"
-                                        :schema ::wall-temps}
-                                :west  {:name   "west"
-                                        :schema ::wall-temps}
-                                :north {:name   "north"
-                                        :schema ::wall-temps}
-                                :south {:name   "south"
-                                        :schema ::wall-temps}}
+                :wall-temps {:name "wall-temps"
+                             :schema {:east  {:name   "east"
+                                              :schema ::wall-temps}
+                                      :west  {:name   "west"
+                                              :schema ::wall-temps}
+                                      :north {:name   "north"
+                                              :schema ::wall-temps}
+                                      :south {:name   "south"
+                                              :schema ::wall-temps}}}
                 :ceiling-temps {:name   "ceilingTemp"
                                 :array? true
                                 :schema ::wall-temps}
@@ -71,9 +75,13 @@
                                 :array? true
                                 :schema ::wall-temps}}
 
-   ::tf-side {:tubes {:name   "tubes"
-                      :schema ::tube
-                      :array? true}}
+   ::tf-level {:rows {:name   "rows"
+                      :array? true
+                      :schema {:sides {:name   "sides"
+                                       :array? true
+                                       :schema {:tubes {:name   "tubes"
+                                                        :schema ::tube
+                                                        :array? true}}}}}}
 
    ::side-fired {:chambers {:name   "chambers"
                             :array? true

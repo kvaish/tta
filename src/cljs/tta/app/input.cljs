@@ -169,7 +169,8 @@
         (swap! state assoc :props props
                :counts [tube-count 2]
                :tube-number-fn tube-number-fn)
-        [:div {:style {:width width, :height height}}
+        [:div {:style {:width width, :height height
+                       :display "inline-block"}}
          [list-head w label on-clear]
          [app-scroll/lazy-rows
           {:width w, :height (- height 48) ;; leave 48 for list-head
@@ -265,8 +266,8 @@
       (translate [:action :add :label] "Add")]]))
 
 ;; 126x38
-(defn- list-row-wall-temps [state index]
-  (let [{:keys [field-fn wall-count]} (:props @state)
+(defn- list-row-wall-temps [state wall-count index]
+  (let [{:keys [field-fn]} (:props @state)
         style (app-style/tube-list-row)
         field (field-fn index)]
     [:span (-> (use-style style)
@@ -275,15 +276,17 @@
        [list-row-add-button state style]
        [list-input state index 0 style field])]))
 
-;; 138x(48+i38)
+;; 160x(48+i38)
 (defn list-wall-temps
   "[{:keys [label height wall-count on-clear
             field-fn on-add on-change on-paste]}]"
   [props]
   (let [state (atom {}) ;; props, counts, show-row
         items-render-fn (fn [indexes show-row]
-                          (swap! state assoc :show-row show-row)
-                          (map #(vector list-row-wall-temps state %) indexes))]
+                          (let [wc (get-in (swap! state assoc :show-row show-row)
+                                           [:props :wall-count])]
+                            (map #(vector list-row-wall-temps state wc %)
+                                 indexes)))]
     ;; Form-2 render fn
     (fn [{:keys [label height wall-count on-clear] :as props}]
       (swap! state assoc
@@ -295,11 +298,11 @@
                                              (fn [row _ val] (% row val)))))
              :counts [wall-count 1])
       (let [width 160, w (- width 12)]
-        [:div {:style {:width width, :height height}}
+        [:div {:style {:width width, :height height
+                       :display "inline-block"}}
          [list-head w label on-clear]
          [app-scroll/lazy-rows
           {:width w, :height (- height 48)
            :item-count (inc wall-count) ;; one row extra for add btn
            :item-height 38
            :items-render-fn items-render-fn}]]))))
-

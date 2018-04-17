@@ -31,6 +31,7 @@
 
 (def card-base
   {:background-color (str (color-rgba :white nil 0.6) " !important")
+   :user-select "none"
    :border-radius "10px !important"
    :-ms-transition-duration "100ms !important"
    ::stylefy/vendors vendors

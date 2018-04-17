@@ -11,16 +11,16 @@
   [claims content-id]
   ;;TODO: apply access-rules
   (case content-id
-    :home             true
-    :dataset-creator  true
-    :dataset-analyzer true
-    :trendline        true
-    :settings         true
-    :gold-cup         true
-    :config-history   true
-    :config           true
-    :logs             true
-    :data-entry       true
-    :import-logger    true
-    :print-logsheet   true
+    :home           true
+    :dataset        true
+    :trendline      true
+    :settings       true
+    :gold-cup       true
+    :config-history true
+    :config         true
+    :logs           true
+    ;; buttons
+    :data-entry     true
+    :import-logger  true
+    :print-logsheet true
     false))

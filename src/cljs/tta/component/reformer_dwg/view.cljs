@@ -202,6 +202,7 @@
 (def ref-dwg
   {:view-box "0 0 600 500"
    :style {:color "grey"
+           :user-select "none"
            :fill "none"
            :stroke "grey"
            :stroke-width "1px"

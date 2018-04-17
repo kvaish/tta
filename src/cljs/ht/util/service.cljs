@@ -22,7 +22,13 @@
   (add-to-api-map
     {:root (:portal-uri @config)
      :api {:fetch-auth "/auth/token/fetch"
-           :logout "/auth/logout"}}))
+           :app-roles "/api/service/get-app-roles" ;; ?app-id=<app-id>
+           :logout "/auth/logout"}})
+  (add-to-api-map
+   ;; resource files located at the same place as index.html
+   ;; just use relative path, hence no root and no preceding /
+   {:root nil
+    :api {:translation "data/translations.json"}}))
 
 (defn api-uri
   ([api-key]
@@ -101,3 +107,21 @@
         :evt-failure evt-failure
         :token? false
         :accept :edn}))
+
+(defn fetch-app-roles [{:keys [evt-success evt-failure]}]
+  (run {:method http/get
+        :api-key :app-roles
+        :data {:query-params {:app-id (:app-id @config)}}
+        :on-success (fn [{:keys [roles]}]
+                      (rf/dispatch (conj evt-success roles)))
+        :evt-failure evt-failure
+        :token? false
+        :accept :edn}))
+
+(defn fetch-translation [{:keys [evt-success evt-failure]}]
+  ;; repsonse format is json, hence do not use :edn
+  (run {:method http/get
+        :api-key :translation
+        :evt-success evt-success
+        :evt-failure evt-failure
+        :token? false}))

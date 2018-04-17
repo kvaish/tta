@@ -7,8 +7,9 @@
             [tta.component.root.subs :as subs]))
 
 (def all-contents
-  {:dataset-creator {}
-   :dataset-analyzer {}
+  {:dataset {:event/init [:tta.component.dataset.event/init]
+             :event/close [:tta.component.dataset.event/close]
+             :subs/warn-on-close? [:tta.component.dataset.subs/warn-on-close?]}
    :trendline {}
    :config {:event/init [:tta.component.config.event/init]
             :subs/warn-on-close? [:tta.component.config.subs/warn-on-close?]
@@ -41,16 +42,17 @@
 
 (rf/reg-event-fx
  ::activate-content
- (fn [_ [_ id]]
+ (fn [_ [_ id params]]
    (let [cid @(rf/subscribe [::subs/active-content])]
      {:dispatch [::with-warning-for-unsaved-changes
-                 [::close-and-init cid id]]})))
+                 [::close-and-init cid id params]]})))
 
 (rf/reg-event-fx
  ::close-and-init ;; close the current, init and open the next
- (fn [{:keys [db]} [_ close-id init-id]]
+ (fn [{:keys [db]} [_ close-id init-id init-params]]
    (let [{:keys [event/close]} (get all-contents close-id)
-         {:keys [event/init]} (get all-contents init-id)]
+         {:keys [event/init]} (if-let [e (get all-contents init-id)]
+                                (update e :event/init conj init-params))]
      {:db (assoc-in db [:component :root :content :active] init-id)
       :dispatch-n (list init close)})))
 
