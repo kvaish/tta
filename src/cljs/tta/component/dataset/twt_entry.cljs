@@ -13,7 +13,7 @@
             [tta.app.icon :as ic]
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols]]
-            [tta.app.view :as app-view :refer [vertical-line]]
+            [tta.app.view :as app-view :refer [vertical-line vertical-line-dataset]]
             [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
@@ -33,7 +33,7 @@
                                   value false]))
         on-clear #(rf/dispatch [::event/clear-raw-temps row-path])]
     (fn [height _ _ _ _]
-      [:span
+      [:span {:style {:float "left"}}
        [list-tube-both-sides
         {:label name
          :height height
@@ -44,7 +44,7 @@
          :field-fn field-fn
          :pref-fn pref-fn
          :on-change on-change}]
-       (if-not last? [vertical-line {:height height}])])))
+       (if-not last? [vertical-line-dataset {:height height}])])))
 
 (defn ceiling-floor-label [scope]
   (case scope
@@ -65,7 +65,7 @@
         on-clear #(rf/dispatch [::event/clear-wall-temps path])
         on-add #(rf/dispatch [::event/add-temp-field path])]
     (fn [height _ _ _]
-      [:span
+      [:span {:style {:float "left"}}
        [list-wall-temps
         {:label label
          :height height
@@ -75,7 +75,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line {:height height}])])))
+       (if-not last? [vertical-line-dataset {:height height}])])))
 
 (defn tf-twt-entry-wall [_ label wall-key last?]
   (let [path [:top-fired :wall-temps wall-key :temps]
@@ -85,7 +85,7 @@
         on-clear #(rf/dispatch [::event/clear-wall-temps path])
         on-add #(rf/dispatch [::event/add-temp-field path])]
     (fn [height _ _ _]
-      [:span
+      [:span {:style {:float "left"}}
        [list-wall-temps
         {:label label
          :height height
@@ -95,7 +95,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line {:height height}])])))
+       (if-not last? [vertical-line-dataset {:height height}])])))
 
 (defn tf-twt-entry-full [{:keys [level-key]
                           {:keys [width height]} :view-size}]
@@ -171,11 +171,12 @@
      [:div {:style {:width wr, :height height
                     :display "inline-block"
                     :vertical-align "top"}}
-      [app-comp/icon-button-l
-       {:icon ic/nav-left
-        :disabled? @(rf/subscribe [::subs/twt-entry-nav-disabled? scope :prev])
-        :on-click #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]
-      [vertical-line {:height height}]
+      [:span {:style {:float "left"}}
+       [app-comp/icon-button-l
+        {:icon      ic/nav-left
+         :disabled? @(rf/subscribe [::subs/twt-entry-nav-disabled? scope :prev])
+         :on-click  #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]]
+      [:span {:style {:float "left"}} [vertical-line {:height height}]]
       (case scope
         :tube
         ^{:key index} [tf-twt-entry-tube-row height
@@ -267,7 +268,7 @@
          :field-fn field-fn
          :on-add on-add
          :on-change on-change}]
-       (if-not last? [vertical-line {:height height}])])))
+       (if-not last? [vertical-line-dataset {:height height}])])))
 
 (defn sf-twt-entry [{{:keys [width height]} :view-size}]
   ;; the peep door wall temps are shown as a set of columns

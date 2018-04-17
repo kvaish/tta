@@ -33,6 +33,9 @@
 (defn vertical-line [{:keys [height]}]
   [:div (use-style (style/vertical-line height))])
 
+(defn vertical-line-dataset [{:keys [height]}]
+  [:div (merge (use-style (style/vertical-line height))
+               {:style {:float "right"}})])
 
 (defn- tab-head [{:keys [index label width last? position
                          on-select selected?]}]
