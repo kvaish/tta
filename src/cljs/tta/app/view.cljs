@@ -33,7 +33,6 @@
 (defn vertical-line [{:keys [height]}]
   [:div (use-style (style/vertical-line height))])
 
-
 (defn- tab-head [{:keys [index label width last? position
                          on-select selected?]}]
   (let [width (if width (if last? width (dec width)))

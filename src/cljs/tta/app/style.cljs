@@ -309,7 +309,8 @@
    :border-left (str "1px solid " widget-bg-e)
    :width "0"
    :height (px (- height 40))
-   :display "inline-block"})
+   :display "inline-block"
+   :vertical-align "top"})
 
 (defn layout-main [view-size]
   (let [w (:width view-size)

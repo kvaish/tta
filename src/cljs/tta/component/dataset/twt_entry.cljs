@@ -65,7 +65,7 @@
         on-clear #(rf/dispatch [::event/clear-wall-temps path])
         on-add #(rf/dispatch [::event/add-temp-field path])]
     (fn [height _ _ _]
-      [:span
+      [:span {:style {:float "left"}}
        [list-wall-temps
         {:label label
          :height height
@@ -85,7 +85,7 @@
         on-clear #(rf/dispatch [::event/clear-wall-temps path])
         on-add #(rf/dispatch [::event/add-temp-field path])]
     (fn [height _ _ _]
-      [:span
+      [:span {:style {:float "left"}}
        [list-wall-temps
         {:label label
          :height height
@@ -171,11 +171,12 @@
      [:div {:style {:width wr, :height height
                     :display "inline-block"
                     :vertical-align "top"}}
-      [app-comp/icon-button-l
-       {:icon ic/nav-left
-        :disabled? @(rf/subscribe [::subs/twt-entry-nav-disabled? scope :prev])
-        :on-click #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]
-      [vertical-line {:height height}]
+      [:span {:style {:float "left"}}
+       [app-comp/icon-button-l
+        {:icon      ic/nav-left
+         :disabled? @(rf/subscribe [::subs/twt-entry-nav-disabled? scope :prev])
+         :on-click  #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]]
+      [:span {:style {:float "left"}} [vertical-line {:height height}]]
       (case scope
         :tube
         ^{:key index} [tf-twt-entry-tube-row height
