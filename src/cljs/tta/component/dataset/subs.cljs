@@ -299,6 +299,119 @@
          :prev (= 0 index)
          nil))))
 
+;;DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TWT  raw or corrected
+
+
+(rf/reg-sub
+ ::twt-type-opts
+ (fn [_ _]
+   [{:id :raw
+     :label "Raw"}
+    {:id :corrected
+     :label "Corrected"}]))
+
+(rf/reg-sub
+ ::twt-type
+ :<- [::twt-type-opts]
+ :<- [::view]
+ (fn [[twt-type-opts view] _] (or (get-in view [:twt-type])
+
+                                 (:id (first twt-type-opts)))))
+
+(rf/reg-sub
+ ::on-off-opts
+ (fn [_ _]
+   [{:id :on
+     :label "On"}
+    {:id :off
+     :label "Off"}]))
+
+(rf/reg-sub
+ ::reduced-firing
+ :<- [::view]
+ :<- [::on-off-opts]
+ (fn [[view on-off-opts] _]
+   (or (get-in view [:reduced-firing])
+       (:id (first on-off-opts))))) 
+
+(rf/reg-sub
+ ::avg-temp-band
+ :<- [::view]
+ :<- [::on-off-opts]
+ (fn [[view on-off-opts] _] (or (get-in view [:avg-temp-band])
+                               (:id (first on-off-opts)))))
+
+(rf/reg-sub
+ ::avg-raw-temp
+ :<- [::view]
+ :<- [::on-off-opts]
+ (fn [[view on-off-opts] _] (or (get-in view [:avg-raw-temp])
+                               (:id (first on-off-opts)))))
+
+(rf/reg-sub
+ ::avg-corrected-temp
+ :<- [::view]
+ :<- [::on-off-opts]
+ (fn [[view on-off-opts] _] (or (get-in view [:avg-corrected-temp])
+                               (:id (first on-off-opts)))))
+
+;;;tf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;reduced-firing avg-temp avg-temp-band avg-raw-temp
+;; x-domain y-domain designT targetT x-title y-title
+;;y domain level top,middle,bottom
+
+;;vector of min max temperature of rows including design and target temperature
+(rf/reg-sub
+ ::tf-y-domain
+ :<- [::settings]
+ :<- [::data]
+ :<- [::twt-type]
+ :<- [::selected-level-key]
+ (fn [[settings data twt-type selected-level-key] _]
+   (let [{:keys [design-temp target-temp]} settings
+         rows (get-in data [:top-fired :levels
+                            selected-level-key :rows])
+         temp-type (if (= :corrected twt-type) :corrected-temp :raw-temp)
+         temps (->> (map :sides rows)
+                    (map (fn [col]
+                           (map :tubes  col)))
+                    flatten
+                    (map temp-type))
+         temp (remove nil?
+                      (conj temps design-temp target-temp))]
+     (vector (apply min temps)
+             (apply max temps)))))
+
+
+;;start end tube vector in descending order of given row 
+(rf/reg-sub
+ ::tf-x-domain
+ :<- [::config]
+ (fn [config [_ row]]
+   (let [{:keys [start-tube end-tube]}
+         (get-in config [:tf-config :tube-rows row])]
+     (if (< start-tube end-tube)
+       (vector start-tube end-tube)
+       (vector end-tube start-tube)))))
+
+;; avg temperature of given row level and temp type  raw-temp or corrected-temp 
+(rf/reg-sub
+ ::avg-temp
+ :<-[::config]
+ :<- [::data]
+ (fn [[config data] [_ row level temp-type]]
+   (let [tube-count (get-in config [:tf-config :tube-rows row :tube-count])
+         tubes (get-in data [:top-fired :levels level
+                             :rows row :sides])]
+     (/ (->> (map :tubes tubes)
+             flatten
+             (map temp-type)
+             (apply +)) tube-count))))
+
+(fn [[dataset twt-type selected-level-key] _])
+
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub

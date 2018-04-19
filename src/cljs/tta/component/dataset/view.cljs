@@ -179,7 +179,7 @@
                 2 ;; gold-cup-entry
                 [:div {:style view-size} "gold-cup entry topfired"])
 
-              (= :read mode)
+              (= :view mode)
               (case sel-top
                 0 ;; overall
                 [overall-graph {:level sel-bottom
@@ -205,7 +205,7 @@
                 2 ;; gold-cup-entry
                 [:div {:style view-size} "gold-cup entry sidefired"])
 
-              (= :read mode)
+              (= :view mode)
               (case sel-top
                 0 ;; twt-graph
                 [twt-graph {:view-size view-size}]

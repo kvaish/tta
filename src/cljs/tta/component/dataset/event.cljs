@@ -184,6 +184,33 @@
                  ((if (= dir :next) inc dec) twt-entry-index))]
      {:db (assoc-in db (conj view-path :twt-entry-index scope) index)})))
 
+;; DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-event-db
+ ::set-twt-type
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :twt-type) value)))
+
+(rf/reg-event-db
+ ::set-reduced-firing
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :reduced-firing) value)))
+
+(rf/reg-event-db
+ ::set-avg-temp-band
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-temp-band) value)))
+
+(rf/reg-event-db
+ ::set-avg-raw-temp
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-raw-temp) value)))
+
+(rf/reg-event-db
+ ::set-avg-corrected-temp
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-corrected-temp) value)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
