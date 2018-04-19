@@ -4,6 +4,7 @@
             [re-frame.cofx :refer [inject-cofx]]
             [day8.re-frame.forward-events-fx]
             [vimsical.re-frame.cofx.inject :as inject]
+            [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]
             [tta.app.subs :as app-subs]
@@ -199,7 +200,21 @@
  )
 
 (rf/reg-event-fx
- ::clear-draft
+ ::reset-draft
+ (fn [_ _]
+   {:dispatch
+    [::ht-event/show-message-box
+     {:message (translate [:warning :reset-draft :message]
+                          "The draft will be disacrded and a new one will be created!")
+      :title (translate [:warning :reset-draft :title]
+                        "Discard current data?")
+      :level :warning
+      :label-ok (translate [:action :discard :label] "Discard")
+      :event-ok [::do-reset-draft]
+      :label-cancel (translate [:action :cancel :label] "Cancel")}]}))
+
+(rf/reg-event-fx
+ ::do-reset-draft
  (fn [{:keys [db]} _]
    (let [{:keys [gold-cup?]} (get-in db (conj comp-path :dataset))]
      {:storage/set {:key :draft, :value nil}
