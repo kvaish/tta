@@ -157,7 +157,6 @@
         items-render-fn (fn [indexes show-row]
                           (swap! state assoc :show-row show-row)
                           (map #(vector row-render-fn state %) indexes))]
-    ;; Form-2 render fn
     (fn [{:keys [label height start-tube end-tube on-clear] :as props}]
       (let [w (- width 12) ;; content width
             [tube-count tube-number-fn]
@@ -165,12 +164,13 @@
               [(- end-tube (dec start-tube))
                #(+ start-tube %)]
               [(- start-tube (dec end-tube))
-               #(- end-tube %)])]
+               #(- start-tube %)])]
         (swap! state assoc :props props
                :counts [tube-count 2]
                :tube-number-fn tube-number-fn)
         [:div {:style {:width width, :height height
-                       :display "inline-block"}}
+                       :display "inline-block"
+                       :vertical-align "top"}}
          [list-head w label on-clear]
          [app-scroll/lazy-rows
           {:width w, :height (- height 48) ;; leave 48 for list-head
@@ -299,7 +299,8 @@
              :counts [wall-count 1])
       (let [width 160, w (- width 12)]
         [:div {:style {:width width, :height height
-                       :display "inline-block"}}
+                       :display "inline-block"
+                       :vertical-align "top"}}
          [list-head w label on-clear]
          [app-scroll/lazy-rows
           {:width w, :height (- height 48)

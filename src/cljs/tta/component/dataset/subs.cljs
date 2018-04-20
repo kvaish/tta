@@ -74,11 +74,24 @@
 
 (rf/reg-sub
  ::can-edit?
- (fn [_ _] true))
+ :<- [::reformer-version]
+ :<- [::app-subs/plant]
+ :<- [::ht-subs/auth-claims]
+ (fn [[ref-version plant claims] _]
+   (and (auth/allow-edit-dataset? claims)
+        (= ref-version (get-in plant [:config :version])))))
 
 (rf/reg-sub
  ::can-delete?
- (fn [_ _] true))
+ :<- [::ht-subs/auth-claims]
+ (fn [claims _]
+   (auth/allow-delete-dataset? claims)))
+
+(rf/reg-sub
+ ::can-export?
+ :<- [::ht-subs/auth-claims]
+ (fn [claims _]
+   (auth/allow-export? claims)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -355,7 +355,7 @@
        :label-fn :label}]
      (if (= "top" firing)
        [app-comp/icon-button-l
-        {:icon ic/dataset
+        {:icon (if (= mode :full) ic/magnify ic/dataset)
          :tooltip (case mode
                     :partial (translate [:twt-entry :switch-to-full :tooltip]
                                         "switch to full view")
