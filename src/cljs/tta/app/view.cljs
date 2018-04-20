@@ -31,8 +31,9 @@
         [body body-size])]]))
 
 (defn vertical-line [{:keys [height]}]
-  [:div (use-style (style/vertical-line height))])
-
+  (let [style (style/vertical-line height)]
+    [:div (use-style style)
+     [:div (use-sub-style style :line)]]))
 
 (defn- tab-head [{:keys [index label width last? position
                          on-select selected?]}]
@@ -46,7 +47,7 @@
 (defn- tab-bar
   "**position** is :top or :bottom"
   [{:keys [labels selected width position on-select]}]
-  (into [:div {:style {:width width, :height 25
+  (into [:div {:style {:width width, :height 26
                        :position "absolute"
                        :left 0, position 0}}]
         (let [lc (count labels)

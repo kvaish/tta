@@ -172,9 +172,9 @@
                     :display "inline-block"
                     :vertical-align "top"}}
       [app-comp/icon-button-l
-       {:icon ic/nav-left
+       {:icon      ic/nav-left
         :disabled? @(rf/subscribe [::subs/twt-entry-nav-disabled? scope :prev])
-        :on-click #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]
+        :on-click  #(rf/dispatch [::event/move-twt-entry-index scope :prev])}]
       [vertical-line {:height height}]
       (case scope
         :tube
@@ -355,7 +355,7 @@
        :label-fn :label}]
      (if (= "top" firing)
        [app-comp/icon-button-l
-        {:icon ic/dataset
+        {:icon (if (= mode :full) ic/magnify ic/dataset)
          :tooltip (case mode
                     :partial (translate [:twt-entry :switch-to-full :tooltip]
                                         "switch to full view")

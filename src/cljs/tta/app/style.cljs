@@ -304,12 +304,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn vertical-line [height]
-  {:margin "10px"
-   :border "none"
-   :border-left (str "1px solid " widget-bg-e)
-   :width "0"
-   :height (px (- height 40))
-   :display "inline-block"})
+  {:width "20px"
+   :display "inline-block"
+   :height (px height)
+   :vertical-align "top"
+   ::stylefy/sub-styles
+   {:line {:border-right "none"
+           :margin "20px 10px"
+           :border-left (str "1px solid " widget-bg-e)
+           :width "0"
+           :height (px (- height 40))}}})
 
 (defn layout-main [view-size]
   (let [w (:width view-size)
@@ -432,6 +436,7 @@
       ::stylefy/sub-styles
       {:div2 {:position "absolute", :left 0
               :border (str "1px solid " widget-bg-e)
+              :border-top (if top-tabs? "none")
               :background (color-hex :white)
               :border-radius
               (str (if top-tabs? "0 0" "8px 8px")
@@ -448,9 +453,15 @@
                   [widget-fg widget-bg-e])
         b (str "1px solid " widget-bg-e)]
     {:display "inline-block"
-     :height "25px" :min-width "88px"
+     :height (if selected? "26px" "25px") :min-width "88px"
      :padding "0 24px"
      :margin-right (if-not last? "1px")
+     :margin-top (if (and (= :bottom position)
+                          (not selected?))
+                   "1px")
+     :margin-bottom (if (and (= :top position)
+                          (not selected?))
+                   "1px")
      :vertical-align "top"
      :color fg
      :background-color bg

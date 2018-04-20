@@ -14,7 +14,7 @@
                   :design   "design"}
         settings {:gold-cup-wavelength "goldCupWavelength"
                   :emissivity-type     "emissivityType"
-                  :emissivity          "emissivity" ;; TODO: remove later
+                  :emissivity          "emissivity"
                   :role-types          "roleTypes"  ;; TODO: remove later :PKPA
                   :role-type-id        "roleTypeId" ;; TODO: remove later :PKPA
                   :pyrometer-id        "pyrometerId"
@@ -85,21 +85,14 @@
 
      :plant/push-history (with-meta history {:db true})
 
-     ::tf-settings {:levels    {:name   "levels"
-                                :array? true
+     ::tf-settings {:levels    {:name "levels"
                                 :schema
-                                {:tube-rows
-                                 {:name   "tubeRows"
-                                  :array? true
-                                  :schema
-                                  {:gold-cup-emissivity {:name    "goldCupEmissivity"
-                                                         ;; 2D array: side x tube
-                                                         :parse   js->clj
-                                                         :unparse clj->js}
-                                   :custom-emissivity   {:name    "customEmissivity"
-                                                         ;; 2D array: side x tube
-                                                         :parse   js->clj
-                                                         :unparse clj->js}}}}}
+                                {:top    {:name   "top"
+                                          :schema ::tf-settings-level}
+                                 :middle {:name   "middle"
+                                          :schema ::tf-settings-level}
+                                 :bottom {:name   "bottom"
+                                          :schema ::tf-settings-level}}}
                     :tube-rows {:name   "tubeRows"
                                 :array? true
                                 :schema
@@ -107,6 +100,17 @@
                                               ;; array: for each tube
                                               :parse   js->clj
                                               :unparse clj->js}}}}
+
+     ::tf-settings-level
+     {:tube-rows {:name   "tubeRows"
+                  :array? true
+                  :schema (let [attr (fn [attr-name]
+                                       {:name    attr-name
+                                        ;; 2D array: side x tube
+                                        :parse   js->clj
+                                        :unparse clj->js})]
+                            {:gold-cup-emissivity (attr "goldCupEmissivity")
+                             :custom-emissivity   (attr "customEmissivity")})}}
 
      ::sf-settings {:chambers {:name   "chambers"
                                :array? true
@@ -136,7 +140,7 @@
                   :tube-row-count   "tubeRowCount"
                   :tube-rows        {:name   "tubeRows"
                                      :array? true
-                                     :schema {:name "name"
+                                     :schema {:name       "name"
                                               :tube-count "tubeCount"
                                               :start-tube "startTube"
                                               :end-tube   "endTube"}}
@@ -154,7 +158,28 @@
                   :measure-levels   {:name   "measureLevels"
                                      :schema {:top?    "hasTop"
                                               :bottom? "hasBottom"
-                                              :middle? "hasMiddle"}}}
+                                              :middle? "hasMiddle"}}
+                  :view-factor      {:name "viewFactor"
+                                     :schema
+                                     {:top    {:name   "top"
+                                               :schema ::tf-view-factor}
+                                      :middle {:name   "top"
+                                               :schema ::tf-view-factor}
+                                      :bottom {:name   "bottom"
+                                               :schema ::tf-view-factor}}}
+                  :draft?           "isDraft"}
+
+     ::tf-view-factor
+     {:tube-rows {:name   "tubeRows"
+                  :array? true
+                  :schema (let [attr (fn [attr-name]
+                                       {:name    attr-name
+                                        ;; 2D array: side x tube
+                                        :parse   js->clj
+                                        :unparse clj->js})]
+                            {:wall    (attr "wall")
+                             :ceiling (attr "ceiling")
+                             :floor   (attr "floor")})}}
 
      ::sf-config {:chambers         {:name   "chambers"
                                      :schema ::chamber

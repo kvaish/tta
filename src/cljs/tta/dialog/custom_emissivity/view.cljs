@@ -24,13 +24,13 @@
 
 (def container (r/atom {}))
 
-(defn tube-col [sel-level height col-index {:keys [start-tube end-tube name]}]
+(defn tube-col [sel-level-key height col-index {:keys [start-tube end-tube name]}]
   (let [data       @(rf/subscribe [::subs/data])
         has-data?  (some #(some some? %)
                          (get-in data
-                                 [:levels sel-level :tube-rows col-index
+                                 [:levels sel-level-key :tube-rows col-index
                                   :custom-emissivity]))
-        field-path [:levels sel-level :tube-rows col-index :custom-emissivity]]
+        field-path [:levels sel-level-key :tube-rows col-index :custom-emissivity]]
     [input/list-tube-both-sides
      {:label      name
       :height     height
@@ -46,17 +46,19 @@
       :on-clear   (if has-data? #(rf/dispatch
                                   [::event/clear-custom-emissivity col-index]))}]))
 
-(defn render-tubes [height sel-level]
+
+
+(defn render-tubes [height sel-level-key]
   (let [plant @(rf/subscribe [::app-subs/plant])
         tube-configs (or
                       (get-in plant [:config :sf-config :chambers])
                       (get-in plant [:config :tf-config :tube-rows]))
         data @(rf/subscribe [::subs/data])
-        row-count (count (get-in data [:levels sel-level :tube-rows]))
+        row-count (count (get-in data [:levels sel-level-key :tube-rows]))
         items-render-fn
         (fn [indexes show-item]
           (map (fn [i]
-                 [tube-col sel-level (- height 20) i (get tube-configs i)])
+                 [tube-col sel-level-key (- height 20) i (get tube-configs i)])
                indexes))]
     [lazy-cols {:height          height
                 :width           (- (:width @container) 30)
@@ -80,9 +82,10 @@
        :on-click  #(rf/dispatch [::event/fill-all])}]]))
 
 (defn content-render [{:keys [height], [_ sel] :selected}]
-  [:div
-   [fill-all]
-   [render-tubes (- height 60) sel]])
+  (let [level-key @(rf/subscribe [::subs/level-key sel])]
+    [:div
+     [fill-all]
+     [render-tubes (- height 60) level-key]]))
 
 (defn custom-emissivity-component [height]
   (r/create-class
@@ -93,11 +96,12 @@
     :reagent-render
     (fn [height]
       [:div {:ref "container"}
-       (let [tab-opts @(rf/subscribe [::subs/tab-opts])]
+       (let [level-opts @(rf/subscribe [::subs/level-opts])
+             level-labels (map #(get % :label) level-opts)]
          [app-view/tab-layout
-          {:bottom-tabs {:labels    tab-opts
-                         :selected  @(rf/subscribe [::subs/selected-level-index])
-                         :on-select #(rf/dispatch [::event/set-level-index %])}
+          {:bottom-tabs {:labels    level-labels
+                         :selected  @(rf/subscribe [::subs/selected-level])
+                         :on-select #(rf/dispatch [::event/set-level %])}
            :width  (:width @container)
            :height height
            :content content-render}])])}))
