@@ -6,138 +6,253 @@
             [ht.app.subs :refer [translate]]
             [ht.style :as ht-style]
             [tta.app.icon :as ic]
+            [ht.util.interop :as i]
+            [cljsjs.d3]
             [tta.app.d3 :refer [d3-svg]]
             [tta.app.comp :as app-comp]))
 
-(defn abs [n] (max n (- n)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Terms:
+;; x-ps-os: From where the plot starts.
+;;              So the bands start here.
+;; x-as-os: From where the x-axis starts relative to plot start
+;; x-pe-os: Where the band ends
+;; x-ae-os: Where the axis ends
+;; Similar for the Y-axis (from bottom)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn linear-scale [[x1 x2] [y1 y2] data]
+
+;; Helpers ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn d3-scale [domain range]
+  (let [scale (-> js.d3
+                  (i/ocall :scaleLinear)
+                  (i/ocall :domain (to-array domain))
+                  (i/ocall :range (to-array range)))]
+    scale))
+
+(defn d3-ticks [scale]
+  (vec (i/ocall scale :ticks)))
+
+(defn- abs [n] (max n (- n)))
+
+(defn- linear-scale [[x1 x2] [y1 y2] data]
   ;; scale data from domain to range
   (let [factor (/ (- y2 y1) (- x2 x1))]
     (if (seqable? data) (mapv #(+ y1 (* factor (- % x1))) data)
      (+ y1 (* factor (- data x1))))))
 
-(defn gen-chart [n]
-  (let [xi 0, xe 500
-        yi 0, ye 300
-        n (or n 100)
-        x (map #(* % (/ xe n)) (random-sample 0.5 (range n)))
-        f (fn [x xi yi] (+ (* x (/ yi xi)) (rand-int 50)))]
-    (mapv (fn [x]
-            {:x (+ x 60)
-             :y (- 260 (f x xe ye))}) x)))
+(defn- create-alt-bands [points start]
+  (let [count (count points)
+        y1 (:y (points 0))
+        y2 (:y (points 1))
+        height (abs (- y1 y2))]
+    (mapv (fn [p] {:x start :y (- (:y p) height) :height height :fill "aliceblue"}) 
+      (take-nth 2 points))))
 
-(defn chart-layout [{:keys [height width point-events point-radius]
-                     [x-reserve y-reserve] :axis-size}]
-  (let [band-st (/ x-reserve 2)
-        plot-ym (- height y-reserve)]
+(defn take-every [nth bounds]
+  (let [[start end] (vec (sort bounds))]
+    (take-nth nth (range start 
+      (if (= 0 (mod (- end start) nth)) (inc end) end)))))
+
+(defn format-to-n [num digits]
+  (let [s (str num), c (count s)]
+    (if (>= c digits) s
+      (str (apply str (repeat (- digits c) 0)) num))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Layouts ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Horizontal Bands
+(defn- ch-horizontal-bands [data-key width]
+  { :tag :rect, :class :bg-horizontal-bands
+    :attr {:x :x :y :y :height :height :width width :fill :fill}
+    :data data-key
+    :multi? true})
+
+;; Vertical Bands
+(defn- ch-vertical-bands [data-key height]
+  { :tag :rect, :class :bg-vertical-bands
+    :attr {:x :x :y 0 :height height :width :width :fill :fill}
+    :data data-key
+    :multi? true})
+
+;; Points
+(defn- ch-points [data-key radius fill events]
+  {:tag :g :class :series
+   :attr {:fill "none", :stroke "none"}
+   :multi? true :data data-key
+   :nodes [{:tag :circle, :class data-key
+            :attr {:r radius :cx :x, :cy :y 
+                    :fill fill}
+            :multi? true
+            :on events
+            :data :data}]})
+
+;; Data rectangles
+(defn- ch-data-rects [data-key]
+  {:tag :rect, :class :data-rectangles
+   :data data-key :multi? true
+   :attr {:x :x :y :y :height :height :width :width :stroke :fill :fill :fill}})
+
+;; Horizontal lines
+(defn- ch-horizontal-lines [data-key x width] 
+  { :tag :g :class :hor-lines
+    :attr {:fill "none", :stroke "none"}
+    :multi? true :data data-key
+    :nodes 
+      [ ;; title
+        { :tag :text, :class :line-title
+          :text :text
+          :attr { :x (+ 40 x), :y #(- (:y %) 5)
+                  :style "font-size: 10px;
+                          fill: black;"}}
+        { :tag :line, :class :line
+          :attr { :x1 (+ 40 x) :y1 :y :x2 width :y2 :y
+                :stroke :stroke :stroke-dasharray :dash-array
+                :style "stroke-width:1"}}]})
+
+;; X-Axis
+(defn- ch-x-axis [data-key x-start y width]
+  { :tag :g
+    :attr {:fill "none", :stroke "none"}
+    :class :x :data data-key
+    :nodes [
+            ;; title
+            {:tag :text, :class :x-title
+              :attr { :x (/ (- width x-start) 2), :y (+ y 25)
+                      :text-anchor "middle"
+                      :style "font-size: 12px; 
+                              fill: black;
+                              font-weight: bold"}
+              :text :title}
+            ;; labels
+            {:tag :text, :class :x-label
+              :attr { :x :x, :y y
+                      :text-anchor "middle"
+                      :style "font-size: 10px;
+                  fill: black;"}
+              :text :text :multi? true :data :ticks}]})
+
+;; Y-Axis
+(defn- ch-y-axis [data-key x y-start height]
+  { :tag :g
+    :attr {:fill "none", :stroke "none"}
+    :class :y :data data-key
+    :nodes 
+      [ ;; title
+        {:tag :text, :class :y-title
+          :attr { :x 0, :y (/ (- height y-start) 2), 
+                  :text-anchor "middle"
+                  :transform (str "rotate(270, 10, " (/ (- height y-start) 2) ")")
+                  :style "font-size: 11px;
+              fill: black;"}
+          :text :title}
+        ;; labels
+        {:tag :g :class :y-labels
+          :attr {:fill "none", :stroke "none"}
+          :multi? true :data :ticks
+          :nodes [{ :tag :line, :class :y-label-line
+                    :attr { :x1 (+ 5 x) :y1 #(- (:y %) 5) :x2 (+ 25 x) :y2 #(- (:y %) 5)
+                            :style "stroke-width:1;stroke:red"}}
+                  { :tag :text, :class :y-label
+                          :attr { :x (+ 5 x), :y #(- (:y %) 10)
+                                  :style "font-size: 10px;
+                              fill: black;"}
+                          :text :text}]}]})
+
+;; Shaded areas
+(defn- ch-diagnol-shading [data-key] 
+  { :tag :g :class :shaded
+    :attr {:fill "none", :stroke "none"}
+    :nodes 
+      [{:tag :defs :class :defs 
+        :nodes [{:tag :pattern :class :diagnol-pattern
+                  :attr {:id "diagnol-pattern" 
+                        :width 8 :height 10
+                        :patternTransform "rotate(-45)"
+                        :patternUnits "userSpaceOnUse"}
+                  :nodes 
+                    [{:tag :line :class :diagnol-pattern-line
+                      :attr {:x1 0 :y1 0 :x2 0 :y2 10
+                              :style "stroke:black; stroke-width:1"}}]}]}
+       {:tag :g :class :shaded-area :data data-key :multi? true
+        :attr {:fill "none", :stroke "none"}
+        :nodes [{:tag :rect, :class :shaded-area-bound
+                 :attr {:x :x :y :y :height :height :width :width
+                        :style "stroke:grey; stroke-width:1" 
+                        :fill "url(#diagnol-pattern)"}}]}]})
+                              
+(defn chart-layout 
+  [{:keys [height width 
+           point-events point-radius 
+           renderers]
+    {:keys [x-ps-os x-pe-os x-as-os x-ae-os
+            y-ps-os y-pe-os y-as-os y-ae-os]} :bounds}]
+
+  (let [empty-fn (constantly {:tag :g :class :empty})
+        { :keys [ horizontal-bands-fn vertical-bands-fn
+                  horizontal-lines-fn
+                  x-axis-fn y-axis-fn
+                  shaded-areas-fn
+                  data-points-fn data-rects-fn
+                  burners-fn tubes-fn] 
+          :or { horizontal-bands-fn empty-fn
+                vertical-bands-fn empty-fn
+                horizontal-lines-fn empty-fn
+                x-axis-fn empty-fn y-axis-fn empty-fn
+                shaded-areas-fn empty-fn
+                data-points-fn empty-fn
+                data-rects-fn empty-fn
+                burners-fn empty-fn tubes-fn empty-fn}} renderers]
+
     { :width width, :height height
       :view-box (str "0 0 " width " " height)
       :style {:color "white"
+              ;:border "1px red solid"
               :font-size "32px"}
-      :node {:tag :g
+      
+      :node {:tag :g :class :root
               :attr {:fill "none", :stroke "none"}
-              :class :root
-              :nodes [
-                      ;; background
+              :nodes [;; background
                       { :tag :g
                         :class :bg 
                         :attr {:fill "none", :stroke "none"}
-                        :nodes [
-                                ;; horizontal bands
-                                { :tag :rect, :class :bg-hor-bands
-                                  :attr {:x band-st :y :y :height :height :width width :fill :fill}
-                                  :data :hor-bands
-                                  :multi? true}
-                                ;; vertical bands
-                                { :tag :rect, :class :bg-ver-bands
-                                  :attr {:x :x :y :0 :height plot-ym :width :width :fill :fill}
-                                  :data :ver-bands
-                                  :multi? true}
-                                  ;; borders
+                        :nodes [(horizontal-bands-fn width)
+                                (vertical-bands-fn (- height y-ps-os))
+                                
+                                ;; borders
                                 { :tag :line, :class :bg-top
-                                   :attr {:x1 band-st :y1 1 :x2 width :y2 1
+                                   :attr {:x1 x-ps-os :y1 1 :x2 width :y2 1
                                           :style "stroke:red;stroke-width:1"}}
                                 { :tag :line, :class :bg-bot
-                                  :attr {:x1 band-st :y1 plot-ym :x2 width :y2 plot-ym
-                                         :style "stroke:red;stroke-width:1"}}]}
-                    
-                      ;; plot
-                      { :tag :g
-                        :attr {:fill "none", :stroke "none"}
-                        :class :series
-                        :data :plot
-                        :nodes [
-                                ;; horizontal lines
-                                {:tag :g :class :hor-lines
-                                 :attr {:fill "none", :stroke "none"}
-                                 :multi? true :data :hor-lines
-                                 :nodes [
-                                        ;; title
-                                         {:tag :text, :class :line-title
-                                           :text :text
-                                           :attr { :x (+ 5 x-reserve), :y #(- (:y %) 5)
-                                                   :style "font-size: 10px;
-                                      fill: black;"}}
-                                         {:tag :line, :class :line
-                                           :attr { :x1 (+ 5 x-reserve) :y1 :y :x2 width :y2 :y
-                                                  :stroke :stroke :stroke-dasharray :dash-array
-                                                  :style "stroke-width:1"}}]}
-                                ;; point
-                                {:tag :circle, :class :point
-                                  :attr {:r point-radius :cx :x, :cy :y 
-                                          :fill "red"}
-                                  :multi? true
-                                  :on point-events                      
-                                  :data :points}]}
-                
+                                  :attr {:x1 x-ps-os :y1 (- height y-ps-os) :x2 width :y2 (- height y-ps-os)
+                                         :style "stroke:grey;stroke-width:1"}}]}
+                      
+                      ;; data rectangles
+                      (data-rects-fn)
+                      ;; data points
+                      (data-points-fn)
+                      ;; horizontal lines
+                      (horizontal-lines-fn (+ 5 x-ps-os) width)
+                      ;; burners
+                      (burners-fn)
+                      ;; tubes
+                      (tubes-fn)
+                      ;; shaded areas
+                      (shaded-areas-fn)
                       ;; x-axis
-                      { :tag :g
-                        :attr {:fill "none", :stroke "none"}
-                        :class :x :data :xaxis
-                        :nodes [
-                                ;; title
-                                {:tag :text, :class :x-title
-                                  :attr { :x (/ (- width band-st) 2), :y height
-                                          :text-anchor "middle"
-                                          :style "font-size: 12px; 
-                                                  fill: black;
-                                                  font-weight: bold"}
-                                  :text :title}
-                                ;; labels
-                                {:tag :text, :class :x-label
-                                  :attr { :x :x, :y #(+ 15 plot-ym)
-                                         :text-anchor "middle"
-                                          :style "font-size: 10px;
-                                      fill: black;"}
-                                      
-                                  :text :text :multi? true :data :points}]}
-
+                      (x-axis-fn x-ps-os (+ 15 (- height y-ps-os)) width )
                       ;; y-axis
-                      { :tag :g
-                        :attr {:fill "none", :stroke "none"}
-                        :class :y :data :yaxis
-                        :nodes [
-                                ;; title
-                                {:tag :text, :class :y-title
-                                  :attr { :x 0, :y (/ plot-ym 2), 
-                                         :text-anchor "middle"
-                                         :transform (str "rotate(270, 10, " (/ plot-ym 2) ")")
-                                          :style "font-size: 11px;
-                                      fill: black;"}
-                                  :text :title}
-                                ;; labels
-                                {:tag :g :class :y-labels
-                                 :attr {:fill "none", :stroke "none"}
-                                 :multi? true :data :points
-                                  :nodes [{ :tag :line, :class :y-label-line
-                                            :attr { :x1 (+ 5 band-st) :y1 :y :x2 (+ 25 band-st) :y2 :y
-                                                   :style "stroke-width:1;stroke:red"}}
-                                          { :tag :text, :class :y-label
-                                                  :attr { :x (+ 5 band-st), :y #(- (:y %) 5)
-                                                          :style "font-size: 10px;
-                                                      fill: black;"}
-                                                  :text :text}]}]}]}}))
+                      (y-axis-fn x-ps-os y-ps-os height)]}}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Components ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn d3-chart [{:keys [data config]}]
   (let [state (r/atom {})]
@@ -151,77 +266,182 @@
               [d3-svg (assoc config 
                         :data data)]])})))
 
+
+
+
+
+(defn overall-twt-chart [{:keys 
+                  [height width red-firing title x-title y-title y-domain 
+                   temp->color burner-nos tube-nos burner-domain]} 
+                   {:keys [tube-data burner-data]}]
+  (let [
+
+        x-ps-os 20, x-pe-os 0, x-as-os 0, x-ae-os 0
+        y-ps-os 50, y-pe-os 0, y-as-os  0, y-ae-os 0
+
+        x-domain [1 (-> tube-data count inc)]
+        x-range [(+ x-ps-os x-as-os) (- width x-pe-os x-ae-os)]
+
+        y-domain y-domain 
+        y-range [(- height y-ps-os y-as-os) (+ y-pe-os y-ae-os)]
+        
+        x-scale (d3-scale x-domain x-range)
+        y-scale (d3-scale y-domain y-range)
+
+        y-ticks (d3-ticks y-scale)
+
+        x-axis {:ticks (mapv (fn [t] { :x (-> t :row-no (+ 0.5) x-scale) 
+                                       :text (:name t)}) tube-data)}
+        y-axis {:title y-title
+                :ticks (mapv (fn [t] {:y (y-scale t) :text (str t)}) y-ticks)}
+        
+        x-tick-w (- (get-in x-axis [:ticks 1 :x]) (get-in x-axis [:ticks 0 :x]))
+        y-tick-h (- (y-scale 1) (y-scale 2))
+
+        h-bands (create-alt-bands (:ticks y-axis) x-ps-os)
+        
+        temperatures (flatten
+            (mapv (fn [{st :start-tube et :end-tube 
+                        row :row-no {:keys [a b]} :temperatures}]
+                      (let [width (* 0.4 x-tick-w )]
+                        (map (fn [l r t]
+                          (let [y (- (y-scale t) y-tick-h)] [{:x (x-scale (+ 0.1 row)) :y y :height y-tick-h :width width :fill (temp->color l)}
+                           {:x (x-scale (+ 0.5 row)) :y y :height y-tick-h :width width :fill (temp->color r)}])) 
+                          a b (range st et)))) 
+                  tube-data))
+
+        tubes [{:fill "blue"
+                :data (flatten 
+                        (map (fn [{r :row-no st :start-tube et :end-tube}]
+                          (let [x (x-scale (+ 0.5 r))]
+                            (map (fn [t] {:x x :y (y-scale (+ t 0.5))}) (range st et)))) 
+                          tube-data))}]
+
+        xaxis {}
+        burners {}
+        horizontal-bands {}
+        shaded-areas {}
+        data {:temperatures temperatures
+              :xaxis x-axis
+              :burners burners
+              :tubes tubes
+              :horizontal-bands h-bands
+              :shaded-areas shaded-areas}
+        config 
+          (assoc 
+            (chart-layout 
+              {:height height, :width width
+               :bounds {:x-ps-os x-ps-os, :x-pe-os x-pe-os, 
+                       :x-as-os x-as-os, :x-ae-os x-ae-os,
+                       :y-ps-os y-ps-os, :y-pe-os y-pe-os, 
+                       :y-as-os y-as-os, :y-ae-os y-ae-os}
+               :renderers 
+                { :horizontal-bands-fn 
+                    (partial ch-horizontal-bands :horizontal-bands)
+                  :x-axis-fn 
+                    (partial ch-x-axis :xaxis)
+                  :burners-fn 
+                    (partial ch-points :burners 5 "grey" nil)
+                  :tubes-fn 
+                    (partial ch-points :tubes 2 "black" nil)
+                  :data-rects-fn
+                    (partial ch-data-rects :temperatures)
+                  :shaded-areas-fn 
+                    (partial ch-diagnol-shading :shaded-areas)}}) 
+            :height height :width width)]
+    (fn [] (let []
+      (js/console.log x-tick-w)
+            [:div {:style {:position "relative" :user-select "none"}} 
+              [d3-chart {:data data :config config}]]))))
+
+
 (defn twt-chart [{:keys 
                   [height width red-firing avg-temp-band avg-raw-temp 
-                   avg-corr-temp title x-title x-domain y-title y-domain
-                   design-temp target-temp]} data]
-  (let [
-        state (r/atom {})
-        chart-data {}
-        x-reserve 50
-        y-reserve 40
-        x-range [x-reserve width]
-        y-range [y-reserve height]
-        scale-x (partial linear-scale x-domain x-range)
-        scale-y (partial linear-scale y-domain y-range)
-        data->points 
-        (fn [x-domain x-range y-domain y-range data] 
-            (flatten 
-             (mapv (fn [{:keys [tube-no temperatures]}]
-                       (let [x (scale-x tube-no)]
-                         (map (fn [temp] 
-                               {:x x :y (- height (scale-y temp)) 
-                                :content (str "Tube: ", tube-no, " Temperature: " temp)}) 
-                              temperatures))) 
-                   data)))
-        plot {:points (data->points x-domain x-range y-domain y-range data)
-              :hor-lines [{:y (- height (scale-y design-temp))
-                           :stroke "red" :text "Design temp"}
-                          {:y (- height (scale-y avg-corr-temp))  
-                           :stroke "blue" :text ""}
-                          {:y (- height (scale-y avg-raw-temp)) 
-                           :stroke "black" :text "" :dash-array "5, 5"}]}
-        yaxis { :title y-title
-                :points (let 
-                         [axis-pts (drop 1 (take-nth 10 
-                                            (range (first y-domain) (last y-domain))))
-                          scaled-pts (scale-y axis-pts)]
-                         (mapv (fn [t y] {:y (- height y) 
-                                          :text (str t)}) axis-pts scaled-pts))}
-        xaxis { :title x-title
-                :points (let [axis-pts (drop 1 (take-nth 1
-                                                (range (first x-domain) (last x-domain))))
-                              scaled-pts (scale-x axis-pts)]
-                         (mapv (fn [r x] {:x x 
-                                          :text (str r)}) axis-pts scaled-pts))}
-        point-radius 3
-        point-events {:mouseover (fn [%1 %2]
-                                     (swap! state assoc :popup %2))
-                           :mouseout (fn [_]
-                                       (swap! state assoc :popup nil))}
+                   avg-corr-temp x-title x-domain y-title y-domain
+                   design-temp target-temp ]} data]
+  
+  (let [state (r/atom {})
+    
+        x-ps-os 20, x-pe-os 0, x-as-os 60, x-ae-os 0
+        y-ps-os 50, y-pe-os 0, y-as-os  0, y-ae-os 0
+
+        x-domain x-domain 
+        x-range [(+ x-ps-os x-as-os) (- width x-pe-os x-ae-os)]
         
-        hor-bands [(let [[from to] avg-temp-band 
-                         from-p (- height (scale-y from))
-                         to-p (- height (scale-y to))] 
-                        {:y to-p :height (- from-p to-p) :fill "pink"})]
-        ver-bands (mapv (fn [[start-r end-r]]
-                         (let [start-p (scale-x (- start-r 0.5))
-                               end-p (scale-x (+ end-r 0.5))]
-                              {:x start-p :width (- end-p start-p) 
-                               :fill "rgba(10,10,10,0.3)"})) red-firing)
+        y-domain y-domain 
+        y-range [(- height y-ps-os y-as-os) (+ y-pe-os y-ae-os)]
+
+        x-scale (d3-scale x-domain x-range)
+        y-scale (d3-scale y-domain y-range)
+    
+        x-ticks (d3-ticks x-scale)
+        y-ticks (d3-ticks y-scale)
+
+        x-axis {:title x-title 
+                :ticks (mapv (fn [t] {:x (x-scale t) :text (format-to-n t 2)}) x-ticks)}
+
+        y-axis {:title y-title
+                :ticks (mapv (fn [t] {:y (y-scale t) :text (str t)}) y-ticks)}
+    
+        p-keys [{:kname :a, :fill "blue"}
+                {:kname :b, :fill "red"}]
+
+        points (map (fn [{:keys [kname fill]}]
+                      {:fill fill
+                       :data (map (fn [d] {:x (x-scale (:tube d))
+                                             :y (y-scale (kname d))}) 
+                                                data)}) p-keys)
+
+        h-lines [{:y (y-scale design-temp), :stroke "red", :text "Design temp"}
+                 {:y (y-scale avg-corr-temp), :stroke "blue", :text ""}
+                 {:y (y-scale avg-raw-temp), :stroke "black", :text "" 
+                  :dash-array "5, 5"}]
+
+        h-bands (merge 
+                  (create-alt-bands (:ticks y-axis) x-ps-os)
+                  (let [[from to] avg-temp-band
+                        from-p (y-scale from) to-p (y-scale to)] 
+                    {:x x-ps-os :y to-p :height (- from-p to-p) :fill "pink"}))
+
+        v-bands (mapv (fn [[sr er]]
+                         (let [sp (x-scale (- sr 0.5))
+                               ep (x-scale (+ er 0.5))]
+                            {:x sp, :width (- ep sp) 
+                              :fill "rgba(10,10,10,0.3)"})) red-firing)
         
-        data (assoc chart-data 
-              :plot plot
-              :yaxis yaxis
-              :xaxis xaxis
-              :hor-bands hor-bands
-              :ver-bands ver-bands)
-        config (assoc (chart-layout 
-                       {:point-events point-events
-                        :height height, :width width
-                        :point-radius point-radius
-                        :axis-size [x-reserve y-reserve]}) 
-                :height height :width width)]
+        p-events {:mouseover (fn [%1 %2] (swap! state assoc :popup %2))
+                  :mouseout (fn [_] (swap! state assoc :popup nil))}
+        
+        data {:points points
+              :yaxis y-axis
+              :xaxis x-axis
+              :hor-lines h-lines
+              :horizontal-bands h-bands
+              :vertical-bands v-bands}
+        config 
+          (assoc 
+            (chart-layout 
+              {:point-events p-events
+              :height height, :width width
+              :bounds {:x-ps-os x-ps-os, :x-pe-os x-pe-os, 
+                       :x-as-os x-as-os, :x-ae-os x-ae-os,
+                       :y-ps-os y-ps-os, :y-pe-os y-pe-os, 
+                       :y-as-os y-as-os, :y-ae-os y-ae-os}
+              :point-radius 3
+              :renderers 
+                { :horizontal-bands-fn 
+                    (partial ch-horizontal-bands :horizontal-bands)
+                  :vertical-bands-fn 
+                    (partial ch-vertical-bands :vertical-bands)
+                  :horizontal-lines-fn 
+                    (partial ch-horizontal-lines :hor-lines)
+                  :x-axis-fn 
+                    (partial ch-x-axis :xaxis)
+                  :y-axis-fn 
+                    (partial ch-y-axis :yaxis)
+                  :data-points-fn 
+                    (partial ch-points :points 3 "blue" p-events)}}) 
+            :height height :width width)]
 
     (fn [] (let [popup (:popup @state)]
             [:div {:style {:position "relative" :user-select "none"}} 
@@ -230,12 +450,9 @@
                                        :padding 10
                                        :color "white" :background-color "rgba(10,10,10,0.7)"
                                        :border-radius 3, :position "absolute", :width 120 
-                                       :left (+ point-radius (:x popup))
-                                       :top (+ point-radius (:y popup))}} 
+                                       :left (+ 3 (:x popup))
+                                       :top (+ 3 (:y popup))}} 
                          (:content popup)])]))))
-
-
-
 
 
 
@@ -252,17 +469,16 @@
           :class :root
           :on bgevents
           :nodes [
-
-          ;; plot background
+                  ;; plot background
                   {:tag :rect, :class :bg
                     :attr {:x 0, :y 0, :width width, :height height, :fill "aliceblue"}}
           
-          ;; zoom area
+                  ;; zoom area
                   {:tag :rect, :class :zoom
                     :attr {:x :x, :y :y, :width :width, :height :height, :fill "pink"}
                     :data :zoom}
           
-          ;; plot
+                  ;; plot
                   {:tag :g
                     :attr {:fill "none", :stroke "none"}
                     :class :series
