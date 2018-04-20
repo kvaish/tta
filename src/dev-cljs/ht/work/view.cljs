@@ -19,6 +19,7 @@
             [tta.ref-sketch]
             [tta.calendar]
             [tta.tube-list]
+            [tta.charts]
             [tta.tube-prefs]
             [tta.tab]
             [tta.wall-list]
@@ -44,6 +45,7 @@
        :tta/tube-list [tta.tube-list/tube-list]
        :tta/tube-prefs [tta.tube-prefs/tube-prefs]
        :tta/tab [tta.tab/tab]
+       :tta/charts [tta.charts/charts]
        :tta/wall-list [tta.wall-list/wall-list]
        :tta/burner [tta.burner/burner]
        ;; default
