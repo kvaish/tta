@@ -82,7 +82,7 @@
 
 ;; Points
 (defn- ch-points [data-key radius fill events]
-  {:tag :g :class :series
+  {:tag :g :class data-key
    :attr {:fill "none", :stroke "none"}
    :multi? true :data data-key
    :nodes [{:tag :circle, :class data-key
@@ -115,11 +115,35 @@
                 :stroke :stroke :stroke-dasharray :dash-array
                 :style "stroke-width:1"}}]})
 
+;; Walls
+(defn- ch-walls [data-key {:keys [west north east south]}]
+  { :tag :g
+    :attr {:fill "none", :stroke "none"}
+    :class data-key :data data-key
+    :nodes [{ :tag :text, :class :left, :text :west 
+              :attr (merge west 
+                      {:style "font-size: 12px; fill: black;"
+                       :text-anchor "middle"
+                       :transform (str "rotate(270, " (:x west) ", " (:y west) ")")})}
+            { :tag :text, :class :top, :text :north
+              :attr (merge north 
+                      {:style "font-size: 12px; fill: black;" 
+                       :text-anchor "middle"})}
+            { :tag :text, :class :right, :text :east
+              :attr (merge east 
+                      {:style "font-size: 12px; fill: black;"
+                       :transform (str "rotate(90, " (:x east) ", " (:y east) ")" ) 
+                       :text-anchor "middle"})}
+            { :tag :text, :class :bottom, :text :south
+              :attr (merge south 
+                      {:style "font-size: 12px; fill: black;"
+                       :text-anchor "middle"})}]})
+
 ;; X-Axis
 (defn- ch-x-axis [data-key x-start y width]
   { :tag :g
     :attr {:fill "none", :stroke "none"}
-    :class :x :data data-key
+    :class data-key :data data-key
     :nodes [
             ;; title
             {:tag :text, :class :x-title
@@ -197,7 +221,7 @@
         { :keys [ horizontal-bands-fn vertical-bands-fn
                   horizontal-lines-fn
                   x-axis-fn y-axis-fn
-                  shaded-areas-fn
+                  walls-fn shaded-areas-fn
                   data-points-fn data-rects-fn
                   burners-fn tubes-fn] 
           :or { horizontal-bands-fn empty-fn
@@ -206,6 +230,7 @@
                 x-axis-fn empty-fn y-axis-fn empty-fn
                 shaded-areas-fn empty-fn
                 data-points-fn empty-fn
+                walls-fn empty-fn
                 data-rects-fn empty-fn
                 burners-fn empty-fn tubes-fn empty-fn}} renderers]
 
@@ -226,11 +251,12 @@
                                 
                                 ;; borders
                                 { :tag :line, :class :bg-top
-                                   :attr {:x1 x-ps-os :y1 1 :x2 width :y2 1
+                                   :attr {:x1 x-ps-os :y1 y-pe-os :x2 width :y2 y-pe-os
                                           :style "stroke:red;stroke-width:1"}}
                                 { :tag :line, :class :bg-bot
                                   :attr {:x1 x-ps-os :y1 (- height y-ps-os) :x2 width :y2 (- height y-ps-os)
                                          :style "stroke:grey;stroke-width:1"}}]}
+                      
                       
                       ;; data rectangles
                       (data-rects-fn)
@@ -244,6 +270,8 @@
                       (tubes-fn)
                       ;; shaded areas
                       (shaded-areas-fn)
+                      ;; walls
+                      (walls-fn)
                       ;; x-axis
                       (x-axis-fn x-ps-os (+ 15 (- height y-ps-os)) width )
                       ;; y-axis
@@ -271,13 +299,13 @@
 
 
 (defn overall-twt-chart [{:keys 
-                  [height width red-firing title x-title y-title y-domain 
-                   temp->color burner-nos tube-nos burner-domain]} 
+                  [height width y-domain wall-names
+                   temp->color burner-domain burner-first?]} 
                    {:keys [tube-data burner-data]}]
   (let [
 
-        x-ps-os 20, x-pe-os 0, x-as-os 0, x-ae-os 0
-        y-ps-os 50, y-pe-os 0, y-as-os  0, y-ae-os 0
+        x-ps-os 20, x-pe-os 0, x-as-os 20, x-ae-os 20
+        y-ps-os 40, y-pe-os 25, y-as-os 0, y-ae-os 0
 
         x-domain [1 (-> tube-data count inc)]
         x-range [(+ x-ps-os x-as-os) (- width x-pe-os x-ae-os)]
@@ -292,8 +320,7 @@
 
         x-axis {:ticks (mapv (fn [t] { :x (-> t :row-no (+ 0.5) x-scale) 
                                        :text (:name t)}) tube-data)}
-        y-axis {:title y-title
-                :ticks (mapv (fn [t] {:y (y-scale t) :text (str t)}) y-ticks)}
+        y-axis {:ticks (mapv (fn [t] {:y (y-scale t) :text (str t)}) y-ticks)}
         
         x-tick-w (- (get-in x-axis [:ticks 1 :x]) (get-in x-axis [:ticks 0 :x]))
         y-tick-h (- (y-scale 1) (y-scale 2))
@@ -317,13 +344,21 @@
                             (map (fn [t] {:x x :y (y-scale (+ t 0.5))}) (range st et)))) 
                           tube-data))}]
 
-        xaxis {}
-        burners {}
-        horizontal-bands {}
-        shaded-areas {}
+        burners [{:fill "green"
+                :data (flatten 
+                        (map-indexed (fn [ i {c :burner-count sb :start-burner eb :end-burner}]
+                          (let [b-scale (d3-scale [1 c] y-range)
+                                x (x-scale (+ (if burner-first? 1 2) i))]
+                            (map (fn [b] {:x x :y (b-scale (+ b 0.5))}) (range sb eb)))) 
+                          burner-data))}]
+
+        ;; TODO - Convert reduced firing data to shaded areas
+        shaded-areas [{:x 120 :y 100 :height 100 :width 160}
+                      {:x 440 :y 200 :height 50 :width 160}]
         data {:temperatures temperatures
               :xaxis x-axis
               :burners burners
+              :walls wall-names
               :tubes tubes
               :horizontal-bands h-bands
               :shaded-areas shaded-areas}
@@ -344,13 +379,18 @@
                     (partial ch-points :burners 5 "grey" nil)
                   :tubes-fn 
                     (partial ch-points :tubes 2 "black" nil)
+                  :walls-fn (partial ch-walls 
+                                    :walls {:west {:x (+ 15 x-ps-os) :y (/ height 2)}
+                                            :east {:x (- width x-pe-os 20) :y (/ height 2)}
+                                            :north {:x (/ width 2) :y 10}
+                                            :south {:x (/ width 2) :y (- height 10)}})
                   :data-rects-fn
                     (partial ch-data-rects :temperatures)
                   :shaded-areas-fn 
                     (partial ch-diagnol-shading :shaded-areas)}}) 
             :height height :width width)]
     (fn [] (let []
-      (js/console.log x-tick-w)
+      (js/console.log burners)
             [:div {:style {:position "relative" :user-select "none"}} 
               [d3-chart {:data data :config config}]]))))
 
@@ -453,141 +493,3 @@
                                        :left (+ 3 (:x popup))
                                        :top (+ 3 (:y popup))}} 
                          (:content popup)])]))))
-
-
-
-(defn chart-layout2 [{
-                      :keys [height width bgevents]}]
-  
- {:width width, :height height
-  :view-box (str "0 0 " width " " height)
-  :style {:color "white"
-          :font-size "32px"}
-  :node {:tag :g
-          :attr {:fill "none", :stroke "none"}
-            
-          :class :root
-          :on bgevents
-          :nodes [
-                  ;; plot background
-                  {:tag :rect, :class :bg
-                    :attr {:x 0, :y 0, :width width, :height height, :fill "aliceblue"}}
-          
-                  ;; zoom area
-                  {:tag :rect, :class :zoom
-                    :attr {:x :x, :y :y, :width :width, :height :height, :fill "pink"}
-                    :data :zoom}
-          
-                  ;; plot
-                  {:tag :g
-                    :attr {:fill "none", :stroke "none"}
-                    :class :series
-                    :nodes [
-                            {:tag :circle, :class :point
-                              :attr {:r 3 :cx :x, :cy :y 
-                                      :fill "red"}
-                              :multi? true
-                              :data :points}]}]}})
-
-(defn d3-chart2 [{:keys [data config zoom-fn]}]
-  (let [state (r/atom {:bg {}})
-
-        height 400 width 600
-
-        ;; returns a new set of [x y] to plot
-        zoom (or zoom-fn 
-              (fn [ series {xi :x yi :y h :height w :width 
-                            :or {xi 0 yi 0 h height w width}}]
-                (let [hf (/ height h) wf (/ width w)]
-                  (mapv (fn [{x :x y :y}] { :x (- (* x wf) (* xi wf)) 
-                                           :y (- (* y hf) (* yi hf))}) series))))
-
-        pan (fn [ series {:keys [left top]}]
-             (mapv (fn [{x :x y :y}] { :x (- x left) 
-                                      :y (- y top)}) series))
-
-        bg-mousedown (fn [ev]
-                      (swap! state update-in [:bg :selected] assoc 
-                        :x js/d3.event.offsetX
-                        :y js/d3.event.offsetY
-                        :x0 js/d3.event.offsetX
-                        :y0 js/d3.event.offsetY)
-                      (if (get-in @state [:modes :pan]) (swap! state assoc :panning? true)))
-
-        bg-mousemove (fn [ev] 
-                      (if (get-in @state [:modes :zoom]) 
-                        (swap! state update-in [:bg :selected] 
-                          (fn [selected]
-                              (if selected 
-                                (let [ cx js/d3.event.offsetX cy js/d3.event.offsetY 
-                                      w (abs (- cx (:x0 selected))) h (abs (- cy (:y0 selected)))
-                                      x (min (:x0 selected) cx) y (min (:y0 selected) cy)]
-                                     (assoc selected :width w :height h :x x :y y))))))
-
-                      (if (:panning? @state) 
-                        (do (swap! state update-in [:bg :zoom-area] 
-                             (fn [zoom-area]
-                                 (if zoom-area (let 
-                                                [cx js/d3.event.offsetX cy js/d3.event.offsetY
-                                                 {sx :x sy :y} (get-in @state [:bg :selected])
-                                                 w (- cx sx) h (- cy sy)
-                                                 lx (or (:x0 zoom-area) (:x zoom-area))
-                                                 ly (or (:y0 zoom-area) (:y zoom-area))
-                                                 x (- lx w) y (- ly h)]
-                                                (assoc zoom-area :x x :y y :x0 lx :y0 ly))))
-                    
-                  
-                             (swap! state update-in [:prev-data :points] 
-                               zoom (get-in @state [:bg :zoom-area])))
-                            (js/console.log (get-in @state [:bg :zoom-area])))))
-
-        bg-mouseup (fn [ev]
-                    (swap! state update :bg (fn [{:keys [selected zoom-area]}]
-                                             (let [{h :height w :width} selected
-                                                   bg {:selected nil}]
-                                               (if (and (> h 0) (> w 0) (get-in @state [:modes :zoom])) (assoc bg :zoom-area selected) bg))))
-                    (if (get-in @state [:modes :zoom]) (swap! state update-in [:plot :points] 
-                                                        zoom (get-in @state [:bg :zoom-area])))
-                    (swap! state assoc :panning? false))
-          
-
-        bg-mouseleave (fn [ev]
-                       (let [x js/d3.event.offsetX
-                             y js/d3.event.offsetY]
-                         (if (not (and (<= 0 x width) (<= 0 y height))) 
-                           (swap! state assoc-in [:bg :selected] nil))
-                         (swap! state assoc :panning? false)))
-
-        layout (chart-layout2 {
-                               :width width :height height
-                               :bgevents { :mousedown bg-mousedown
-                                           :mousemove bg-mousemove
-                                           :mouseup bg-mouseup
-                                           :mouseleave bg-mouseleave}})]
-    (r/create-class
-      { :component-will-mount 
-          (fn [this] nil)
-
-        :reagent-render
-        (fn [{:keys [data config zoom-fn]}]
-          (if (not= (:prev-data @state) data) 
-            (do (swap! state assoc :prev-data data)
-                (swap! state assoc-in [:plot :points] 
-                  (zoom (:points data) (get-in @state [:bg :zoom-area])))))
-          (let []
-            [:div {:style {:display "block"}}
-              [:div 
-                [:button {:style {:display "inline-block"}
-                          :on-click #(do (swap! state assoc-in [:bg :zoom-area] 
-                                          {:x 0 :y 0 :height height :width width})
-                                        (swap! state assoc :plot data))} 
-                  "Reset"]
-                [:button {:style {:display "inline-block" :background-color (if (get-in @state [:modes :zoom]) "grey")}
-                          :on-click #(swap! state update-in [:modes :zoom] not)}
-                  "Toggle zoom"]
-                [:button {:style {:display "inline-block" :background-color (if (get-in @state [:modes :pan]) "grey")}
-                          :on-click #(swap! state update-in [:modes :pan] not)}
-                  "Toggle pan"]]
-              [d3-svg (assoc layout 
-                       :data (assoc (:plot @state)
-                              :zoom (get-in @state [:bg :selected])))]]))})))
