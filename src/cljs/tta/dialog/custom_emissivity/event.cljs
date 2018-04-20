@@ -34,8 +34,9 @@
  [(inject-cofx ::inject/sub [::subs/data])]
  (fn [{:keys [::subs/data]} _]
    {:dispatch-n (list
-                 [:tta.component.settings.event/set-custom-emissivity data]
-                 [::close])}))
+                  [:tta.component.settings.event/set-custom-emissivity data]
+                  ;[::close]
+                  )}))
 
 (rf/reg-event-db
  ::set-data
@@ -63,22 +64,22 @@
                       {:max 0.99, :min 0.01, :precision 2})))
 
 (rf/reg-event-db
- ::set-level-index
+ ::set-level
  (fn [db [_ index]]
-   (assoc-in db (conj dlg-path :view :selected-level-index) index)))
+   (assoc-in db (conj dlg-path :view :selected-level) index)))
 
 (rf/reg-event-fx
  ::fill-all
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::subs/field [:fill-all]])
-  (inject-cofx ::inject/sub [::subs/selected-level-index])]
- (fn [{:keys [db ::subs/data ::subs/field ::subs/selected-level-index]} _]
+  (inject-cofx ::inject/sub [::subs/selected-level-key])]
+ (fn [{:keys [db ::subs/data ::subs/field ::subs/selected-level-key]} _]
    (let [{:keys [value]} field
          value (js/Number value)]
      {:db
       (-> db
           (assoc-in data-path
-                    (update-in data [:levels selected-level-index :tube-rows]
+                    (update-in data [:levels selected-level-key :tube-rows]
                                (fn [rows]
                                  (mapv
                                   (fn [tube-row]
@@ -91,17 +92,17 @@
 (rf/reg-event-fx
  ::clear-custom-emissivity
  [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/selected-level-index])]
- (fn [{:keys [db ::subs/data ::subs/selected-level-index]} [_ col-index]]
+  (inject-cofx ::inject/sub [::subs/selected-level-key])]
+ (fn [{:keys [db ::subs/data ::subs/selected-level-key]} [_ col-index]]
    {:db
     (-> db
      (assoc-in data-path
                (update-in data
-                          [:levels selected-level-index :tube-rows
+                          [:levels selected-level-key :tube-rows
                            col-index :custom-emissivity]
                           (fn [custom-emissivity]
                             (let [n (count (first custom-emissivity))]
                               (vec (repeat 2 (vec (repeat n nil))))))))
-     (assoc-in (conj form-path :levels selected-level-index
+     (assoc-in (conj form-path :levels selected-level-key
                      :tube-rows col-index)
                nil))}))

@@ -192,24 +192,20 @@
                      "side" (update-in data [:sf-settings :chambers]
                                        (fn [chs]
                                          (let [new-chs (get-in emissivity-data
-                                                               [:levels 0 :tube-rows])]
+                                                               [:levels :reformer :tube-rows])]
                                            (mapv merge
                                                  (or chs (repeat (count new-chs) nil))
                                                  new-chs))))
                      "top" (update-in
-                            data [:tf-settings :levels]
-                            (fn [levels]
-                              (let [new-levels (:levels emissivity-data)]
-                                (mapv
-                                 (fn [level new-level]
-                                   (update
-                                    level :tube-rows
-                                    (fn [rows]
-                                      (let [new-rows (:tube-rows new-level)]
-                                        (mapv merge
-                                              (or rows (repeat (count new-rows) nil))
-                                              new-rows)))))
-                                 (or levels (repeat (count new-levels) nil))
-                                 new-levels))))))
-         (assoc-in (conj form-path :emissivity-type) {:value "custom"
+                             data [:tf-settings :levels]
+                             (fn [levels]
+                               (reduce-kv
+                                 (fn [levels level-key level]
+                                   (update-in
+                                     levels [level-key :tube-rows]
+                                     #(mapv merge
+                                            (or % (repeat nil))
+                                            (:tube-rows level))))
+                                 levels (:levels emissivity-data))))))
+         (assoc-in (conj form-path :emissivity-type) {:value  "custom"
                                                       :valid? true})))))
