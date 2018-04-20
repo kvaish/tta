@@ -15,6 +15,7 @@
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.app.icon :as ic]
+            [tta.app.scroll :refer [lazy-rows]]
             [ht.util.interop :as i]
             [ht.util.common :as u]
             [tta.app.comp :as app-comp]
@@ -29,7 +30,7 @@
    (if topsoe? "◆" "")])
 
 (defn right-icon [tubes%]
-  [:span
+  [:span {:style {:margin "0px 10px"}}
    (if (< tubes% 70)
      [ic/dataset-inadequate {:style {:color (color-hex :red)
                                      :position "absolute"}}]
@@ -41,29 +42,42 @@
 (defn display-date [data-date]
   (let [{:keys [year month day hour minute]}
         (u/to-date-time-map data-date)]
-    (format "%4d-%02d-%02d | %02d:%02d"
-            year month day hour minute)))
 
-(defn dataset-list [datasets]
+    [:div {:style {:width       120
+                   :font-size   "12px"
+                   :line-height "24px"
+                   :min-height  "24px"
+                   :color       (color-hex :royal-blue)
+                   :display     "inline-block"}}
+     (format "%4d-%02d-%02d | %02d:%02d"
+             year month day hour minute)]))
+
+(defn dataset-list [datasets state]
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
-        h (/ height 2)]
-    [:div {:style {:height h, :width 200}}])
-  #_(->> datasets
-       (map
-        (fn [item] ;; item = dataset
-          [ui/menu-item
-           {:key             (:id item)
-            :primary-text    (display-date (:data-date item))
-                                        ;:left-icon       (r/as-element [left-icon (:topsoe? item)])
-            :left-icon      (r/as-element (right-icon (:tubes% item)))
-            :on-click        (fn []
-                               (swap! state assoc :open? false)
-                               (rf/dispatch [::event/select-dataset (:id item)]))
-            :disabled        (= selected-id (:id item))
-            :value           (:id item)
-                                        ;:inner-div-style {:padding "0px 40px"}
-            }]))
-       (doall)))
+        h (* height 0.4), w 200
+        icon-style {:width   40
+                    :display "inline-block"}
+        style (use-style style/item-style)]
+    [lazy-rows
+     {:width           w
+      :height          h
+      :item-height     32
+      :item-count      (count datasets)
+      :items-render-fn #(map (fn [item]
+                               [:div {:id (:id item)
+                                      :style {:style {:cursor "pointer"}}
+                                      :on-click (fn []
+                                                  (swap! state assoc :open? false)
+                                                  (rf/dispatch [::event/select-dataset (:id item)]))}
+                                ;;left icon
+                                [:div {:style icon-style}
+                                 (left-icon (:topsoe? item))]
+                                ;;date
+                                [display-date (:data-date item)]
+                                ;;right icon
+                                [:div {:style icon-style}
+                                 (right-icon (:tubes% item))]
+                                ]) datasets)}]))
 
 (defn menu [state selected-id warn-on-selection-change?]
   (let [fetching? @(rf/subscribe [::subs/fetching?])
@@ -98,7 +112,7 @@
                           (translate [:dataset-selector :message :not-found]
                                      "no datasets found")]
        ;; dataset list
-       :found-datasets [dataset-list datasets])]))
+       :found-datasets [dataset-list datasets state])]))
 
 (defn dataset-selector [{:keys [selected-id warn-on-selection-change?]}]
   (let [state (r/atom {:open? false})]
