@@ -24,7 +24,7 @@
           :create-plant "/api/client/:client-id/plant"
           :update-plant-config "/api/client/:client-id/plant/:plant-id/config"
           :update-plant-settings "/api/client/:client-id/plant/:plant-id/settings"
-          :find-datasets "/api/client/:client-id/plant/:plant-id/dataset"
+          :search-datasets "/api/client/:client-id/plant/:plant-id/dataset"
           :fetch-latest-dataset "/api/client/:client-id/plant/:plant-id/latest-dataset"
           :fetch-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"
           :create-dataset "/api/client/:client-id/plant/:plant-id/dataset"
@@ -135,14 +135,12 @@
         :on-success (dispatch-one evt-success :res/update)
         :evt-failure evt-failure}))
 
-(defn find-datasets [{:keys [client-id plant-id start end
-                             evt-success evt-failure]}]
+(defn search-datasets [{:keys [client-id plant-id query
+                               evt-success evt-failure]}]
   (run {:method      http/get
-        :api-key     :find-datasets
-        :api-params  {:client-id client-id :plant-id plant-id}
-        :data        {:query-params (to-api :dataset/query
-                                            {:utc-start start
-                                             :utc-end   end})}
+        :api-key     :search-datasets
+        :api-params  {:client-id client-id, :plant-id plant-id}
+        :data        {:query-params (to-api :dataset/query query)}
         :on-success  (dispatch-many evt-success :dataset)
         :evt-failure evt-failure}))
 

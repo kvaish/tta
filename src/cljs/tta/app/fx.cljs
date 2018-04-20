@@ -102,9 +102,16 @@
      :evt-failure (or evt-failure [::ht-event/service-failure false])})))
 
 (rf/reg-fx
- :service/search-dataset
- (fn [{:keys [client-id plant-id from-data to-date]}]
-   ))
+ :service/search-datasets
+ (fn [{:keys [client-id plant-id from-date to-date
+             evt-success evt-failure]}]
+   (svc/search-datasets
+    {:client-id client-id
+     :plant-id plant-id
+     :query {:utc-start from-date
+             :utc-end to-date}
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
 
 (rf/reg-fx
  :service/fetch-latest-dataset
