@@ -44,7 +44,7 @@
             :height 350, :width 700
             :temp->color temp->color
             :wall-names {:north "north" :east "east" :west "west" :south "south"}
-            :burner-first? true
+            :burner-first? false
             :y-domain [1 12]}
         data_twt_overall {
             :tube-data 
@@ -77,7 +77,9 @@
                 :end-tube 12
                 :temperatures {:a [(temp) (temp)] :b [(temp) (temp)]}}]
             :burner-data 
-              [{:burner-count 5 :start-burner 1 :end-burner 5}]}]
+              [{ :burner-count 5 :start-burner 1 :end-burner 5}
+              { :burner-count 5 :start-burner 1 :end-burner 5}
+              { :burner-count 5 :start-burner 1 :end-burner 5}]}]
     [:div
       [ht-charts/overall-twt-chart config_twt_overall data_twt_overall]
       [ht-charts/twt-chart config_twt data_twt]]))

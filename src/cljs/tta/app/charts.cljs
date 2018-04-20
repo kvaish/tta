@@ -82,7 +82,7 @@
 
 ;; Points
 (defn- ch-points [data-key radius fill events]
-  {:tag :g :class :series
+  {:tag :g :class data-key
    :attr {:fill "none", :stroke "none"}
    :multi? true :data data-key
    :nodes [{:tag :circle, :class data-key
@@ -272,11 +272,11 @@
 
 (defn overall-twt-chart [{:keys 
                   [height width red-firing title x-title y-title y-domain 
-                   temp->color burner-nos tube-nos burner-domain]} 
+                   temp->color burner-nos tube-nos burner-domain burner-first?]} 
                    {:keys [tube-data burner-data]}]
   (let [
 
-        x-ps-os 20, x-pe-os 0, x-as-os 0, x-ae-os 0
+        x-ps-os 20, x-pe-os 0, x-as-os 20, x-ae-os 0
         y-ps-os 50, y-pe-os 0, y-as-os  0, y-ae-os 0
 
         x-domain [1 (-> tube-data count inc)]
@@ -317,9 +317,14 @@
                             (map (fn [t] {:x x :y (y-scale (+ t 0.5))}) (range st et)))) 
                           tube-data))}]
 
-        xaxis {}
-        burners {}
-        horizontal-bands {}
+        burners [{:fill "green"
+                :data (flatten 
+                        (map-indexed (fn [ i {c :burner-count sb :start-burner eb :end-burner}]
+                          (let [b-scale (d3-scale [1 c] y-range)
+                                x (x-scale (+ (if burner-first? 1 2) i))]
+                            (map (fn [b] {:x x :y (b-scale (+ b 0.5))}) (range sb eb)))) 
+                          burner-data))}]
+
         shaded-areas {}
         data {:temperatures temperatures
               :xaxis x-axis
@@ -350,7 +355,7 @@
                     (partial ch-diagnol-shading :shaded-areas)}}) 
             :height height :width width)]
     (fn [] (let []
-      (js/console.log x-tick-w)
+      (js/console.log burners)
             [:div {:style {:position "relative" :user-select "none"}} 
               [d3-chart {:data data :config config}]]))))
 
