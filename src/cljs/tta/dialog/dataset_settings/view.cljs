@@ -121,7 +121,7 @@
 
 (defn pyrometer-emissivity-warning [style]
   (let [{:keys [emissivity-setting]} @(rf/subscribe [::subs/active-pyrometer])]
-    (if-not (= 1 emissivity-setting)
+    (if (and emissivity-setting (not= 1 emissivity-setting))
       [:div (use-sub-style style :div-warning)
        (translate [:dataset-settings :emissivity-warning :message]
                   "* Please check the latest calibration report.

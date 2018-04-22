@@ -168,11 +168,11 @@
     (when can-submit?
       (let [draft (-> (get-in db draft-path)
                       (merge
-                       (select-keys data [:plant-id :client-id :summary
-                                          :data-date :topsoe? :gold-cup?
-                                          :reformer-version
-                                          :pyrometer :shift :comment :operator
-                                          :role-type :reformer-version]))
+                       (select-keys data [:plant-id :client-id :pyrometer
+                                          :data-date :reformer-version
+                                          :topsoe? :gold-cup? :summary
+                                          :emissivity :emissivity-type
+                                          :shift :comment :operator :role-type]))
                       (update :data-date u/from-date-time-map))
             draft (cond-> draft
                     ;; draft dataset also saved to storage
@@ -211,10 +211,17 @@
 
 (rf/reg-event-fx
  ::set-emissivity-type
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ value]]
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/src-data])]
+ (fn [{:keys [db ::subs/data ::subs/src-data]} [_ value]]
    {:dispatch [::validate-emissivity-type]
-    :db (set-field db [:emissivity-type] value data data-path form-path true)}))
+    :db (-> db
+            (set-field [:emissivity-type] value data
+                       data-path form-path true)
+            (update-in data-path assoc :emissivity
+                       ;; restore the emissivity override, if common is chosen
+                       ;; otherwise clear it
+                       (if (= value "common") (:emissivity src-data))))}))
 
 (rf/reg-event-fx
  ::set-pyrometer

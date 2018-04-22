@@ -233,7 +233,7 @@
                       :value (au/dataset-to-storage data)}
         :db (-> db
                 (assoc-in (conj comp-path :dataset) data)
-                (assoc-in data-path data))}))))
+                (assoc-in data-path nil))}))))
 
 (rf/reg-event-fx
  ::create-dataset-success

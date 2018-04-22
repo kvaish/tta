@@ -156,7 +156,7 @@
 (defn sf-peep-doors [style]
   (if-let [n @(rf/subscribe [::subs/sf-pd-count-per-section])]
     [form-cell-1 style
-     (translate [:config :peep-door-tube-counts :label]
+     (translate [:config :peep-door-tube-count :label]
                 "No of tubes in each peep door")
      (map #(with-meta (vector sf-peep-door-tube-count style %) {:key %})
           (range n))]))
