@@ -95,23 +95,7 @@
 (defn menu [state selected-id warn-on-selection-change?]
   (let [fetching? @(rf/subscribe [::subs/fetching?])
         style (style/dataset-list-style)
-        datasets @(rf/subscribe [::subs/data])
-        datasets [{:id 1
-                   :data-date "2018-12-14"
-                   :tubes% 70
-                   :topsoe? true}
-                  {:id 2
-                   :data-date "2018-12-14"
-                   :tubes% 55
-                   :topsoe? false}
-                  {:id 3
-                   :data-date "2018-12-14"
-                   :tubes% 84
-                   :topsoe? false}
-                  {:id 4
-                   :data-date "2018-12-14"
-                   :tubes% 90
-                   :topsoe? true}]]
+        datasets @(rf/subscribe [::subs/data])]
     [ui/menu {:value selected-id
               :menu-item-style (use-sub-style
                                  style :menu-item-style)}
