@@ -187,27 +187,27 @@
 ;; DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-db
- ::set-twt-type
+ ::set-twt-temp
  (fn [db [_ value]]
-   (assoc-in db (conj view-path :twt-type) value)))
+   (assoc-in db (conj view-path :twt-temp) value)))
 
 (rf/reg-event-db
- ::set-reduced-firing
+ ::set-reduced-firing-filter
  (fn [db [_ value]]
    (assoc-in db (conj view-path :reduced-firing) value)))
 
 (rf/reg-event-db
- ::set-avg-temp-band
+ ::set-avg-temp-band-filter
  (fn [db [_ value]]
    (assoc-in db (conj view-path :avg-temp-band) value)))
 
 (rf/reg-event-db
- ::set-avg-raw-temp
+ ::set-avg-raw-temp-filter
  (fn [db [_ value]]
    (assoc-in db (conj view-path :avg-raw-temp) value)))
 
 (rf/reg-event-db
- ::set-avg-corrected-temp
+ ::set-avg-corrected-temp-filter
  (fn [db [_ value]]
    (assoc-in db (conj view-path :avg-corrected-temp) value)))
 

@@ -13,8 +13,8 @@
         fs-w (* (- width 85) 0.4)
         f-w (- fs-w 5)
         c-w (- (* 0.5 f-w) 5)
-        c-w-2 (- f-w 5)
-        c-w-4 (- f-w 180)]
+        c-w-2 (- f-w 5)]
+    
     {:width (px width), :height (px height)
      :padding "20px"
      :border (str "1px solid " app-style/widget-bg-e)
@@ -38,11 +38,11 @@
                     :padding "0 0 6px 0"
                     :position "relative"}
 
-      :form-cell-4 {:width "230px"
-                    :vertical-align "top"
-                    :display "inline-block"
-                    :padding "0 0 6px 0"
-                    :position "relative"}
+      :form-cell-200px {:width "200px"
+                      :vertical-align "top"
+                      :display "inline-block"
+                      :padding "0 0 6px 0"
+                      :position "relative"}
       :form-label {:color (color-hex :royal-blue)
                    :user-select "none"
                    :font-size "12px"

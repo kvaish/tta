@@ -10,6 +10,7 @@
             [tta.app.view :as app-view]
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols]]
+            [tta.app.charts :refer [twt-chart overall-twt-chart]]
             [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]))
@@ -28,8 +29,8 @@
    [:span (use-sub-style style :form-error)
     (if (fn? error) (error) error)]])
 
-(defn form-cell-4 [style error label widget]
-  [:div (use-sub-style style :form-cell-4)
+(defn form-cell-200 [style error label widget]
+  [:div (use-sub-style style :form-cell-200px)
    [:span (use-sub-style style :form-label) label]
    widget
    [:span (use-sub-style style :form-error)
@@ -38,79 +39,46 @@
 (defn twt-type [style]) 
 
 (defn reduced-firing [style]
-  (let [rf-opts @(rf/subscribe [::subs/on-off-opts])
-        rf @(rf/subscribe [::subs/reduced-firing])
-        selected (some #(if(= (:id %) rf) %) rf-opts)]
-
-    [form-cell-4 style nil
-     (translate [:dataset :reduced-firing :label] "Reduced Firing")
-     [app-comp/selector {:item-width 40
-                         :options rf-opts
-                         :label-fn :label
-                         :selected selected
-                         :value-fn :id
-                         :on-select #(rf/dispatch [::event/set-reduced-firing
-                                                   (% :id)])}]]))
+  [form-cell-200 style nil
+   (translate [:dataset :reduced-firing :label] "Reduced Firing")
+   [app-comp/toggle
+    {:value  @(rf/subscribe [::subs/reduced-firing-filter])
+     :on-toggle #(rf/dispatch [::event/set-reduced-firing-filter
+                               %])}]])
 
 (defn avg-temp-band [style]
-  (let [at-opts @(rf/subscribe [::subs/on-off-opts])
-        rf @(rf/subscribe [::subs/avg-temp-band])
-        selected (some #(if(= (:id %) rf) %) at-opts)]
-
-    [form-cell-4 style nil
-     (translate [:dataset :avg-temp-band :label] "+/- 20° off Avg")
-     [app-comp/selector {:item-width 40
-                         :options at-opts
-                         :label-fn :label
-                         :selected selected
-                         :value-fn :id
-                         :on-select #(rf/dispatch [::event/set-avg-temp-band
-                                                   (% :id)])}]]))
+  [form-cell-200 style nil
+   (translate [:dataset :avg-temp-band :label] "+/- 20° off Avg")
+   [app-comp/toggle
+    {:value  @(rf/subscribe [::subs/avg-temp-band-filter])
+     :on-toggle #(rf/dispatch [::event/set-avg-temp-band-filter
+                               %])}]])
 
 (defn avg-raw-temp [style]
-  (let [act-opts @(rf/subscribe [::subs/on-off-opts])
-        rf @(rf/subscribe [::subs/avg-raw-temp])
-        selected (some #(if(= (:id %) rf) %) act-opts)]
-
-    [form-cell-4 style nil
-     (translate [:dataset :avg-raw-temp :label] "Avg. Raw Temp")
-     [app-comp/selector {:item-width 40
-                         :options act-opts
-                         :label-fn :label
-                         :selected selected
-                         :value-fn :id
-                         :on-select #(rf/dispatch [::event/set-avg-raw-temp
-                                                   (% :id)])}]]))
+  (let [val @(rf/subscribe [::subs/avg-raw-temp-filter])]
+      [form-cell-200 style nil
+       (translate [:dataset :avg-raw-temp :label] "Avg. Raw Temp")
+       [app-comp/toggle
+        {:value     false
+         :on-toggle #(rf/dispatch [::event/set-avg-raw-temp-filter
+                                   %])}]]))
 
 (defn avg-corrected-temp [style]
-  (let [act-opts @(rf/subscribe [::subs/on-off-opts])
-        rf @(rf/subscribe [::subs/avg-corrected-temp])
-        selected (some #(if(= (:id %) rf) %) act-opts)]
-
-    [form-cell-4 style nil
-     (translate [:dataset :avg-corrected-temp :label] "Avg. Corr. Temp")
-     [app-comp/selector {:item-width 40
-                         :options act-opts
-                         :label-fn :label
-                         :selected selected
-                         :value-fn :id
-                         :on-select #(rf/dispatch [::event/set-avg-corrected-temp
-                                                   (% :id)])}]]))
+  [form-cell-200 style nil
+   (translate [:dataset :avg-corrected-temp :label] "Avg. Corr. Temp")
+   [app-comp/toggle
+    {:value @(rf/subscribe [::subs/avg-corrected-temp-filter])
+     :on-toggle #(rf/dispatch [::event/set-avg-corrected-temp-filter                               %])}]])
 
 
 (defn sf-twt [{:keys [width height]}]
   (let [chambers (get-in @(rf/subscribe [::subs/config]) [:sf-config :chambers])
-        item-width 600
-        item-count (count chambers)
-        item-width (if (> (+ width 10)
-                          (* item-width item-count))
-                     width item-width)
+        item-width 800
         render-fn
         (fn [indexes show-item] 
           (map (fn [i]
                  [:div {:style {:height height
-                                :width item-width
-                                :border "1px solid grey"}}])
+                                :width item-width}}]) 
                indexes))]
     [lazy-cols {:width width
                 :height height  
@@ -126,50 +94,53 @@
         render-fn
         (fn [indexes show-item] 
           (map (fn [i]
-                 [:div {:style {:height height
-                                :width item-width
-                                :border "1px solid grey"}}])
+                 (let [chart-row @(rf/subscribe [::subs/tf-twt-chart-row :top i])
+                       chart-row (assoc chart-row  :height height :width item-width)]
+                   [twt-chart chart-row])
+                 )
                indexes))]
     [lazy-cols {:width width
                 :height height  
                 :item-width item-width
                 :items-render-fn render-fn
                 :item-count tube-row-count}]))
- 
+
 (defn twt-graph [{:keys [level], {:keys [width height]} :view-size}]
   (let [firing          @(rf/subscribe [::subs/firing])
-        twt-type        @(rf/subscribe [::subs/twt-type])
+        twt-type        @(rf/subscribe [::subs/twt-temp])
         h1              55
-        h3              55
+        h3              65
         h2              (- height (+ h1  h3))
         style (style/body width height)]
     [:div
      [:div {:style {:height h1
                     :font-size "14px"
-                    :width width
-                    :border "1px solid pink"}}
-      (let [twt-opts   @(rf/subscribe [::subs/twt-type-opts])
-            twt-type        @(rf/subscribe [::subs/twt-type])
-            selected (some #(if(= (:id %) twt-type) %) twt-opts)]
+                    :width width}}
+      (let [twt-opts   @(rf/subscribe [::subs/twt-temp-opts])
+            twt-type        @(rf/subscribe [::subs/twt-temp])
+            selected (some #(if(= (:id %) twt-type) %) twt-opts)] 
 
-        [form-cell-2 style nil
+        [form-cell-2 style nil 
          (translate [:dataset :reduced-firing :label] "Choose type:")
          [app-comp/selector {:item-width 70
                              :options twt-opts
                              :label-fn :label
                              :selected selected
                              :value-fn :id
-                             :on-select #(rf/dispatch [::event/set-twt-type
+                             :on-select #(rf/dispatch [::event/set-twt-temp
                                                        (% :id)])}]])]
      
-     [:div {:style {:height h2 :width width :border "1px solid red"}}
+     [:div {:style {:height h2 :width width }}
       (case firing
         "side" [sf-twt  {:width width
-                              :height h2}]
+                         :height h2}]
         "top" [tf-twt  {:width width
-                             :height h2}])]
-     [:div {:style {:height h3 :width width :border "1px solid green"}}
+                        :height h2}])]
+     [:div {:style {:height h3 :width width}}
       (reduced-firing style)
       (avg-temp-band style)
       (avg-raw-temp style)
-      (avg-corrected-temp style)]]))
+      (avg-corrected-temp style)
+      [:div {:style {:height 30 :width width
+                     :text-align "right" }} ;;TODO: chart info
+        ]]]))

@@ -402,7 +402,7 @@
   
   (let [state (r/atom {})
     
-        x-ps-os 20, x-pe-os 0, x-as-os 60, x-ae-os 0
+        x-ps-os 20, x-pe-os 0, x-as-os 60, x-ae-os 10
         y-ps-os 50, y-pe-os 0, y-as-os  0, y-ae-os 0
 
         x-domain x-domain 
