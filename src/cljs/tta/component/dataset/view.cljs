@@ -114,8 +114,8 @@
 (defn action-dataset-list []
   (let [disabled? (if (= :read @(rf/subscribe [::subs/mode]))
                     false true)]
-    [dataset-selector {:selected (:id @(rf/subscribe [::subs/data]))
-                       :disabled? disabled?}]))
+    [dataset-selector {:selected-id (:id @(rf/subscribe [::subs/data]))
+                       :warn-on-selection-change? @(rf/subscribe [::subs/warn-on-close?])}]))
 
 (defn action-publish-gold-cup []
   [app-comp/button

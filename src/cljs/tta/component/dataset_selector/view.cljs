@@ -39,80 +39,96 @@
                                        :position "absolute"}}]
        nil))])
 
-(defn display-date [data-date]
+(defn display-date [data-date style]
   (let [{:keys [year month day hour minute]}
         (u/to-date-time-map data-date)]
 
-    [:div {:style {:width       120
-                   :font-size   "12px"
-                   :line-height "24px"
-                   :min-height  "24px"
-                   :color       (color-hex :royal-blue)
-                   :display     "inline-block"}}
+    [:div (use-sub-style style :display-date)
      (format "%4d-%02d-%02d | %02d:%02d"
              year month day hour minute)]))
 
-(defn dataset-list [datasets state]
+(defn warn-on-change [selected-id]
+  (js/console.log selected-id)
+  (rf/dispatch
+    [::ht-event/show-message-box
+     {:message      (translate [:warning :warn-on-change :message]
+                               "The current draft will be disacrded on selection change.")
+      :title        (translate [:warning :reset-draft :title]
+                               "Discard current data?")
+      :level        :warning
+      :label-ok     (translate [:action :discard :label] "Discard")
+      :event-ok     [::event/select-dataset selected-id]
+      :label-cancel (translate [:action :cancel :label] "Cancel")}]))
+
+(defn dataset-list [datasets selected-id state
+                    style warn-on-selection-change?]
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
-        h (* height 0.4), w 200
-        icon-style {:width   40
-                    :display "inline-block"}
-        style (use-style style/item-style)]
+        h (* height 0.4), w 220]
     [lazy-rows
-     {:width           w
-      :height          h
-      :item-height     32
-      :item-count      (count datasets)
-      :items-render-fn #(map (fn [item]
-                               [:div {:id (:id item)
-                                      :style {:style {:cursor "pointer"}}
-                                      :on-click (fn []
-                                                  (swap! state assoc :open? false)
-                                                  (rf/dispatch [::event/select-dataset (:id item)]))}
-                                ;;left icon
-                                [:div {:style icon-style}
-                                 (left-icon (:topsoe? item))]
-                                ;;date
-                                [display-date (:data-date item)]
-                                ;;right icon
-                                [:div {:style icon-style}
-                                 (right-icon (:tubes% item))]
-                                ]) datasets)}]))
+     {:width       w
+      :height      h
+      :item-height 32
+      :item-count  (count datasets)
+      :items-render-fn
+                   #(map (fn [item]
+                           [:div (if (= selected-id (:id item))
+                                   (use-sub-style style :selected-item)
+                                   (use-sub-style style :item))
+                            [:div
+                             {:id       (:id item)
+                              :on-click (fn []
+                                          (swap! state assoc :open? false)
+                                          (if warn-on-selection-change?
+                                            (warn-on-change (:id item))
+                                            (rf/dispatch [::event/select-dataset (:id item)])))}
+                             ;;left icon
+                             [:div {:style {:width   40
+                                            :display "inline-block"}}
+                              (left-icon (:topsoe? item))]
+                             ;;date
+                             [display-date (:data-date item) style]
+                             ;;right icon
+                             [:div {:style {:width   40
+                                            :display "inline-block"}}
+                              (right-icon (:tubes% item))]]]) datasets)}]))
 
 (defn menu [state selected-id warn-on-selection-change?]
   (let [fetching? @(rf/subscribe [::subs/fetching?])
+        style (style/dataset-list-style)
         datasets @(rf/subscribe [::subs/data])
-        datasets [{:id "a"
-                   :data-date (js/Date.)
-                   :topsoe? true
-                   :tubes% 65}
-                  {:id "b"
-                   :data-date (js/Date.)
-                   :topsoe? true
-                   :tubes% 85}
-                  {:id "c"
-                   :data-date (js/Date.)
-                   :topsoe? false
-                   :tubes% 80}
-                  {:id "d"
-                   :data-date (js/Date.)
-                   :topsoe? false
-                   :tubes% 70}]]
-    [ui/menu {:value           selected-id
-              :menu-item-style {:font-size   "12px"
-                                :line-height "24px"
-                                :min-height  "24px"
-                                :color (color-hex :royal-blue)}}
+        datasets [{:id 1
+                   :data-date "2018-12-14"
+                   :tubes% 70
+                   :topsoe? true}
+                  {:id 2
+                   :data-date "2018-12-14"
+                   :tubes% 55
+                   :topsoe? false}
+                  {:id 3
+                   :data-date "2018-12-14"
+                   :tubes% 84
+                   :topsoe? false}
+                  {:id 4
+                   :data-date "2018-12-14"
+                   :tubes% 90
+                   :topsoe? true}]]
+    [ui/menu {:value selected-id
+              :menu-item-style (use-sub-style
+                                 style :menu-item-style)}
      (cond
        ;; show busy
-       fetching? [ui/menu-item {}
-                  [ui/circular-progress {:width "20px", :height "20px"}]]
+       fetching?
+       [ui/menu-item {}
+        [ui/circular-progress
+         {:width "20px", :height "20px"}]]
        ;; show not found
-       (empty? datasets) [ui/menu-item {}
-                          (translate [:dataset-selector :message :not-found]
-                                     "no datasets found")]
+       (empty? datasets)
+       [ui/menu-item {}
+        (translate [:dataset-selector :message :not-found]
+                   "no datasets found")]
        ;; dataset list
-       :found-datasets [dataset-list datasets state])]))
+       :found-datasets
+       [dataset-list datasets selected-id state style warn-on-selection-change?])]))
 
 (defn dataset-selector [{:keys [selected-id warn-on-selection-change?]}]
   (let [state (r/atom {:open? false})]

@@ -14,7 +14,7 @@
 
 (rf/reg-event-fx
  ::select-dataset
- (fn [_ [_ dataset-id]]
+ (fn [_ [_ dataset-id warn-on-selection-change?]]
    {:dispatch [:tta.component.root.event/activate-content
                :dataset {:dataset-id dataset-id}]}))
 
