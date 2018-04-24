@@ -132,7 +132,7 @@ none matched, returns nil."
 
 (defn tooltip-pos
   "checks where to put the tooltip around the anchor and
-  returns tooltip position (x,y,top?,left?)  
+  returns tooltip position (x,y,top?,right?)  
   view top-left: vx xy (default: 0 0)  
   anchor rectangle: ax, ay, aw, ah  
   tooltip size: tw, th  
@@ -146,12 +146,12 @@ none matched, returns nil."
   (let [adx (or adx (/ aw 2))
         tdx (or tdx adx)
         x (- (+ ax aw tdx) adx tw)
-        [x left?] (if (<= vx x) [x true]
+        [x right?] (if (<= vx x) [x true]
                       [(- (+ ax adx) tdx) false])
         y (- ay tym th)
         [y top?] (if (<= vy y) [y true]
                      [(+ ay ah tym) false])]
-    {:x x, :y y, :top? top?, :left? left?}))
+    {:x x, :y y, :top? top?, :left? right?}))
 
 ;; date time util ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
