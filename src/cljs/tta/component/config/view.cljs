@@ -19,6 +19,7 @@
             [tta.component.root.event :as root-event]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
+            [tta.dialog.view-factor.view :refer [view-factor]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]
             [clojure.string :as str]))
 
@@ -495,19 +496,31 @@
       [form style]]
      [app-view/vertical-line {:height h}]
      [reformer-dwg {:width  w, :height h
-                    :config @(rf/subscribe [::subs/sketch-config])}]]))
+                    :config @(rf/subscribe [::subs/sketch-config])}]
+     ;;dialogs
+     (if @(rf/subscribe [:tta.dialog.view-factor.subs/open?])
+       [view-factor])]))
 
 (defn config [props]
-  [app-view/layout-main
-   (translate [:config :title :text] "Configuration")
-   (translate [:config :title :sub-text] "Reformer configuration")
-   [[app-comp/button {:disabled? (if (show-error?)
-                                   (not @(rf/subscribe [::subs/can-submit?]))
-                                   (not @(rf/subscribe [::subs/dirty?])))
-                      :icon ic/upload
-                      :label (translate [:action :upload :label] "Upload")
-                      :on-click #(rf/dispatch [::event/upload])}]
-    [app-comp/button {:icon ic/cancel
-                      :label (translate [:action :cancel :label] "Cancel")
-                      :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
-   body])
+  (let [firing @(rf/subscribe [::subs/firing])]
+    [app-view/layout-main
+     (translate [:config :title :text] "Configuration")
+     (translate [:config :title :sub-text] "Reformer configuration")
+     [(if (= "top" firing)
+        [app-comp/button {:disabled? false
+                          :icon ic/upload
+                          :label (translate [:action :view-factor :label]
+                                            "View Factor")
+                          :on-click #(rf/dispatch
+                                      [:tta.dialog.view-factor.event/open])}])
+      
+      [app-comp/button {:disabled? (if (show-error?)
+                                     (not @(rf/subscribe [::subs/can-submit?]))
+                                     (not @(rf/subscribe [::subs/dirty?])))
+                        :icon ic/upload
+                        :label (translate [:action :upload :label] "Upload")
+                        :on-click #(rf/dispatch [::event/upload])}]
+      [app-comp/button {:icon ic/cancel
+                        :label (translate [:action :cancel :label] "Cancel")
+                        :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
+     body]))
