@@ -67,6 +67,96 @@
     (if (pos? n)
       (/ (apply + nums) n))))
 
+(defn- pct [x n]
+  (if (and (pos? x) (pos? n))
+    (* 100.0 (/ x n))))
+
+(defn- tube-row-summary
+  "return summary for a row of tubes.  
+  in case of top-fired it is a tube-row.
+  in case of side-fired it is a chamber."
+  [tube-row]
+  (let [tn (count (get-in tube-row [:sides 0 :tubes]))
+        ts (mapcat :tubes (:sides tube-row))
+        ;; collect raw-temp
+        rts (filter pos? (map :raw-temp ts))
+        rtn (count rts)
+        rt+ (apply + rts)
+        ;; collect corrected-temp
+        cts (filter pos? (map :corrected-temp ts))
+        ctn (count cts)
+        ct+ (apply + cts)
+        ;; gold-cup count
+        gcn (count (filter (some-fn :emissivity-override
+                                    :emissivity-calculated)
+                           ts))
+        ;; measured-tube count
+        mtn (->> (map :tubes (:sides tube-row))
+                 ;; make a tube list (each a pair of side A & B)
+                 (apply map list)
+                 ;; tube is considered to be measured if
+                 ;; at least one side raw-temp is available
+                 (filter (fn [[ta tb]]
+                           (or (pos? (:raw-temp ta))
+                               (pos? (:raw-temp tb)))))
+                 count)]
+    (cond-> {:t-count tn ;; tube-count
+             :mt-count mtn ;; measured tube-count
+             :gc-count gcn ;; gold-cup count
+             ;; raw-temp count and sum (only pos?)
+             :rt-count rtn, :rt-sum rt+
+             ;; corrected-temp count and sum (only pos?)
+             :ct-count ctn, :ct-sum ct+
+             ;; summary
+             :tubes% (or (pct mtn tn) 0)
+             :gold-cup% (or (pct gcn (* 2 tn)) 0)}
+      (pos? ctn) (assoc :avg-temp (/ ct+ ctn)
+                        :max-temp (apply max cts)
+                        :min-temp (apply min cts) )
+      (pos? rtn) (assoc :avg-raw-temp (/ rt+ rtn)
+                        :max-raw-temp (apply max rts)
+                        :min-raw-temp (apply min rts)))))
+
+(defn- summary [row-summary]
+  (let [rs row-summary
+        tn (apply + (map :t-count rs))
+        mtn (apply + (map :mt-count rs))
+        gcn (apply + (map :gc-count rs))
+        rtn (apply + (map :rt-count rs))
+        ctn (apply + (map :ct-count rs))
+        rt+ (apply + (map :rt-sum rs))
+        ct+ (apply + (map :ct-sum rs))
+        sfn (fn [k f]
+              (->> (map k rs)
+                   (remove nil?)
+                   (apply f)))]
+    (cond-> {:tubes% (or (pct mtn tn) 0)
+             :gold-cup% (or (pct gcn (* 2 tn)) 0)
+             :rows (mapv #(dissoc % :t-count :mt-count :gc-count
+                                  :rt-count :rt-sum :ct-count :ct-sum)
+                                rs)}
+      (pos? ctn) (assoc :avg-temp (/ ct+ ctn)
+                        :max-temp (sfn :max-temp max)
+                        :min-temp (sfn :min-temp min))
+      (pos? rtn) (assoc :avg-raw-temp (/ rt+ rtn)
+                        :max-raw-temp (sfn :max-raw-temp max)
+                        :min-raw-temp (sfn :min-raw-temp min)))))
+
+(defn update-summary [dataset]
+  (assoc dataset :summary
+         (if-let [chambers (get-in dataset [:side-fired :chambers])]
+           ;; side-fired
+           (summary (map tube-row-summary chambers))
+           ;; top-fired
+           (let [[rs kvs] (->> (get-in dataset [:top-fired :levels])
+                               (map (fn [[level-key level]]
+                                      (let [rs (map tube-row-summary (:rows level))]
+                                        [rs [level-key (summary rs)]])))
+                               (apply map list))]
+             (-> (summary (apply concat rs))
+                 (dissoc :rows)
+                 (assoc :levels (into {} kvs)))))))
+
 ;; TOP-FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn tf-calc-wall-temps [dataset]
