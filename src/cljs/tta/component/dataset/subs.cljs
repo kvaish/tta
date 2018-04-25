@@ -491,6 +491,13 @@
      (/ (->> (mapcat :tubes ch-data)
              (map temp-type)
              (apply +)) tube-count))))
+(rf/reg-sub
+ ::burner-status-active-side
+ :<- [::view]
+ (fn [view  [_ ch-index]]
+   (get-in view [:burner-status-active-side ch-index])))
+
+
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub

@@ -76,7 +76,8 @@
         v))))
 
 (defn tf-burner [{:keys [value-fn label-fn on-change row col]}]
-  (let [style tf-burner-style
+  (let [mode @(rf/subscribe [::subs/mode])
+        style tf-burner-style
         value-fn #(value-fn row col)
         label (label-fn row col)
         on-change #(if-let [v (tf-burner-parse %)]
@@ -89,16 +90,14 @@
          [:div (merge (stylefy/use-sub-style style :circle)
                       {:style {:background (opening->color value)}})
           label]
+        
          [app-comp/text-input
           {:width     48
            :value     value
-           :on-change on-change}]]))))
+           :on-change on-change
+           :read-only? (if-not (= :edit mode) true)}]]))))
 
 (defn tf-burner-table
-  "TODO:
-  **value-fn**
-  **label-fn**
-  **on-change**"
   [width height
    burner-row-count burner-count-per-row
    value-fn label-fn on-change
@@ -365,10 +364,11 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
 
 (defn burner-entry [{{:keys [width height]} :view-size}]
   (if @(rf/subscribe [::subs/burner?])
-    (if-let [firing @(rf/subscribe [::subs/firing])]
+    (let [firing @(rf/subscribe [::subs/firing])
+          mode @(rf/subscribe [::subs/mode])]
       (case firing
         "side" [sf-burner-entry width height]
-        "top" [tf-burner-entry width height]))
+        "top" [tf-burner-entry width height false]))
     ;; burner entry not started yet
     [app-comp/button
      {:icon ic/plus

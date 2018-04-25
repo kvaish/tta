@@ -212,6 +212,11 @@
  (fn [db [_ value]]
    (assoc-in db (conj view-path :avg-corrected-temp) value)))
 
+(rf/reg-event-db
+ ::set-burner-status-active-side
+ (fn [db [_ ch-index side]]
+   (assoc-in db (conj view-path :burner-status-active-side ch-index) side)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
@@ -275,10 +280,10 @@
   (inject-cofx ::inject/sub [::app-subs/client])]
  (fn [{:keys [::subs/data ::subs/can-submit? ::app-subs/client ::app-subs/plant]} _]
    #_(if can-submit?
-     {:service/create-dataset {:client (:id client)
-                               :plant-id (:id plant)
-                               :dataset data
-                               :evt-success [::create-dataset-success]}})))
+       {:service/create-dataset {:client (:id client)
+                                 :plant-id (:id plant)
+                                 :dataset data
+                                 :evt-success [::create-dataset-success]}})))
 
 (rf/reg-event-fx
  ::add-burners
