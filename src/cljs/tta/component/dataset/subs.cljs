@@ -312,6 +312,185 @@
          :prev (= 0 index)
          nil))))
 
+;;DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TWT  raw or corrected
+
+
+(rf/reg-sub
+ ::twt-temp-opts
+ (fn [_ _]
+   [{:id :raw-temp
+     :label "Raw"}
+    {:id :corrected-temp
+     :label "Corrected"}]))
+
+(rf/reg-sub
+ ::twt-temp
+ :<- [::twt-temp-opts]
+ :<- [::view]
+ (fn [[twt-temp-opts view] _] (or (get-in view [:twt-temp])
+                                 (:id (first twt-temp-opts)))))
+
+
+(rf/reg-sub
+ ::reduced-firing-filter
+ :<- [::view]
+ (fn [view _]
+   (get-in view [:reduced-firing]))) 
+
+(rf/reg-sub
+ ::avg-temp-band-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-temp-band])))
+
+(rf/reg-sub
+ ::avg-raw-temp-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-raw-temp])))
+
+(rf/reg-sub
+ ::avg-corrected-temp-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-corrected-temp])))
+
+;;;tf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;reduced-firing avg-temp avg-temp-band avg-raw-temp
+;; x-domain y-domain designT targetT x-title y-title
+;;y domain level top,middle,bottom
+
+;;vector of min max temperature of rows including design and target temperature
+(rf/reg-sub
+ ::tf-y-domain
+ :<- [::settings]
+ :<- [::data]
+ :<- [::twt-type]
+ :<- [::selected-level-key]
+ (fn [[settings data twt-type selected-level-key] _]
+   (let [{:keys [design-temp target-temp]} settings
+         rows (get-in data [:top-fired :levels
+                            selected-level-key :rows])
+         temps (->> (map :sides rows)
+                    (map #(map :tubes %))
+                    flatten
+                    (map twt-type))
+         temps (remove nil?
+                       (conj temps design-temp target-temp))]
+     (vector (apply min temps)
+             (apply max temps)))))
+
+
+(defn tf-y-domain [{:keys [settings data twt-temp level temp-unit]}]
+  
+  (let [{:keys [design-temp target-temp]} settings
+        rows (get-in data [:top-fired :levels
+                           level :rows])
+        temps (->> (map :sides rows)
+                   (mapcat #(map :tubes %))
+                   (flatten)
+                   (map twt-temp)
+                   (map #(au/to-temp-unit % temp-unit)))
+        temps (remove nil?
+                      (conj temps design-temp target-temp))]
+    (vector (apply min temps)
+            (apply max temps))))
+
+(defn tf-x-domain [config row]
+  (let [{:keys [start-tube end-tube]}
+        (get-in config [:tf-config :tube-rows row])]
+    
+    (if (< start-tube end-tube)
+      (vector start-tube end-tube)
+      (vector end-tube start-tube))))
+
+(defn tf-avg-temp [{:keys [config data row level temp-unit]} temp-type]
+  (let [tube-count (get-in config [:tf-config :tube-rows row :tube-count])
+        tubes (get-in data [:top-fired :levels level
+                            :rows row :sides])]
+    (/ (->> (map :tubes tubes)
+            flatten
+            (map temp-type)
+            (map #(au/to-temp-unit % temp-unit))
+            (apply +)) tube-count)))
+
+
+(rf/reg-sub
+ ::tf-twt-chart-row
+ :<- [::twt-temp]
+ :<- [::reduced-firing-filter]
+ :<- [::avg-temp-band-filter]
+ :<- [::avg-corrected-temp-filter]
+ :<- [::avg-raw-temp-filter]
+ :<- [::data]
+ :<- [::config]
+ :<- [::settings]
+ :<- [::app-subs/temp-unit]
+ (fn [[twt-temp reduced-firing-filter avg-temp-band-filter
+      avg-corrected-temp-filter avg-raw-temp-filter
+      data config settings temp-unit] [_ level row]]
+   (let [params      {:config    config
+                      :settings  settings
+                      :data      data
+                      :twt-temp twt-temp
+                      :level     level
+                      :row       row
+                      :temp-unit (if (= temp-unit "°C") au/deg-C au/deg-F)}
+         tf-avg (tf-avg-temp params twt-temp)]
+
+     (cond-> {:x-domain (tf-x-domain config row)
+              :y-domain (tf-y-domain params)
+              :design-temp (:design-temp settings)
+              :target-temp (:target-temp settings)}
+       
+       (and avg-temp-band-filter tf-avg-temp)
+       (assoc :avg-temp-band [(+ tf-avg 20) (- tf-avg 20)])
+
+       reduced-firing-filter
+       (assoc :red-firing [[1 2] [3 4]])
+
+       avg-raw-temp-filter
+       (assoc :avg-raw-temp (tf-avg-temp params :raw-temp))
+
+       avg-corrected-temp-filter
+       (assoc :avg-corrected-temp (tf-avg-temp params :corrected-temp))))))
+
+
+;;;sf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;temperature range for side-fired
+(rf/reg-sub
+ ::sf-y-domain
+ :<- [::data]
+ :<- [::settings]
+ (fn [[data settings] [_ temp-type]]
+   (let [{:keys [design-temp target-temp]} settings
+         temps (->> (map :sides (get-in data [:side-fired :chambers]))
+                    (mapcat #(map :tubes %))
+                    (map :raw-temp))
+         temps (remove nil? (conj temps target-temp design-temp))]
+     (vector (apply min temps)
+             (apply max temps)))))
+
+(rf/reg-sub
+ ::sf-x-domain
+ :<- [::config]
+ (fn [config [_ ch]]
+   (let [{:keys [end-tube start-tube]}
+         (get-in config [:sf-config :chambers ch])]
+
+     (if (< start-tube end-tube)
+       (vector start-tube end-tube)
+       (vector end-tube start-tube)))))
+
+(rf/reg-sub
+ ::sf-avg-temp
+ :<- [::data]
+ :<- [::config]
+ (fn [[data config] [_ ch temp-type]]
+   (let [tube-count (get-in config [:sf-config :chambers ch :tube-count])
+         ch-data (get-in data [:side-fired :chambers ch :sides])]
+     (/ (->> (mapcat :tubes ch-data)
+             (map temp-type)
+             (apply +)) tube-count))))
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
