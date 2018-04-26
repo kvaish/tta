@@ -12,7 +12,7 @@
             [tta.app.style :as app-style]
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
-            [tta.app.d3 :refer [d3-svg get-value d3-svg-2-string]]
+            [tta.app.d3 :refer [d3-svg get-value d3-svg->string]]
             [tta.component.reformer-dwg.style :as style]
             [tta.component.reformer-dwg.subs :as subs]
             [tta.component.reformer-dwg.event :as event])
@@ -230,7 +230,7 @@
 
 (defn save-image [{:keys [config]}]
   (let [width 600, height 500
-        svg-string (d3-svg-2-string
+        svg-string (d3-svg->string
                     (merge ref-dwg
                            {:width width, :height height
                             :preserve-aspect-ratio "none"

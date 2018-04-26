@@ -6,7 +6,7 @@
 ;; primary signals
 (rf/reg-sub
  ::dialog
- (fn [db _] (get-in db [:dialog :work])))
+ (fn [db _] (get-in db [:dialog :ht-workspace])))
 
 
 ;;derived signals/subscriptions

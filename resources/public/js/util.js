@@ -53,7 +53,8 @@ function getSVGString( svgNode ) {
 		var styleElement = document.createElement("style");
 		styleElement.setAttribute("type","text/css");
 		styleElement.innerHTML = cssText;
-		var refNode = element.hasChildNodes() ? element.children[0] : null;
+	    var refNode = element.hasChildNodes() ?
+                (element.children||element.childNodes)[0] : null;
 		element.insertBefore( styleElement, refNode );
 	}
 }

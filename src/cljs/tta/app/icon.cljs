@@ -165,16 +165,16 @@ m4,0 v-12 m4,0 v12"}]]))
   ([] (dataset-inadequate nil))
   ([props]
     [icon props
-     [:path {:d "M12,20 a1,1 0 0,1 0 -16,0"}]
-     [:path {:d "M12,4 a1,1 0 0,1 0 16,0"
+     [:path {:d "M12,20 a1,1 0,0,1 0,-16"}]
+     [:path {:d "M12,4 a1,1 0,0,1 0,16"
              :fill "currentColor"}]]))
 
 (defn dataset-incomplete
   ([] (dataset-incomplete nil))
   ([props]
    [icon props
-    [:path {:d "M12,20 a1,1 0 0,1 0 -16,0"}]
-    [:path {:d "M12,4 a1,1 0 0,1 0 16,0"
+    [:path {:d "M12,20 a1,1 0,0,1 0,-16"}]
+    [:path {:d "M12,4 a1,1 0,0,1 0,16"
             :fill "currentColor"}]]))
 
 (defn menu

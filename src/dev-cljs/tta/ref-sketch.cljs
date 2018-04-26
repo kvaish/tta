@@ -6,7 +6,7 @@
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [ht.util.interop :as i]
             [ht.util.common :as u :refer [dev-log]]
-            [tta.app.d3 :refer [d3-svg d3-svg-2-string]]
+            [tta.app.d3 :refer [d3-svg d3-svg->string]]
             [tta.component.reformer-dwg.view :as dwg])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -100,7 +100,7 @@
                  :data (:chart @my-state))])
 
 (defn save-image []
-  (let [svg-string (d3-svg-2-string (-> my-sketch
+  (let [svg-string (d3-svg->string (-> my-sketch
                                         (assoc-in [:style :font-family] "open_sans")
                                         (assoc :data (:data @my-state))))]
     ;; (dev-log svg-string)

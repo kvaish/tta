@@ -183,7 +183,7 @@
           (swap! state assoc :data data)
           (update-node root node data nil [(:class node)] state)))})))
 
-(defn d3-svg-2-string
+(defn d3-svg->string
   "**props**: map with width, height, view-box, preserveAspectRatio,
   style, class, node, data"
   [props]

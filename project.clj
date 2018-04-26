@@ -94,8 +94,8 @@
    [{:id           "dev"
      :source-paths ["src/cljs" "src/cljc" "src/dev-cljs"]
      :figwheel     {:websocket-host :js-client-host
-                    :on-jsload "tta.core/mount-root"}
-     :compiler     {:main                 tta.core
+                    :on-jsload "dev.load/on-jsload"}
+     :compiler     {:main                 dev.load
                     :output-to            "resources/public/js/dev/app.js"
                     :output-dir           "resources/public/js/dev/out"
                     :asset-path           "js/dev/out"
