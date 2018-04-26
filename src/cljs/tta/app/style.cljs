@@ -27,9 +27,7 @@
                                  :stroke-width 1
                                  :display "inline-block"
                                  :user-select "none"
-                                 :width "24px", :height "24px"})
-
-    ))
+                                 :width "24px", :height "24px"})))
 
 (def widget-transition {:std "450ms ease-in-out"})
 
@@ -314,6 +312,13 @@
            :border-left (str "1px solid " widget-bg-e)
            :width "0"
            :height (px (- height 40))}}})
+
+
+(defn horizontal-line [width]
+  {:width (px width)
+   :border (str "1px solid " widget-bg-e)
+   :margin "10px 0 0 10px"})
+
 
 (defn layout-main [view-size]
   (let [w (:width view-size)
