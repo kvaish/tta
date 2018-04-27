@@ -60,7 +60,7 @@
 ;; Layouts ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn ch-defs-radial-fade [id class-kw color opacity-0 opacity-100]
+(defn- ch-defs-radial-fade [id class-kw color opacity-0 opacity-100]
   {:tag :defs, :class :grad-defs
    :nodes [{:tag :radialGradient, :class :rg
             :attr {:id id, :r "50%"
@@ -75,12 +75,23 @@
                             :style (str "stop-color:" color
                                         ";stop-opacity:" opacity-100)}}]}]})
 
-(defn point-shadow [id class-kw data-key size]
+(defn- ch-defs-diagonal-lines [id class-kw color spacing]
+  {:tag :defs, :class class-kw
+   :nodes [{:tag :pattern, :class :pattern
+            :attr {:id id
+                   :width spacing :height 10
+                   :patternTransform "rotate(-45)"
+                   :patternUnits "userSpaceOnUse"}
+            :nodes [{:tag :line :class :line
+                     :attr {:x1 0 :y1 0 :x2 0 :y2 10
+                            :stroke color}}]}]})
+
+(defn- ch-point-shadow [class-kw data-key fill-id size]
   {:tag :circle, :class class-kw
    :data data-key
    :skip? #(not (:x %))
    :attr {:r (/ size 2), :cx :x, :cy :y
-          :fill (str "url(#" id ")")}})
+          :fill (str "url(#" fill-id ")")}})
 
 (defn- vertical-text [{:keys [x y]}]
   (str "rotate(270, " x ", " y ")"))
@@ -230,26 +241,13 @@
                          (> (- y 14) (second y-range)))))})
 
 ;; Shaded areas
-#_(defn- ch-diagnol-shading [data-key] 
-  { :tag :g :class :shaded
-    :attr {:fill "none", :stroke "none"}
-    :nodes 
-      [{:tag :defs :class :defs 
-        :nodes [{:tag :pattern :class :diagnol-pattern
-                  :attr {:id "diagnol-pattern" 
-                        :width 8 :height 10
-                        :patternTransform "rotate(-45)"
-                        :patternUnits "userSpaceOnUse"}
-                  :nodes 
-                    [{:tag :line :class :diagnol-pattern-line
-                      :attr {:x1 0 :y1 0 :x2 0 :y2 10
-                              :style "stroke:black; stroke-width:1"}}]}]}
-       {:tag :g :class :shaded-area :data data-key :multi? true
-        :attr {:fill "none", :stroke "none"}
-        :nodes [{:tag :rect, :class :shaded-area-bound
-                 :attr {:x :x :y :y :height :height :width :width
-                        :style "stroke:grey; stroke-width:1" 
-                        :fill "url(#diagnol-pattern)"}}]}]})
+(defn- ch-diagonal-shading [class-kw data-key fill-id color]
+  {:tag :rect, :class class-kw
+   :data data-key
+   :multi? true
+   :attr {:x :x :y :y :height :height :width :width
+          :style (str "stroke-width:1;stroke:" color)
+          :fill (str "url(#" fill-id ")")}})
 
 #_(defn chart-layout 
   [{:keys [height width 
@@ -323,14 +321,26 @@
 ;; Components ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-#_(defn overall-twt-chart [{:keys 
-                  [height width y-domain wall-names
-                   temp->color burner-domain burner-first?]} 
-                   {:keys [tube-data burner-data]}]
-  (let [
+;; OVERALL-TWT-CHART;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn update-overall-twt-data [state props]
+  (let [state (merge state props)
+        {:keys [max-temp min-temp
+                height width
+                burner-on? temps]}
+
+        ;; plot => chamber box, axes => color plots
         x-ps-os 20, x-pe-os 0, x-as-os 20, x-ae-os 20
         y-ps-os 40, y-pe-os 25, y-as-os 0, y-ae-os 0
+        ]))
+
+(defn overall-twt-chart [{:keys [;; static
+                                 wall-names row-names
+                                 max-temp min-temp
+                                 ;; dynamic
+                                 height width
+                                 burner-on? temps]}]
+  (let [
 
         x-domain [1 (-> tube-data count inc)]
         x-range [(+ x-ps-os x-as-os) (- width x-pe-os x-ae-os)]
@@ -718,8 +728,8 @@
            ;; dynamic
            height width
            burner-on? avg-temp-band
-           avg-raw-temp avg-temp
-           raw? temps]}]
+           avg-raw-temp avg-temp temps
+           raw?]}]
   (let [state (atom {})
         tooltip-state (r/atom nil)
         p-events {:mouseover (fn [_ d] (reset! tooltip-state d))
@@ -737,8 +747,8 @@
                                (ch-horizontal-lines :h-lines :h-lines)
                                (ch-x-axis :x-axis :x-axis)
                                (ch-y-axis :y-axis :y-axis 25)
-                               (point-shadow "twt-grad-pt-shadow"
-                                             :pt-shadow :pt-shadow 30)
+                               (ch-point-shadow :pt-shadow :pt-shadow
+                                                "twt-grad-pt-shadow" 30)
                                (ch-marker-circle :points-a [:points 0] 6
                                                  color-1 p-events)
                                (ch-marker-square :points-b [:points 1] 6
@@ -747,7 +757,7 @@
 
     (fn [{:keys [raw?] :as props}]
       (let [ks [:height :width
-                :reduced-firing-bands :avg-temp-band
+                :burner-on? :avg-temp-band
                 :avg-raw-temp :avg-temp :temps]
             temp-unit @(rf/subscribe [::app-subs/temp-unit])
             y-title (str (if raw?
