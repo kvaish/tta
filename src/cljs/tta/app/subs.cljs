@@ -45,7 +45,8 @@
  :<- [::plant]
  (fn [plant _]
    (let [{:keys [config]} plant]
-     (case (:firing config)
-       "top" (some? (not-empty (:tf-config config)))
-       "side" (some? (not-empty (:sf-config config)))
-       false))))
+     (if-not (:draft? config)
+       (case (:firing config)
+         "top" (some? (not-empty (:tf-config config)))
+         "side" (some? (not-empty (:sf-config config)))
+         false)))))

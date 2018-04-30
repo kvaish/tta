@@ -11,7 +11,7 @@
 (rf/reg-sub
   ::src-data
   :<- [::app-subs/plant]
-  (fn [plant _] (:config plant)))
+  (fn [plant _] (or (:config plant) {:draft? true})))
 
 (rf/reg-sub
  ::component
@@ -34,6 +34,11 @@
  (fn [component _] (:form component)))
 
 (rf/reg-sub
+ ::draft?
+ :<- [::data]
+ (fn [data _] (:draft? data)))
+
+(rf/reg-sub
   ::dirty?
   :<- [::data]
   :<- [::src-data]
@@ -48,7 +53,12 @@
   ::can-submit?
   :<- [::dirty?]
   :<- [::valid?]
-  (fn [[dirty? valid?] _] (and dirty? valid?)))
+  :<- [::draft?]
+  :<- [::view-factor-valid?]
+  (fn [[dirty? valid? draft? vf-valid?] _]
+    ;; additional check, top-fired & not draft? => view-factor full!
+    (and dirty? valid?
+         (or draft? vf-valid?))))
 
 (rf/reg-sub
   ::warn-on-close?
@@ -378,3 +388,98 @@
          pdn (if (chk? (:peep-door-count fch)) (:peep-door-count ch))
          pdn (if (and sn pdn (zero? (mod pdn sn))) (quot pdn sn))]
      pdn)))
+
+;; VIEW-FACTOR (TF ONLY) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; darft can be saved without view-factor
+;; completion of view-factor auto-commits draft
+;; once committed view-factor 100% mandatory
+
+;; valid config to work on view-factor
+(rf/reg-sub
+ ::ready-for-view-factor?
+ :<- [::tf-tube-count-per-row]
+ :<- [::tf-tube-row-count]
+ :<- [::tf-measure-levels-validity]
+ (fn [[tube-count row-count validity] _]
+   (and (pos? tube-count)
+        (pos? row-count)
+        (or (nil? validity) (:valid? validity)))))
+(rf/reg-sub
+ ::view-factor-valid?
+ :<- [::firing]
+ :<- [::tf-view-factor-full?]
+ :<- [::tf-view-factor-matching-config?]
+ (fn [[firing vf-full? vf-match?] _]
+   (or (= firing "side")
+       (and vf-full? vf-match?))))
+
+(rf/reg-sub
+ ::view-factor
+ :<- [::data]
+ (fn [data _]
+   (get-in data [:tf-config :view-factor])))
+
+(rf/reg-sub
+ ::tf-view-factor-full?
+ :<- [::view-factor]
+ :<- [::tf-measure-level? :top?]
+ :<- [::tf-measure-level? :middle?]
+ :<- [::tf-measure-level? :bottom?]
+ (fn [[vf top? middle? bottom?] _]
+   (let [;; function to check a level, returns true if any missing
+         f (fn [level-key]
+             (if-let [rows (get-in vf [level-key :tube-rows])]
+               (some (fn [row]
+                       ;; each row is a map of :wall/:ceiling/:floor
+                       ;; to a 2D array side x tube.
+                       ;; no need to check for existence of keys, since it is
+                       ;; assummed that the row will always initialized
+                       ;; with a full empty skeleton by the view-factor dialog.
+                       ;; hence enough to check the values only.
+                       (some (fn [sides]
+                               (some (fn [tubes]
+                                       (some nil? tubes))
+                                     sides))
+                             (vals row)))
+                     rows)
+               true))]
+     ;; check that no required level missing
+     (not (or
+           (if top? (f :top))
+           (if middle? (f :middle))
+           (if bottom? (f :bottom)))))))
+
+(rf/reg-sub
+ ::tf-view-factor-matching-config?
+ :<- [::view-factor]
+ :<- [::tf-tube-row-count]
+ :<- [::tf-tube-count-per-row]
+ :<- [::tf-measure-level? :top?]
+ :<- [::tf-measure-level? :middle?]
+ :<- [::tf-measure-level? :bottom?]
+ (fn [[vf rn tn top? middle? bottom?] _]
+   ;; if vf not available yet, then there is no mismatch
+   ;; need to check for mismatch only when present
+   (let [level-keys (remove nil? [(if top? :top)
+                                  (if middle? :middle)
+                                  (if bottom? :bottom)])]
+     (or (not vf)
+         (not ;; should have no mismatch
+          (or
+           ;; bad if list of levels not same
+           (not= (into #{} level-keys)
+                 (into #{} (keys vf)))
+           ;; now check if any level doesn't match in terms off
+           ;; tube-row-count or tube-count
+           (some (fn [level-key]
+                   (let [rows (get-in vf [level-key :tube-rows])]
+                     (or
+                      ;; bad if tube row count has changed
+                      (not= (count rows) rn)
+                      ;; just check length of one side of the wall
+                      ;; its enough since rows are always created
+                      ;; with same tube-count for wall as well as ceiling/floor
+                      (some (fn [wall]
+                              (not= (count (first wall)) tn))
+                            (map :wall rows)))))
+                 level-keys)))))))

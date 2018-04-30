@@ -190,6 +190,20 @@ m4,0 v-12 m4,0 v12"}]]))
     [:path {:d "M6,9 a 7,7 0 1 1 0,6"}]
     [:path {:d "M6,3 v6 h6"}]]))
 
+(defn view-factor
+  ([] (view-factor nil))
+  ([props]
+   [icon props
+    [:path {:d "M3,15 l15,-12 M3,15 l15,6 M10,10 l2,8"}]
+    ;; [:path {:d "M3,19 l15,-15 M3,20 h15 M11,19 v-8"}]
+    ;; [:path {:d "M18,12 h5 M18,9 l4,-2 M18,15 l4,2"}]
+    [:path {:d "M21,3 v18" :stroke-dasharray "3,2"}]]))
+
+(defn dataset-scope
+  ([] (dataset-scope nil))
+  ([props]
+   [icon props
+    [:path {:d "M9,6 v12 h6 v-12 z M4,8 v8 M20,8 v8"}]]))
 
 ;; more complex icons ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fixed view-box     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -118,27 +118,6 @@
                               :right-action on-clear
                               :right-disabled? (not on-clear)}])
 
-(defn- list-sub-head  [width {:keys [level]}]
-  (let [wall (translate [:config :wall :label] "Wall")
-        ceiling (translate [:config :ceiling :label] "Ceiling")
-        floor (translate [:config :floor :label] "Floor")
-        names (case level
-                :top [ceiling wall nil wall ceiling]
-                :bottom [floor wall nil wall floor]
-                :middle [wall nil wall])]
-
-    [:div {:style {:width (- width 10) :display "inline-block"
-                   :height 20 
-                   :font-size "12px"
-                   :padding-left "6px"
-                   :color (color-hex :sky-blue)}}
-     (map (fn [t i] [:div {:style {:width (if t 68 30)
-                                  :height 18
-                                  :margin-left "10px"
-                                  :margin-right "10px"
-                                  :text-align "center"
-                                  :display "inline-block"
-                                  } :key i} t]) names (range))]))
 ;; 68x30
 (defn- list-input [state row col _ _]
   (let [on-paste (partial on-paste-input state row col)
@@ -165,7 +144,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- list-input-tube-factor [state row col _ _]
+#_(defn- list-input-tube-factor [state row col _ _]
   (let [on-paste (partial on-paste-input state row col)
         on-change (partial on-change-input state row col)
         on-key-down (partial shift-focus state row col)]
@@ -194,18 +173,22 @@
 (defn- list-tubes
   "!!! should not be used directly !!!  
   render list of tubes using specified renderer for each tube.  
-  [width row-height row-render-fn  
-   {:keys [label height start-tube end-tube on-clear]}]  
+  [width row-height row-render-fn props  
+   sub-head props-fn]  
   **on-clear**: (fn []) should clear out all, provide nil to disable button"
-  [width row-height row-render-fn props]
+  [width row-height row-render-fn props
+   ;; additional parameters
+   sub-head props-fn]
   ;; uses lazy-rows
   ;; for each item, renders using list-row-tube-both-sides
   (let [state (atom {}) ;; props, tube-number-fn, show-row, counts
         items-render-fn (fn [indexes show-row]
                           (swap! state assoc :show-row show-row)
                           (map #(vector row-render-fn state %) indexes))]
-    (fn [{:keys [label height start-tube end-tube on-clear] :as props}]
-      (let [w (- width 12) ;; content width
+    (fn [props]
+      (let [props (if props-fn (props-fn props) props)
+            {:keys [label height start-tube end-tube on-clear]} props
+            w (- width 12) ;; content width
             [tube-count tube-number-fn]
             (if (> end-tube start-tube)
               [(- end-tube (dec start-tube))
@@ -213,19 +196,20 @@
               [(- start-tube (dec end-tube))
                #(- start-tube %)])]
         (swap! state assoc :props props
-               :counts [tube-count 2]
+               :counts [tube-count (or (:field-count props) 2)]
                :tube-number-fn tube-number-fn)
         [:div {:style {:width width, :height height
                        :display "inline-block"
                        :vertical-align "top"}}
          [list-head w label on-clear]
+         (if sub-head [sub-head w props])
          [app-scroll/lazy-rows
           {:width w :height (- height 48) ;; leave 48 for list-head
            :item-count tube-count
            :item-height row-height
            :items-render-fn items-render-fn}]]))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LIST-TUBE-BOTH-SIDES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 208x38
 (defn- list-row-tube-both-sides
@@ -242,7 +226,59 @@
      [:span (use-sub-style style label-style-key) (tube-number-fn index)]
      [list-input state index 1 style right-field]]))
 
-(defn- list-view-factor-tubes
+
+;; 220x(48+i38)
+(defn list-tube-both-sides
+  "can be for temperature input or emissivity input  
+  **field-fn**: (fn [index side]) should return the form field for the tube/side  
+  **pref-fn**: (fn [index]), should return \\\"imp\\\" or \\\"pin\\\" or nil  
+  **on-clear**: (fn []) should clear out all, provide nil to disable button  
+  **on-change**: (fn [index side value]) to update value, where: side = 0 or 1  
+  **on-paste**: (fn [index side value]) to update value, where: side = 0 or 1,  
+  if on-paste is nil, on-change is used instead."
+  [{:keys [label height start-tube end-tube on-clear
+           field-fn pref-fn on-change on-paste]
+    :as props}]
+  (list-tubes 220 38 list-row-tube-both-sides props nil nil))
+
+;; LIST-TUBE-PREFS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 300x(48+i38)
+(defn- list-row-tube-prefs
+  "for a tube of given index, a selector to choose preference"
+  [state index]
+  (let [{:keys [tube-number-fn], {:keys [selected-fn on-select]} :props} @state
+        pref (selected-fn index)
+        style (app-style/tube-list-row pref)
+        options [{:id nil, :label "None"}
+                 {:id "imp", :label "Important"}
+                 {:id "pin", :label "Pinched"}]
+        selected (some #(if (= (:id %) pref) %) options)]
+    [:span (use-style style)
+     [:span (-> (use-sub-style style :filled)
+                (update :style assoc :margin "8px 0"))
+      (tube-number-fn index)]
+     [app-comp/selector {:options options
+                         :item-width 70
+                         :label-fn :label
+                         :value-fn :id
+                         :on-select #(on-select index (:id %))
+                         :selected selected}]]))
+
+;; 300x(48+i38)
+(defn list-tube-prefs
+  "for selecting tube preference  
+  **selected-fn**: (fn [index]) should return the pref for the tube  
+  **on-clear**: (fn []) should clear out all, provide nil to disable button  
+  **on-select**: (fn [index selection]) to update preference"
+  [{:keys [label height start-tube end-tube on-clear
+           selected-fn on-select]
+    :as props}]
+  (list-tubes 310 48 list-row-tube-prefs props nil nil))
+
+;; LIST-TUBE-VIEW-FACTOR ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#_(defn- list-tubes-view-factors
   "!!! should not be used directly !!!  
   render list of tubes using specified renderer for each tube.  
   [width row-height row-render-fn  
@@ -277,88 +313,90 @@
            :item-height row-height
            :items-render-fn items-render-fn}]]))))
 
-(defn- list-row-tube-view-factor
+(defn- list-sub-head-view-factors [width {:keys [level-key]}]
+  (let [wall (translate [:config :wall :label] "Wall")
+        ceiling (translate [:config :ceiling :label] "Ceiling")
+        floor (translate [:config :floor :label] "Floor")
+        names (case level-key
+                :top [wall ceiling nil ceiling wall]
+                :bottom [wall floor nil floor wall]
+                :middle [wall nil wall])]
+    [:div {:style {:height 10
+                   :padding "0 12px"
+                   :display "inline-block"
+                   :font-size "10px", :line-height "10px"
+                   :color (color-hex :sky-blue)}}
+     (doall
+      (map-indexed (fn [i t]
+                     ^{:key i}
+                     [:span {:style {:width (if t 68 30)
+                                     :height 10
+                                     :margin "0 8px"
+                                     :text-align "center"
+                                     :display "inline-block"}}
+                      t])
+                   names))]))
+
+(defn- list-row-tube-view-factors
   "for a tube of given index, a row with 2 inputs, one for each side of the tube"
   [state index]
-  (let [{:keys [tube-number-fn], {:keys [field-fn pref-fn num-field]} :props}
-        @state
-        style (app-style/tube-list-row (pref-fn index))
-        label-style-key (if (some #(:value (field-fn index %)) (range num-field))
+  (let [{:keys [tube-number-fn]
+         {:keys [field-fn pref-fn field-count]} :props} @state
+        style (app-style/tube-list-row-view-factors (pref-fn index))
+        label-style-key (if (some #(:value (field-fn index %))
+                                  (range field-count))
                           :filled :label)]
     [:span (use-style style)
      (doall (map (fn [i]
                    ^{:key i}
-                   [list-input-tube-factor state index i style (field-fn index i)])
-                 (range (/ num-field 2))))
-     
+                   [list-input state index i style (field-fn index i)])
+                 (range (/ field-count 2))))
      [:span (use-sub-style style label-style-key) (tube-number-fn index)]
      (doall (map (fn [i]
                    ^{:key i}
-                   [list-input-tube-factor state index i style (field-fn index i)])
-                 (range (/ num-field 2) num-field)))]))
+                   [list-input state index i style (field-fn index i)])
+                 (range (/ field-count 2) field-count)))]))
 
-(defn list-tube-view-factor
+(defn list-tube-view-factors
   "For view factor
-  **field-fn**: (fn [index side]) should return the form field for the tube/side  
+  *wall-type* is one of :wall, :ceiling or :floor, while
+  *side* is 0 or 1, and *index* is the tube index  
+  **field-fn**: (fn [index side wall-type]) should return the form field  
   **pref-fn**: (fn [index]), should return \\\"imp\\\" or \\\"pin\\\" or nil  
   **on-clear**: (fn []) should clear out all, provide nil to disable button  
-  **on-change**: (fn [index side value]) to update value, where: side = 0 or 1  
-  **on-paste**: (fn [index side value]) to update value, where: side = 0 or 1,  
+  **on-change**: (fn [index side wall-type value]) to update value  
+  **on-paste**: (fn [index side wall-type value]) to update value  
   if on-paste is nil, on-change is used instead."
-  [{:keys [label height start-tube end-tube on-clear
-           field-fn pref-fn on-change on-paste level num-field]
+  [{:keys [level-key
+           label height start-tube end-tube
+           field-fn pref-fn on-change on-paste on-clear]
     :as props}]
-  (list-view-factor-tubes (+ 40 (* num-field 110))  38 list-row-tube-view-factor props))
-
-
-;; 220x(48+i38)
-(defn list-tube-both-sides
-  "can be for temperature input or emissivity input  
-  **field-fn**: (fn [index side]) should return the form field for the tube/side  
-  **pref-fn**: (fn [index]), should return \\\"imp\\\" or \\\"pin\\\" or nil  
-  **on-clear**: (fn []) should clear out all, provide nil to disable button  
-  **on-change**: (fn [index side value]) to update value, where: side = 0 or 1  
-  **on-paste**: (fn [index side value]) to update value, where: side = 0 or 1,  
-  if on-paste is nil, on-change is used instead."
-  [{:keys [label height start-tube end-tube on-clear
-           field-fn pref-fn on-change on-paste]
-    :as props}]
-  (list-tubes 220 38 list-row-tube-both-sides props))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; 300x(48+i38)
-(defn- list-row-tube-prefs
-  "for a tube of given index, a selector to choose preference"
-  [state index]
-  (let [{:keys [tube-number-fn], {:keys [selected-fn on-select]} :props} @state
-        pref (selected-fn index)
-        style (app-style/tube-list-row pref)
-        options [{:id nil, :label "None"}
-                 {:id "imp", :label "Important"}
-                 {:id "pin", :label "Pinched"}]
-        selected (some #(if (= (:id %) pref) %) options)]
-    [:span (use-style style)
-     [:span (-> (use-sub-style style :filled)
-                (update :style assoc :margin "8px 0"))
-      (tube-number-fn index)]
-     [app-comp/selector {:options options
-                         :item-width 70
-                         :label-fn :label
-                         :value-fn :id
-                         :on-select #(on-select index (:id %))
-                         :selected selected}]]))
-
-;; 300x(48+i38)
-(defn list-tube-prefs
-  "for selecting tube preference  
-  **selected-fn**: (fn [index]) should return the pref for the tube  
-  **on-clear**: (fn []) should clear out all, provide nil to disable button  
-  **on-select**: (fn [index selection]) to update preference"
-  [{:keys [label height start-tube end-tube on-clear
-           selected-fn on-select]
-    :as props}]
-  (list-tubes 310 48 list-row-tube-prefs props))
+  (let [field-count (if (= level-key :middle) 2 4)
+        w (+ 10 24 46 (* field-count 86))
+        ;; helper fn to resolve side-index and wall-type from field-index
+        f-i-fn (fn [i] (case level-key
+                        :middle [:wall i]
+                        [(if (< 0 i 3)
+                           (case level-key :top :ceiling, :floor)
+                           :wall)
+                         (get {0 0, 1 0, 2 1, 3 1} i)]))
+        f-field-fn (fn [f]
+                     (fn [ti fi]
+                       (let [[wt si] (f-i-fn fi)]
+                         (f ti si wt))))
+        f-on-change (fn [f]
+                      (if f
+                        (fn [ti fi v]
+                          (let [[wt si] (f-i-fn fi)]
+                            (f ti si wt v)))))]
+    (list-tubes w 38 list-row-tube-view-factors props
+                ;; additional parameters
+                list-sub-head-view-factors
+                #(-> %
+                     (assoc :field-count field-count)
+                     (update :field-fn f-field-fn)
+                     (update :on-change f-on-change)
+                     (update :on-paste f-on-change)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

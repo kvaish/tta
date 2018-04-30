@@ -4,6 +4,7 @@
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.style :refer [color-hex]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -502,19 +503,27 @@
        [view-factor])]))
 
 (defn config [props]
-  (let [firing @(rf/subscribe [::subs/firing])]
+  (let [firing @(rf/subscribe [::subs/firing])
+        vf-ready? @(rf/subscribe [::subs/ready-for-view-factor?])
+        vf-valid? @(rf/subscribe [::subs/view-factor-valid?])
+        show-error? (show-error?)]
     [app-view/layout-main
      (translate [:config :title :text] "Configuration")
      (translate [:config :title :sub-text] "Reformer configuration")
-     [(if (= "top" firing)
-        [app-comp/button {:disabled? false
-                          :icon ic/upload
+     [(if (and show-error? (= "top" firing) vf-ready? (not vf-valid?))
+        [:span {:style {:color (color-hex :red)
+                        :font-size "12px"}}
+         "* "
+         (translate [:config :view-factor :incomplete]
+                    "Incomplete view factor!")
+         " -->"])
+      (if (= "top" firing)
+        [app-comp/button {:disabled? (not vf-ready?)
+                          :icon ic/view-factor
                           :label (translate [:action :view-factor :label]
                                             "View Factor")
-                          :on-click #(rf/dispatch
-                                      [:tta.dialog.view-factor.event/open])}])
-      
-      [app-comp/button {:disabled? (if (show-error?)
+                          :on-click #(rf/dispatch [::event/open-view-factor])}])
+      [app-comp/button {:disabled? (if show-error?
                                      (not @(rf/subscribe [::subs/can-submit?]))
                                      (not @(rf/subscribe [::subs/dirty?])))
                         :icon ic/upload

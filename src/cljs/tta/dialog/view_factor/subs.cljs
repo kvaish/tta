@@ -34,15 +34,6 @@
  (fn [dialog _] (:view dialog)))
 
 (rf/reg-sub
- ::field
- :<- [::form]
- :<- [::data]
- (fn [[form data] [_ path]]
-   (or (get-in form path)
-       {:value (get-in data path)
-        :valid? true})))
-
-(rf/reg-sub
  ::dirty?
  :<- [::data]
  :<- [::src-data]
@@ -75,22 +66,19 @@
  (fn [dialog _]
    (:open? dialog)))
 
-#_(rf/reg-sub
- ::data
- :<- [::dialog]
- :<- [::src-data]
- (fn [[dialog src-data] _]
-   (or (:data dialog)
-       src-data)))
+(defn get-field
+  ([path form data] (get-field path form data identity))
+  ([path form data parse]
+   (or (get-in form path)
+       {:value (parse (get-in data path))
+        :valid? true})))
 
 (rf/reg-sub
  ::field
  :<- [::form]
  :<- [::data]
  (fn [[form data] [_ path]]
-   (or (get-in form path)
-       {:value (get-in data path)
-        :valid? true})))
+   (get-field path form data)))
 
 (rf/reg-sub
  ::config
@@ -113,12 +101,10 @@
         (filter :show?)
         (vec))))
 
-
 (rf/reg-sub
  ::selected-level ;; bottom tab selected
  :<- [::view]
  (fn [view _] (or (:selected-level view) 0)))
-
 
 (rf/reg-sub
  ::selected-level-key
@@ -131,7 +117,6 @@
  :<- [::level-opts]
  (fn [opts [_ index]] (get-in opts [index :id])))
 
-
 (rf/reg-sub
  ::tube-pref
  :<- [::app-subs/plant]
@@ -141,70 +126,63 @@
          (get-in rows [row :tube-prefs index])))))
 
 (rf/reg-sub
- ::fill-all-wall
- :<- [::form]
- (fn [form _]
-   (get-in form [:fill-all-wall])))
-
-(rf/reg-sub
- ::fill-all-ceiling
- :<- [::form]
- (fn [form _]
-   (get-in form [:fill-all-ceiling])))
-
-(rf/reg-sub
- ::fill-all-floor
- :<- [::form]
- (fn [form _]
-   (get-in form [:fill-all-floor])))
-
-(rf/reg-sub
- ::view-factor-field  
+ ::view-factor-field
  :<- [::data]
  :<- [::form]
- (fn [[data form] [_ level key row side index]]
-   (let [path [level :tube-rows row key side index]]
-     (or (get-in form path)
-         {:value (get-in data path)
-          :valid? true}))))
+ (fn [[data form] [_ level-key row-index wall-type side-index tube-index]]
+   (get-field [level-key :tube-rows row-index wall-type side-index tube-index]
+              form data)))
 
 (rf/reg-sub
  ::row-options
  :<- [::config]
  (fn [config _]
    (let [tube-rows (get-in config [:tf-config :tube-rows])]
-     (into [{:id -1  :label "All"}]
-           (mapv (fn [{:keys [name]} i]
-                   {:id i :label name})
-                 tube-rows (range))))))
+     (into [{:id :all
+             :label (translate [:view-factor :row-option :all] "All")}]
+           (map-indexed #(hash-map :id %1 :label (:name %2))
+                        tube-rows)))))
 
 (rf/reg-sub
  ::row-selection
+ :<- [::view]
+ (fn [view _]
+   (get view :row-selection :all)))
+
+(defn init-tube-row [level-key tube-count]
+  (let [init-value (->> (repeat tube-count nil)
+                        vec (repeat 2) vec)]
+    (cond-> {:wall init-value}
+      (= level-key :top) (assoc :ceiling init-value)
+      (= level-key :bottom) (assoc :floor init-value))))
+
+(defn init-data [level-opts config]
+  (let [{:keys [tube-rows]} (:tf-config config)]
+    (reduce (fn [m {level-key :id}]
+              (assoc m level-key
+                     {:tube-rows
+                      (mapv #(init-tube-row level-key (:tube-count %))
+                            tube-rows)}))
+            {} level-opts)))
+
+(rf/reg-sub
+ ::has-data?
+ :<- [::data]
  :<- [::form]
- (fn [form _]
-   (or (get form :row-selection)
-        -1)))
+ (fn [[data form] [_ level-key row-index]]
+   (or (some (fn [sides]
+               (some #(some some? %) sides))
+             (vals (get-in data [level-key :tube-rows row-index])))
+       (some (fn [sides]
+               (some #(some (comp some? :value) %) sides))
+             (vals (get-in form [level-key :tube-rows row-index]))))))
 
 (rf/reg-sub
  ::src-data
- :<- [::src-subs/data]
  :<- [::level-opts]
  :<- [::config]
- (fn [[data level-opts config] _]
-   (let [{:keys [tube-rows tube-row-count]} (:tf-config config)] 
-     (or (:view-factor data)
-         (->>(mapv (fn [{:keys [id]} ]
-                        {id
-                         {:tube-rows (mapv (fn [{:keys [tube-count]}]
-                                             (let [value (vec (repeat 2 (vec
-                                                                         (repeat
-                                                                          tube-count
-                                                                          nil))))]
-                                               (cond-> {:wall value}
-                                                 (= id :ceiling)
-                                                 (assoc :ceiling value)
-                                                 (= id :floor)
-                                                 (assoc :floor value))))
-                                           tube-rows)}})
-                   level-opts)
-             (into {}))))))
+ (fn [[level-opts config] _]
+   ;; returns {:top {:tube-rows [{:wall [[]] :celing [[]] :floor [[]]}]}, ..}
+   (or (get-in config [:tf-config :view-factor])
+       ;; if no data, provide default initial value, empty vectors
+       (init-data level-opts config))))

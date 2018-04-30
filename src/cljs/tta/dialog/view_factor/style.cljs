@@ -10,8 +10,8 @@
 
 (def form-field
   {:display "inline-block"
+   :vertical-align "top"
    :position "relative"
-   :float "right"
    :padding "0 0 8px 12px"
    ::stylefy/sub-styles
    {:label {:font-size "12px"
@@ -24,3 +24,10 @@
             :color app-style/widget-err
             :font-size "10px"
             :bottom 0, :left "12px"}}})
+
+(def body
+  {:position "relative"
+   :padding-bottom "60px"
+   ::stylefy/sub-styles
+   {:btns {:position "absolute"
+           :bottom 0, :right 0}}})

@@ -5,27 +5,67 @@
             [day8.re-frame.forward-events-fx]
             [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.event :as ht-event]
-            [tta.dialog.view-factor.subs :as subs]
+            [tta.util.common :refer [set-field-decimal]]
             [tta.app.event :as app-event]
-            [tta.util.common :refer [set-field-decimal]]))
+            [tta.dialog.view-factor.subs :as subs]))
 
 ;; Do NOT use rf/subscribe
 ;; instead use cofx injection like [(inject-cofx ::inject/sub [::subs/data])]
 
-(defonce ^:const dlg-path [:dialog :view-factor])
-(defonce ^:const data-path (conj dlg-path :data))
-(defonce ^:const form-path (conj dlg-path :form))
+(defonce dlg-path [:dialog :view-factor])
+(defonce data-path (conj dlg-path :data))
+(defonce form-path (conj dlg-path :form))
+(defonce view-path (conj dlg-path :view))
 
-(rf/reg-event-db
+#_(defn config-not-matching? [level-opts config]
+  ;; if vf not available yet, then there is no mismatch
+  ;; need to check for mismatch only when present
+  (if-let [vf (get-in config [:tf-config :view-factor])]
+    (or
+     ;; bad if list of levels not same
+     (not= (into #{} (map :id level-opts))
+           (into #{} (keys vf)))
+     ;; now check if any level doesn't match in terms off
+     ;; tube-row-count or tube-count
+     (let [{:keys [tube-rows tube-row-count]} (:tf-config config)]
+       (some (fn [level-key]
+               (let [rows (get-in vf [level-key :tube-rows])]
+                 (or
+                  ;; bad if tube row count has changed
+                  (not= (count rows) tube-row-count)
+                  ;; just check length of one side of the wall
+                  ;; its enough since this component always creates
+                  ;; a complete row together with same tube-count
+                  ;; for wall as well as ceiling/floor
+                  (some (fn [[i wall]]
+                          (let [{:keys [tube-count]} (get tube-rows i)]
+                            (not= (count (first wall)) tube-count)))
+                        (map-indexed (fn [i row] [i (:wall row)])
+                                     rows)))))
+             (map :id level-opts))))))
+
+(rf/reg-event-fx
  ::open
- (fn [db [_ options]]
-   (update-in db dlg-path merge options {:open? true})))
+ [(inject-cofx ::inject/sub [::subs/level-opts])
+  (inject-cofx ::inject/sub [::subs/config])]
+ (fn [{:keys [db ::subs/level-opts ::subs/config]} [_ reset? options]]
+   (let [init (subs/init-data level-opts config)]
+     ;; if config changes no longer matching existing view-factors
+     ;; reset to nils and start again.
+     {:db (update-in db dlg-path merge options {:open? true
+                                                :data (if reset? init)
+                                                :form init})})))
 
 (rf/reg-event-db
  ::close
  (fn [db [_ options]]
    (update-in db dlg-path merge  {:form nil, :data nil, :view nil}
               options {:open? false})))
+
+(rf/reg-event-db
+ ::set-options
+ (fn [db [_ options]]
+   (update-in db [:dialog :view-factor] merge options)))
 
 (rf/reg-event-fx
  ::submit
@@ -36,113 +76,62 @@
                  [::close])}))
 
 (rf/reg-event-db
- ::set-field
- (fn [db [_ id value]]
-   (assoc-in db [:dialog :view-factor :field id]
-             {:valid? false
-              :error nil
-              :value value})))
-
-(rf/reg-event-fx
- ::set-view-factor-field
- [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_  level key row side index value]]
-   (print [level :tube-rows row key side index])
-   {:db (set-field-decimal db [level :tube-rows row key side index]
-                           value data
-                           data-path form-path false
-                           {:max 0.99, :min 0.01, :precision 2})}))
-
-(rf/reg-event-db
- ::set-level
- (fn [db [_ index]]
-   (assoc-in db (conj dlg-path :view :selected-level) index)))
-
-(rf/reg-event-db
- ::set-data
- (fn [db [_ data]]
-   (assoc-in db [:dialog :view-factor :data] data)))
-
-(rf/reg-event-db
- ::set-wall-fill-all-field
- (fn [db [_ value]]
-   (set-field-decimal db [:fill-all-wall] value nil
+ ::set-fill-all
+ (fn [db [_ wall-type value]]
+   (set-field-decimal db [:fill-all wall-type] value nil
                       nil form-path false
                       {:max 0.99, :min 0.01, :precision 2})))
-
-(rf/reg-event-db
- ::set-ceiling-fill-all-field
- (fn [db [_ value]]
-   (set-field-decimal db [:fill-all-ceiling] value nil
-                      nil form-path false
-                      {:max 0.99, :min 0.01, :precision 2})))
-
-(rf/reg-event-db
- ::set-floor-fill-all-field
- (fn [db [_ value]]
-   (set-field-decimal db [:fill-all-floor] value nil
-                      nil form-path false
-                      {:max 0.99, :min 0.01, :precision 2})))
-
 
 (rf/reg-event-db
  ::set-row-selection
  (fn [db [_ value]]
-   (assoc-in db (conj form-path  :row-selection) value)))
+   (assoc-in db (conj view-path :row-selection) value)))
 
 (rf/reg-event-db
- ::set-options
- (fn [db [_ options]]
-   (update-in db [:dialog :view-factor] merge options)))
+ ::set-selected-level
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :selected-level) value)))
 
 (rf/reg-event-fx
- ::clear-row
- [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/form])
-  (inject-cofx ::inject/sub [::subs/selected-level-key])]
- (fn [{:keys [db ::subs/data ::subs/form ::subs/selected-level-key]}
-     [_ row]]
-   {:db (-> db
-            (assoc-in data-path (assoc-in data [selected-level-key :tube-rows row] nil))
-            (assoc-in form-path (assoc-in form [selected-level-key :tube-rows row] nil)))})) 
+ ::set-view-factor-field
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_  level-key row wall-type side index value]]
+   {:db (set-field-decimal db [level-key :tube-rows row wall-type side index]
+                           value data
+                           data-path form-path false
+                           {:max 0.99, :min 0.01, :precision 2})}))
+
+(rf/reg-event-fx
+ ::clear-tube-row
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ level-key row-index tube-count]]
+   (let [init-value (subs/init-tube-row level-key tube-count)]
+     {:db (-> db
+              (assoc-in data-path (assoc-in data [level-key :tube-rows row-index]
+                                            init-value))
+              (assoc-in (conj form-path level-key :tube-rows row-index)
+                        init-value))})))
 
 (rf/reg-event-fx
  ::fill-all
  [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/form])
-  (inject-cofx ::inject/sub [::subs/selected-level-key])
   (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/row-selection])]
- (fn [ {:keys [db ::subs/data ::subs/form
-              ::subs/fill-all-wall
-              ::subs/selected-level-key ::subs/config ::subs/row-selection]}
-     [_ up-key value]]
-   
-   (let [tube-row-count (get-in config [:tf-config :tube-row-count])
-         tube-rows (get-in config [:tf-config :tube-rows])
+ (fn [{:keys [db ::subs/data ::subs/config ::subs/row-selection]}
+     [_ level-key wall-type value]]
+   (let [{:keys [tube-rows tube-row-count]} (:tf-config config)
          value (js/Number value)]
      {:db
-      (-> db       
-          (assoc-in data-path
-                    (update-in data [selected-level-key :tube-rows]
-                               (fn [rows]
-                                 (mapv (fn [row {:keys [tube-count]} i]
-                                         (if (or (= -1 row-selection)
-                                                 (= row-selection i) )
-                                           (assoc row up-key
-                                                  (vec
-                                                   (repeat 2 (vec
-                                                              (repeat
-                                                               tube-count
-                                                               value))))) row))
-                                       rows tube-rows (range)))) )
-          (assoc-in form-path 
-                    (update-in form [selected-level-key :tube-rows]
-                               (fn [rows]
-                                 (mapv 
-                                  (fn [row]
-                                    (if (and (vector? row) (contains? row up-key)) 
-                                      (assoc (last row) up-key nil))
-                                    (if (contains? row up-key)(assoc row up-key nil)))
-                                  rows)))))})))
-
+      (reduce (fn [db i]
+                (let [{:keys [tube-count]} (get tube-rows i)
+                      fill (->> (repeat tube-count value) vec (repeat 2) vec)
+                      init (->> (repeat tube-count nil) vec (repeat 2) vec)]
+                  (-> db
+                      (assoc-in (conj data-path level-key :tube-rows i wall-type)
+                                fill)
+                      (assoc-in (conj form-path level-key :tube-rows i wall-type)
+                                init))))
+              (assoc-in db data-path data)
+              (if (= :all row-selection)
+                (range tube-row-count)
+                [row-selection]))})))
