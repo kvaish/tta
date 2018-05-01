@@ -359,9 +359,10 @@
 
 (rf/reg-sub
  ::tf-burner
+ :<- [::form]
  :<- [::data]
- (fn [data [_ [row col]]]
-   (get-in data [:top-fired :burners row col :deg-open])))
+ (fn [[form data] [_ [row col]]]
+   (get-field [:top-fired :burners row col :deg-open] form data)))
 
 (defn get-field-temp [path form data temp-unit]
   (get-field path form data #(au/to-temp-unit % temp-unit)))

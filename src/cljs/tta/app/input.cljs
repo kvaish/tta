@@ -118,28 +118,32 @@
                               :right-disabled? (not on-clear)}])
 
 ;; 68x30
-(defn- list-input [state row col _ _]
+(defn- list-input [state row col _ _ color-fn]
   (let [on-paste (partial on-paste-input state row col)
         on-change (partial on-change-input state row col)
         on-key-down (partial shift-focus state row col)]
     (r/create-class
-     {:component-did-mount
-      (fn [this]
-        (register-input state row col (dom/dom-node this)))
-      :component-will-unmount
-      (fn [_]
-        (register-input state row col nil))
-      :reagent-render
-      (fn [_ _ _ style field]
-        (let [{:keys [value valid?]} field]
-          [:input (merge (use-sub-style style
-                                        (if valid? :input :invalid-input))
-                         {:value (or value "")
-                          ;; :ref #(register-input index side %)
-                          :on-focus on-focus-input
-                          :on-paste on-paste
-                          :on-change on-change
-                          :on-key-down on-key-down})]))})))
+      {:component-did-mount
+       (fn [this]
+         (register-input state row col (dom/dom-node this)))
+       :component-will-unmount
+       (fn [_]
+         (register-input state row col nil))
+       :reagent-render
+       (fn [_ _ _ style field]
+         (let [{:keys [value valid?]} field
+               bg-color (if color-fn (color-fn value))]
+           [:input (merge (use-sub-style style
+                                         (if valid? :input :invalid-input))
+                          (if (and bg-color (not= bg-color "#fff"))
+                            {:style {:background-color bg-color
+                                     :color "#fff"}})
+                          {:value       (or value "")
+                           ;; :ref #(register-input index side %)
+                           :on-focus    on-focus-input
+                           :on-paste    on-paste
+                           :on-change   on-change
+                           :on-key-down on-key-down})]))})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -305,5 +309,44 @@
          [app-scroll/lazy-rows
           {:width w, :height (- height 48)
            :item-count (inc wall-count) ;; one row extra for add btn
+           :item-height 38
+           :items-render-fn items-render-fn}]]))))
+
+(defn- list-row-burner-input [color-fn state item-count index]
+  (let [{:keys [field-fn]} (:props @state)
+        style (app-style/tube-list-row)
+        field (field-fn index)]
+    [:span (-> (use-style style)
+               (update :style assoc :margin-left 20))
+     [list-input state index 0 style field color-fn]]))
+
+(defn list-burner-input
+  "[{:keys [height item-count
+            field-fn on-change on-paste color-fn]}]"
+  [props]
+  (let [state (atom {}) ;; props, counts, show-row
+        {:keys [color-fn]} props
+        items-render-fn (fn [indexes show-row]
+                          (let [ic (get-in (swap! state assoc :show-row show-row)
+                                           [:props :item-count])]
+                            (map #(vector list-row-burner-input color-fn state ic %)
+                                 indexes)))]
+    ;; Form-2 render fn
+    (fn [{:keys [label height item-count] :as props}]
+      (swap! state assoc
+             ;; ensure the arity of on-change and on-paste
+             ;; since col is not applicable here
+             :props (-> props
+                        (update :on-change #(fn [row _ val] (% row val)))
+                        (update :on-paste #(if %
+                                             (fn [row _ val] (% row val)))))
+             :counts [item-count 1])
+      (let [width 160, w (- width 12)]
+        [:div {:style {:width width, :height height
+                       :display "inline-block"
+                       :vertical-align "top"}}
+         [app-scroll/lazy-rows
+          {:width w, :height (- height 48)
+           :item-count (inc item-count) ;; one row extra for add btn
            :item-height 38
            :items-render-fn items-render-fn}]]))))

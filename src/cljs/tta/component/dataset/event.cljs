@@ -297,10 +297,10 @@
 (rf/reg-event-fx
  ::set-tf-burner
  [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ [row col] value]]
-   {:db (assoc-in db data-path
-                  (assoc-in data [:top-fired :burners row col :deg-open]
-                            value))}))
+ (fn [{:keys [db ::subs/data]} [_ row col value]]
+   {:db (set-field-number db [:top-fired :burners row col :deg-open]
+                          value data data-path form-path false
+                          {:max 90, :min 0})}))
 
 (rf/reg-event-fx
  ::set-temp
