@@ -4,6 +4,7 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
+            [cljsjs.material-ui]
             [cljs-react-material-ui.reagent :as ui]
             [ht.util.interop :as i]
             [ht.app.style :as ht-style]

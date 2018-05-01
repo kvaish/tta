@@ -5,7 +5,6 @@
             [cljs-react-material-ui.core :refer [get-mui-theme]]
             [cljs-react-material-ui.reagent :as ui]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
-            [ht.work.view] ;; dev purpose only!
             [ht.app.style :as style]
             [ht.app.subs :as subs :refer [translate]]
             [ht.app.event :as event]))
@@ -98,7 +97,6 @@
         (cond
           claims        [root]
           (false? claims) [no-claims]))
-      [ht.work.view/work] ;; has no effect in prod build. only for dev!
       [message-box]
       [busy-screen]
       [service-failure]]]))
