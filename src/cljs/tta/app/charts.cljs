@@ -449,49 +449,65 @@
              {:tag :g, :class :marker-2
               :nodes [{:tag :rect, :class :marker-rect
                        :attr {:width 6, :height 6
-                              :x (f :x 60), :y (f :y 3)
+                              :x (f :x 100), :y (f :y 3)
                               :fill color-2}}
                       {:tag :text, :class :side-right
                        :attr {:style label-style
-                              :x (f :x 78), :y (f :y 9)}
+                              :x (f :x 118), :y (f :y 9)}
                        :text [:labels :side-names 1]}]}
              {:tag :g, :class :avg-temp
               :nodes [{:tag :line, :class :line
-                       :attr {:x1 (f :x 150), :x2 (f :x 170)
+                       :attr {:x1 (f :x 250), :x2 (f :x 270)
                               :y1 (f :y 6), :y2 (f :y 6)
                               :stroke (color-hex :ocean-blue)
                               :shape-rendering "crispEdges"}}
                       {:tag :text, :class :label
                        :attr {:style label-style
-                              :x (f :x 175), :y (f :y 9)}
+                              :x (f :x 275), :y (f :y 9)}
                        :text [:labels :avg-temp]}]}
              {:tag :g, :class :avg-raw-temp
               :nodes [{:tag :line, :class :line
-                       :attr {:x1 (f :x 250), :x2 (f :x 270)
+                       :attr {:x1 (f :x 350), :x2 (f :x 370)
                               :y1 (f :y 6), :y2 (f :y 6)
                               :stroke (color-hex :ocean-blue)
                               :shape-rendering "crispEdges"
                               :stroke-dasharray "5,5"}}
                       {:tag :text, :class :label
                        :attr {:style label-style
-                              :x (f :x 275), :y (f :y 9)}
+                              :x (f :x 375), :y (f :y 9)}
                        :text [:labels :avg-raw-temp]}]}
              {:tag :g, :class :reduced-firing
               :nodes [{:tag :rect, :class :rect
-                       :attr {:x (f :x 350), :y :y, :width 20, :height 12
+                       :attr {:x (f :x 450), :y :y, :width 20, :height 12
                               :fill (color-rgba :red 30 0.5)}}
                       {:tag :text, :class :label
                        :attr {:style label-style
-                              :x (f :x 375), :y (f :y 9)}
+                              :x (f :x 475), :y (f :y 9)}
                        :text [:labels :reduced-firing]}]}
              {:tag :g, :class :avg-temp-band
               :nodes [{:tag :rect, :class :rect
-                       :attr {:x (f :x 450), :y :y, :width 20, :height 12
+                       :attr {:x (f :x 550), :y :y, :width 20, :height 12
                               :fill (color-rgba :ocean-blue 50 0.5)}}
                       {:tag :text, :class :label
                        :attr {:style label-style
-                              :x (f :x 475), :y (f :y 9)}
+                              :x (f :x 575), :y (f :y 9)}
                        :text [:labels :avg-temp-band]}]}]}))
+
+(defn twt-chart-title []
+  (let [f (fn [kw os] #(+ (kw %) os))]
+    {:tag :g, :class :chart-title
+     :data :chart-title
+     :nodes [{:tag :text, :class :title
+              :attr {:x :x, :y (f :y 16)
+                     :style (str "font-size:12px;font-weight:700;fill:"
+                                 (color-hex :bitumen-grey))
+                     :text-anchor "middle"}
+              :text [:text :title]}
+             {:tag :text, :class :sub-title
+              :attr {:x :x, :y (f :y 32)
+                     :style (str "font-size:10px;fill:" (color-hex :bitumen-grey))
+                     :text-anchor "middle"}
+              :text [:text :sub-title]}]}))
 
 (defn update-twt-data [state props]
   (let [state (merge state props)
@@ -613,27 +629,31 @@
                                               (color-hex :sky-blue 80))
 
         ;; avg temp bands
-        h-bands-avg (let [[from to] avg-temp-band
-                          from-p (y-scale from)
-                          to-p (y-scale to)]
-                      [{:x x-start
-                        :y (min from-p to-p)
-                        :w x-width
-                        :h (abs (- from-p to-p))
-                        :color (color-rgba :ocean-blue 50 0.5)}])
+        h-bands-avg (if avg-temp-band
+                      (let [[from to] avg-temp-band
+                            from-p (y-scale from)
+                            to-p (y-scale to)]
+                        [{:x x-start
+                          :y (min from-p to-p)
+                          :w x-width
+                          :h (abs (- from-p to-p))
+                          :color (color-rgba :ocean-blue 50 0.5)}]))
 
         ;; reduced firing bands
-        v-bands (mapv (fn [[bi be]]
-                        (let [bip (b-scale bi)
-                              bep (b-scale be)]
-                          {:x bip, :y y-start
-                           :w (- bep bip)
-                           :h y-height
-                           :color (color-rgba :red 30 0.5)}))
-                      reduced-firing-bands)
+        v-bands (if reduced-firing-bands
+                  (mapv (fn [[bi be]]
+                          (let [bip (b-scale bi)
+                                bep (b-scale be)]
+                            {:x bip, :y y-start
+                             :w (- bep bip)
+                             :h y-height
+                             :color (color-rgba :red 30 0.5)}))
+                        reduced-firing-bands))
 
         ;; legend position
-        legend  {:x plot-x-start, :y (- (/ y-start 2) 6)}]
+        legend  {:x plot-x-start, :y (- (/ y-start 2) 6)}
+        ;; chart title position
+        chart-title {:x (+ x-start (/ x-width 2)), :y y-start}]
 
     (-> state
         (merge props)
@@ -645,7 +665,8 @@
                       :h-bands-bg h-bands-bg
                       :h-bands-avg h-bands-avg
                       :v-bands v-bands
-                      :legend legend}
+                      :legend legend
+                      :chart-title chart-title}
                :reduced-firing-bands reduced-firing-bands
                :x-label-fn x-label-fn
                :y-label-fn y-label-fn))))
@@ -684,24 +705,29 @@
          (str (y-label-fn t) " " @(rf/subscribe [::app-subs/temp-unit]))]]])))
 
 (defn twt-chart-d3-config [state config
-                           {:keys [y-title x-title legend-labels tooltip]}]
+                           {:keys [y-title x-title legend-labels tooltip chart-title]}]
   (let [{:keys [data width height]} state
         data (-> data
                  (assoc-in [:pt-shadow] tooltip)
                  (assoc-in [:y-axis :title :text] y-title)
                  (assoc-in [:x-axis :title :text] x-title)
-                 (assoc-in [:legend :labels] legend-labels))]
+                 (assoc-in [:legend :labels] legend-labels)
+                 (assoc-in [:chart-title :text] chart-title))]
     (assoc config :data data
            :view-box (str "0 0 " width " " height)
            :width width, :height height)))
 
-(defn twt-chart-export [state config {:keys [y-title x-title legend-labels]}]
+(defn twt-chart-export [state config {:keys [y-title x-title legend-labels
+                                             title sub-title]}]
   (let [props {:width 700, :height 500}
         {:keys [width height]} props
         state (update-twt-data state props)
-        d3-config (twt-chart-d3-config state config {:x-title x-title
-                                                     :y-title y-title
-                                                     :legend-labels legend-labels})
+        d3-config (twt-chart-d3-config state config
+                                       {:x-title x-title
+                                        :y-title y-title
+                                        :legend-labels legend-labels
+                                        :chart-title {:title title
+                                                      :sub-title sub-title}})
         svg-string (d3-svg->string d3-config)]
     (save-svg-to-file "chart.png" svg-string width height 30)))
 
@@ -715,6 +741,7 @@
            start-tube end-tube
            design-temp target-temp
            side-names row-name
+           title sub-title
            ;; dynamic
            height width
            burner-on? avg-temp-band
@@ -743,11 +770,12 @@
                                                  color-1 p-events)
                                (ch-marker-square :points-b [:points 1] 6
                                                  color-2 p-events)
-                               (twt-chart-legend color-1 color-2)]}}]
+                               (twt-chart-legend color-1 color-2)
+                               (twt-chart-title)]}}]
 
     (fn [{:keys [raw?] :as props}]
       (let [ks [:height :width
-                :reduced-firing-bands :avg-temp-band
+                :burner-on? :avg-temp-band
                 :avg-raw-temp :avg-temp :temps]
             temp-unit @(rf/subscribe [::app-subs/temp-unit])
             y-title (str (if raw?
@@ -767,8 +795,9 @@
              :reduced-firing
              (translate [:twt-chart :legend :reduced-firing] "Reduced firing")
              :avg-temp-band
-             (str "±" (if (= temp-unit deg-C) 20 36) temp-unit " "
-                  (translate [:twt-chart :legend :avg-temp-band] "Avg temp"))}]
+             (translate [:twt-chart :legend :avg-temp-band] "{delta} off Avg temp"
+                        {:delta (str "±" (if (= temp-unit deg-C) 20 36)
+                                     " " temp-unit)})}]
         ;; update chart data when required
         (when (not= (select-keys props ks)
                     (select-keys @state ks))
@@ -797,4 +826,6 @@
                         :on-click #(twt-chart-export @state config
                                                      {:legend-labels legend-labels
                                                       :x-title x-title
-                                                      :y-title y-title})}]]])))))
+                                                      :y-title y-title
+                                                      :title title
+                                                      :sub-title sub-title})}]]])))))

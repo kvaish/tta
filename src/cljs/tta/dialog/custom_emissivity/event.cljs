@@ -35,8 +35,7 @@
  (fn [{:keys [::subs/data]} _]
    {:dispatch-n (list
                   [:tta.component.settings.event/set-custom-emissivity data]
-                  ;[::close]
-                  )}))
+                  [::close])}))
 
 (rf/reg-event-db
  ::set-data

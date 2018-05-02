@@ -13,6 +13,7 @@
             [tta.app.comp :as app-comp]
             [tta.app.scroll :as scroll :refer [lazy-cols]]
             [tta.app.view :as app-view]
+            [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]))
 
@@ -76,7 +77,8 @@
         v))))
 
 (defn tf-burner [{:keys [value-fn label-fn on-change row col]}]
-  (let [style tf-burner-style
+  (let [mode @(rf/subscribe [::subs/mode])
+        style tf-burner-style
         value-fn #(value-fn row col)
         label (label-fn row col)
         on-change #(if-let [v (tf-burner-parse %)]
@@ -92,13 +94,10 @@
          [app-comp/text-input
           {:width     48
            :value     value
-           :on-change on-change}]]))))
+           :on-change on-change
+           :read-only? (if-not (= :edit mode) true)}]]))))
 
 (defn tf-burner-table
-  "TODO:
-  **value-fn**
-  **label-fn**
-  **on-change**"
   [width height
    burner-row-count burner-count-per-row
    value-fn label-fn on-change
@@ -162,39 +161,8 @@
 
 ;; SIDE FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def sf-burner-style
-  (let [col-on (color-hex :green)
-        col-off (color-hex :red)
-        col-off-aux (color-hex :orange)
-        col-off-fix (color-hex :brown)
-        circle {:width "24px", :height "24px"
-                :position "absolute"
-                :top "24px", :left "24px"
-                :border-radius "50%"
-                :background (color-hex :white)
-                :box-shadow "inset -6px -6px 10px rgba(0,0,0,0.3)"}]
-    {:height "48px", :width "48px"
-     :display "inline-block"
-     :position "relative"
-     ::stylefy/sub-styles
-     {:on (assoc circle :background col-on)
-      :off (assoc circle :background col-off)
-      :off-aux (assoc circle :background col-off-aux)
-      :off-fix (assoc circle :background col-off-fix)
-      :popup {:position "relative"
-              :height "96px", :width "96px"
-              :top "-12px", :left "-12px"
-              :z-index "99999"
-              :border-radius "50%"
-              :background (color-rgba :white 0 0.5)
-              :box-shadow "0 0 10px 3px rgba(0,0,0,0.3),
-inset -3px -3px 10px rgba(0,0,0,0.3)"}
-      :circle (assoc circle
-                     :top "36px", :left "36px"
-                     :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")}}))
-
 (defn sf-burner-popup [{:keys [state]}]
-  (let [style sf-burner-style
+  (let [style style/sf-burner-style
         {:keys [value on-change hover? dual-nozzle?]} @state]
     (if hover?
       (into [:div (stylefy/use-sub-style style :popup)
@@ -220,7 +188,7 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
 
 ;; 48x48
 (defn sf-burner [{:keys [value-fn on-change row col side] :as props}]
-  (let [style sf-burner-style
+  (let [style style/sf-burner-style
         value-fn (partial value-fn side row col)
         on-change (partial on-change side row col)
         state (r/atom (assoc props :value-fn value-fn, :on-change on-change))
@@ -239,36 +207,31 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
   "TODO:
   **value-fn**
   **on-change**"
-  [width height row-count col-count value-fn on-change dual-nozzle?]
+  [width height row-count col-count value-fn on-change dual-nozzle? burner-no]
   [scroll/table-grid
-   {:height              height :width width
-    :row-header-width    64 :col-header-height 30
-    :row-count           row-count :col-count col-count
-    :row-height          64 :col-width 64
-    :labels              ["Row" "Burner"]
-    :gutter              [20 20]
-    :table-count         [1 2]
-    :padding             [3 3 15 15]
+   {:height height, :width width
+    :row-header-width 64, :col-header-height 30
+    :row-count (inc row-count,) :col-count (inc col-count)
+    :row-height 64, :col-width 64
+    :labels ["Row" "Burner"]
+    :gutter [20 20]
+    :table-count [1 2]
+    :padding [3 3 15 15]
     :row-header-renderer (fn [row [t-row t-col]]
-                           [:div {:style {:text-align "center"
-                                          :line-height "64px"
-                                          :border-right "1px solid"
-                                          :border-color (color-hex :sky-blue)
-                                          :height "inherit"}}
-                            (inc row)])
+                           [:div (use-sub-style style/sf-burner-table :row-head)
+                            (if (< row row-count) (inc row))])
     :col-header-renderer (fn [col [t-row t-col]]
-                           [:div {:style {:text-align "center"
-                                          :border-bottom "1px solid"
-                                          :border-color (color-hex :sky-blue)
-                                          :height "inherit"}}
-                            (inc col)])
-    :cell-renderer       (fn [row col [t-row t-col]]
-                           [sf-burner {:value-fn     value-fn
-                                       :on-change    on-change
-                                       :dual-nozzle? dual-nozzle?
-                                       :row row
-                                       :col col
-                                       :side t-col}])}])
+                           [:div (use-sub-style style/sf-burner-table :col-head)
+                            (if (< col col-count) (burner-no col))])
+    :cell-renderer (fn [row col [t-row t-col]]
+                     (if (and (< row row-count)
+                              (< col col-count))
+                       [sf-burner {:value-fn value-fn
+                                   :on-change on-change
+                                   :dual-nozzle? dual-nozzle?
+                                   :row row
+                                   :col col
+                                   :side t-col}]))}])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -295,7 +258,7 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn sf-burner-legend [dual-nozzle?]
-  (let [style sf-burner-style]
+  (let [style style/sf-burner-style]
     [:div {:style {:height 48
                    :font-size "12px"}}
      (->> [[:on (translate [:dataset :burner :on] "On")]
@@ -316,33 +279,32 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
           (into [:div {:style {:width 600, :margin "auto"}}]))]))
 
 (defn sf-chamber-burner-entry [_ _ ch-name side-names ch-index dual-nozzle?
-                               row-count col-count]
+                               row-count col-count burner-no]
   (let [value-fn (fn [side row col]
                    @(rf/subscribe [::subs/sf-burner [ch-index side row col]]))
         on-change (fn [side row col value]
                     (rf/dispatch [::event/set-sf-burner
                                   [ch-index side row col] value]))]
     (fn [width height _ _]
-      [:div {:style {:width width, :height height
-                     :border (str "1px solid " (color-hex :sky-blue))
-                     :border-radius "6px"
-                     :padding "20px"}}
-       [:div {:style {:width (- width 40), :height 60
-                      :text-align "center"
-                      :font-size "14px"
-                      :color (color-hex :royal-blue)}}
-        ch-name
-        (into [:div]
-              (map-indexed (fn [i side-name]
-                             [:div {:key i
-                                    :style {:width (/ (- width 40) 2)
-                                            :display "inline-block"}}
-                              side-name])
-                           side-names))]
-       [sf-burner-table (- width 40) (- height 150)
-        row-count col-count
-        value-fn on-change dual-nozzle?]
-       [sf-burner-legend dual-nozzle?]])))
+      (let [w (- width 40)
+            w2 (/ w 2)
+            h1 60
+            h2 (- height h1 48 40)]
+        [:div (update (use-sub-style style/sf-burner-table :body) :style
+                      assoc :width width, :height height)
+         [:div (update (use-sub-style style/sf-burner-table :title) :style
+                       assoc :width w, :height h1)
+          [:div {:style {:width w}} ch-name]
+          (doall
+           (map-indexed (fn [i side-name]
+                          [:div {:key i
+                                 :style {:width w2, :display "inline-block"}}
+                           side-name])
+                        side-names))]
+         [sf-burner-table w h2
+          row-count col-count
+          value-fn on-change dual-nozzle? burner-no]
+         [sf-burner-legend dual-nozzle?]]))))
 
 (defn sf-burner-entry [width height]
   (let [config @(rf/subscribe [::subs/config])
@@ -350,25 +312,31 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
         dual-nozzle? (get-in config [:sf-config :dual-nozzle?])
         render-fn (fn [indexes _]
                     (map (fn [ch-index]
-                           (let [{:keys [burner-row-count burner-count-per-row]}
-                                 (get-in config [:sf-config :chambers ch-index])]
+                           (let [{:keys [burner-row-count burner-count-per-row
+                                         start-burner end-burner name side-names]}
+                                 (get-in config [:sf-config :chambers ch-index])
+                                 burner-no #(if (> end-burner start-burner)
+                                              (+ start-burner %)
+                                              (- start-burner %))]
                              [sf-chamber-burner-entry (- width 20) (- height 30)
-                              (get-in config [:sf-config :chambers ch-index :name])
-                              (get-in config [:sf-config :chambers ch-index :side-names])
+                              name side-names
                               ch-index dual-nozzle?
-                              burner-row-count burner-count-per-row]))
+                              burner-row-count burner-count-per-row
+                              burner-no]))
                          indexes))]
     [lazy-cols {:width width, :height height
                 :item-width width
                 :item-count ch-count
                 :items-render-fn render-fn}]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn burner-entry [{{:keys [width height]} :view-size}]
   (if @(rf/subscribe [::subs/burner?])
-    (if-let [firing @(rf/subscribe [::subs/firing])]
+    (let [firing @(rf/subscribe [::subs/firing])]
       (case firing
         "side" [sf-burner-entry width height]
-        "top" [tf-burner-entry width height]))
+        "top" [tf-burner-entry width height false]))
     ;; burner entry not started yet
     [app-comp/button
      {:icon ic/plus

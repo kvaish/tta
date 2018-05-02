@@ -15,7 +15,8 @@
                    ;; divide by n -> 4th root -> back to degC
                    (#(- (js/Math.pow (/ % n) 0.25) K))))]
     {:avg avg
-     :temps temps}))
+     ;; maintain minimum 5 cells
+     :temps (into temps (repeat (- 5 (count temps)) nil))}))
 
 (defn- apply-emissivity [tube-row row-emissivity emissivity-type]
   (update tube-row :sides
@@ -38,6 +39,18 @@
                                             "custom" :custom-emissivity
                                             :gold-cup-emissivity)
                          (repeat nil)))))))
+
+(defn apply-pinched? [tube-row {:keys [tube-prefs]}]
+  (update tube-row :sides
+          (fn [sides]
+            (mapv (fn [side]
+                    (update side :tubes
+                            (fn [tubes]
+                              (mapv #(if (= "pin" %2)
+                                       (assoc % :pinched? true)
+                                       (dissoc % :pinched?))
+                                    tubes tube-prefs))))
+                  sides))))
 
 (defn- calc-dT-corr
   "calculate the correction delta in degC (same as K)  
@@ -218,6 +231,14 @@
            rows
            (get-in settings [:tf-settings :levels level-key :tube-rows])))))
 
+(defn tf-apply-pinched? [dataset settings]
+  (tf-levels-update-rows
+   dataset
+   (fn [rows level-key]
+     (mapv #(apply-pinched? %1 %2)
+           rows
+           (get-in settings [:tf-settings :tube-rows])))))
+
 (defn- tf-update-tubes
   "f : (fn [tubes ri si])"
   [rows f]
@@ -240,19 +261,21 @@
      (drop (- n 6) tubes)]))
 
 (defn- tf-calc-tube [dataset tube Tw]
-  (let [py (:pyrometer dataset)
-        em (or (:emissivity-override tube)
-               (:emissivity-calculated tube)
-               (:emissivity tube)
-               (:emissivity dataset)
-               (:tube-emissivity py))
-        lam (:wavelength py)
-        Tm (:raw-temp tube)
-        F (:view-factor tube)
-        dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
-                (remove nil?) not-empty)
-        Tc (if dT (+ Tm (apply + dT)))]
-    (assoc tube :corrected-temp Tc)))
+  (if-let [Tc (if (:pinched? tube) nil
+                  (let [py (:pyrometer dataset)
+                        em (or (:emissivity-override tube)
+                               (:emissivity-calculated tube)
+                               (:emissivity tube)
+                               (:emissivity dataset)
+                               (:tube-emissivity py))
+                        lam (:wavelength py)
+                        Tm (:raw-temp tube)
+                        F (:view-factor tube)
+                        dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
+                                (remove nil?) not-empty)]
+                    (if dT (+ Tm (apply + dT)))))]
+    (assoc tube :corrected-temp Tc)
+    (dissoc tube :corrected-temp)))
 
 (defn tf-calc-Tc [dataset]
   (let [Tw-n (get-in dataset [:top-fired :wall-temps :north :avg])
@@ -320,6 +343,13 @@
                      chambers
                      (get-in settings [:sf-settings :chambers])))))
 
+(defn sf-apply-pinched? [dataset settings]
+  (update-in dataset [:side-fired :chambers]
+             (fn [chambers]
+               (mapv #(apply-pinched? %1 %2)
+                     chambers
+                     (get-in settings [:sf-settings :chambers])))))
+
 (defn- sf-split-tubes [tubes peep-door-tube-count]
   (loop [[n & r] peep-door-tube-count
          tubes tubes
@@ -329,18 +359,20 @@
       ts)))
 
 (defn- sf-calc-tube [dataset tube Tw]
-  (let [py (:pyrometer dataset)
-        em (or (:emissivity-override tube)
-               (:emissivity-calculated tube)
-               (:emissivity tube)
-               (:emissivity dataset)
-               (:tube-emissivity py))
-        lam (:wavelength py)
-        Tm (:raw-temp tube)
-        F 1
-        dT (calc-dT-corr Tm Tw lam em F)
-        Tc (if dT (+ Tm dT))]
-    (assoc tube :corrected-temp Tc)))
+  (if-let [Tc (if (:pinched? tube) nil
+                  (let [py (:pyrometer dataset)
+                        em (or (:emissivity-override tube)
+                               (:emissivity-calculated tube)
+                               (:emissivity tube)
+                               (:emissivity dataset)
+                               (:tube-emissivity py))
+                        lam (:wavelength py)
+                        Tm (:raw-temp tube)
+                        F 1
+                        dT (calc-dT-corr Tm Tw lam em F)]
+                    (if dT (+ Tm dT))))]
+    (assoc tube :corrected-temp Tc)
+    (dissoc tube :corrected-temp)))
 
 (defn sf-calc-Tc [dataset config]
   (sf-update-sides dataset
@@ -354,3 +386,32 @@
                                     (map :avg (:wall-temps side)))
                             vec
                             (assoc side :tubes))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn update-calc-summary [dataset config]
+  (if (= "top" (:firing config))
+    ;; top-fired
+    (-> dataset
+        (tf-calc-wall-temps)
+        (tf-calc-Tc)
+        (update-summary))
+    ;; side-fired
+    (-> dataset
+        (sf-calc-wall-temps)
+        (sf-calc-Tc config)
+        (update-summary))))
+
+;; called once initially after settings update
+(defn apply-settings [dataset settings config]
+  (if (= "top" (:firing config))
+    ;; top-fired
+    (-> dataset
+        (tf-apply-emissivity settings)
+        (tf-apply-view-factor config)
+        (tf-apply-pinched? settings))
+    ;; side-fired
+    (-> dataset
+        (sf-apply-emissivity settings)
+        (sf-apply-pinched? settings))))

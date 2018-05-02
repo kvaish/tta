@@ -176,13 +176,18 @@
 
 ;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(rf/reg-sub
+ ::fetching?
+ :<- [::view]
+ (fn [view _] (:fetching? view)))
+
 (rf/reg-sub-raw
  ::mode-opts
  (fn [_ _]
    (reaction
     (let [mode-read (translate [:dataset :mode :read] "Graph")
           mode-edit (translate [:dataset :mode :edit] "Data")]
-      [{:id :view
+      [{:id :read
         :label mode-read}
        {:id :edit
         :label mode-edit}]))))
@@ -202,27 +207,36 @@
           burner? @(rf/subscribe [::burner?])]
       (->> [{:id :overall
              :label (translate [:data-analyzer :area :overall] "Overall")
-             :show? (and (= mode :view) (= firing "top"))}
+             :show? (and (= mode :read) (= firing "top"))}
             {:id :twt
              :label (case mode
-                      :view (translate [:data-entry :area :twt] "TWT")
-                      (translate [:data-analyzer :area :twt] "Tube/Wall"))
+                      :edit (translate [:data-entry :area :twt] "Tube/Wall")
+                      (translate [:data-analyzer :area :twt] "TWT"))
              :show? true}
-            {:id :burner-status
-             :label (translate [:data-entry :area :burner] "Burner Status")
-             :show? (or (= mode :read))}
             {:id :burner
              :label (translate [:data-entry :area :burner] "Burners")
              :show? (or (= mode :edit) burner?)}
             {:id :gold-cup
              :label (translate [:data-entry :area :gold-cup] "Gold Cup")
              :show? gold-cup?}]
-           (filter :show?))))))
+           (filter :show?)
+           (vec))))))
+
+(rf/reg-sub
+ ::area-id
+ :<- [::area-opts]
+ (fn [opts [_ index]] (:id (get opts index))))
 
 (rf/reg-sub
  ::selected-area ;; the top tab selected
  :<- [::view]
  (fn [view _] (or (:selected-area view) 0)))
+
+(rf/reg-sub
+ ::selected-area-id
+ :<- [::area-opts]
+ :<- [::selected-area]
+ (fn [[opts index] _] (:id (get opts index))))
 
 (rf/reg-sub-raw
  ::level-opts ;; bottom tab selection options
@@ -297,11 +311,14 @@
  (fn [view [_ scope]] (get-in view [:twt-entry-index scope]
                              (if (= scope :wall) :north 0))))
 
+;; checks if can nav to left or right
 (rf/reg-sub
  ::twt-entry-nav-disabled?
+ ;; signal fn
  (fn [[_ scope _] _]
    [(rf/subscribe [::config])
     (rf/subscribe [::twt-entry-index scope])])
+ ;; sub fn
  (fn [[config index] [_ scope dir]]
    (if (= scope :wall) false
        (case dir
@@ -311,6 +328,183 @@
 
          :prev (= 0 index)
          nil))))
+
+;; TWT-GRAPH ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-sub-raw
+ ::twt-type-opts
+ (fn [_ _]
+   (reaction
+    [{:id :raw
+      :label (translate [:twt-graph :twt-type :raw] "Raw")}
+     {:id :corrected
+      :label (translate [:twt-graph :twt-type :corrected] "Corrected")}])))
+
+(rf/reg-sub
+ ::twt-type
+ :<- [::view]
+ (fn [view _] (get view :twt-type :corrected)))
+
+(rf/reg-sub
+ ::reduced-firing?
+ :<- [::view]
+ (fn [view _] (get view :reduced-firing? true)))
+
+(rf/reg-sub
+ ::avg-temp-band?
+ :<- [::view]
+ (fn [view _] (get view :avg-temp-band? true)))
+
+(rf/reg-sub
+ ::avg-temp-band
+ :<- [::app-subs/temp-unit]
+ (fn [temp-unit _]
+   (str (au/to-temp-unit 20 temp-unit)
+        " " temp-unit)))
+
+(rf/reg-sub
+ ::avg-raw-temp?
+ :<- [::view]
+ (fn [view _] (get view :avg-raw-temp? true)))
+
+(rf/reg-sub
+ ::avg-temp?
+ :<- [::view]
+ (fn [view _] (get view :avg-temp? true)))
+
+;; twt-graph data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn tf-burner-on? [{:keys [deg-open]}]
+  ;; missing burners not to be treated as off
+  (or (nil? deg-open)
+      (>= deg-open 90)))
+
+(defn sf-burner-on? [{:keys [state]}]
+  ;; missing burners not to be treated as off
+  (or (nil? state)
+      (= "on" state)))
+
+(defn tf-twt-chart-burner-on? [burners tube-row-index config]
+  (if (seq burners)
+    (let [{bf? :burner-first?, bn :burner-row-count} (:tf-config config)
+          ti tube-row-index
+          bis (if bf?
+                [ti (inc ti)]
+                (if (zero? ti) [0]
+                    (if (< ti bn) [(dec ti) ti]
+                        [(dec ti)])))]
+      (->> bis
+           (map #(get burners %))
+           (apply map list)
+           (map #(every? tf-burner-on? %))))))
+
+(defn sf-twt-chart-burner-on? [sides]
+  (->> sides
+       (map :burners)
+       (map (fn [burners]
+              (if (seq burners)
+                (->> burners
+                     (apply map list)
+                     (map #(every? sf-burner-on? %))))))
+       (apply map list)
+       (map #(every? true? %))
+       (not-empty)))
+
+(defn twt-graph-row-data [data config settings temp-unit
+                          level-key row-index twt-type]
+  (let [tf? (= "top" (:firing config))
+         ;; row info
+         {:keys [start-tube end-tube name]}
+         (if tf?
+           (get-in config [:tf-config :tube-rows row-index])
+           (get-in config [:sf-config :chambers row-index]))
+         ;; side names
+         side-names
+         (if tf?
+           (let [{:keys [west east]} (get-in config [:tf-config :wall-names])]
+             [west east])
+           (get-in config [:sf-config :chambers row-index :side-names]))
+         ;; temperatures
+         temp-key (case twt-type :raw :raw-temp :corrected-temp)
+         temps (->>
+                (if tf?
+                  (get-in data [:top-fired :levels level-key :rows row-index :sides])
+                  (get-in data [:side-fired :chambers row-index :sides]))
+                (map (fn [side]
+                       (map temp-key (:tubes side)))))
+         ;; burner status
+         burner-on? (if tf?
+                       (tf-twt-chart-burner-on?
+                        (get-in data [:top-fired :burners]) row-index config)
+                       (sf-twt-chart-burner-on?
+                        (get-in data [:side-fired :chambers row-index :sides])))
+
+         ;; summary - max/min
+         {:keys [max-temp min-temp max-raw-temp min-raw-temp]}
+         (if tf?
+           (get-in data [:summary :levels level-key])
+           (:summary data))
+         max-temp (if (and max-temp max-raw-temp)
+                    (max max-temp max-raw-temp)
+                    (or max-temp max-raw-temp))
+         min-temp (if (and min-temp min-raw-temp)
+                    (min min-temp min-raw-temp)
+                    (or min-temp min-raw-temp))
+         ;; summary - avg temp & band
+         {:keys [avg-temp avg-raw-temp]}
+         (if tf?
+           (get-in data [:summary :levels level-key :rows row-index])
+           (get-in data [:summary :rows row-index]))
+         avg-temp (or avg-temp avg-raw-temp)
+         avg-temp-band (if avg-temp
+                         [(- avg-temp 20) (+ avg-temp 20)])]
+
+    {:row-name name
+     :side-names side-names
+     :start-tube start-tube
+     :end-tube end-tube
+     :max-temp max-temp
+     :min-temp min-temp
+     :design-temp (:design-temp settings)
+     :target-temp (:target-temp settings)
+     :temps temps
+     :raw? (= twt-type :raw)
+     :burner-on? burner-on?
+     :avg-temp-band avg-temp-band
+     :avg-temp avg-temp
+     :avg-raw-temp avg-raw-temp}))
+
+(rf/reg-sub
+ ::twt-graph-row-data
+ :<- [::twt-type]
+ :<- [::reduced-firing?]
+ :<- [::avg-temp-band?]
+ :<- [::avg-temp?]
+ :<- [::avg-raw-temp?]
+ :<- [::data]
+ :<- [::config]
+ :<- [::settings]
+ :<- [::app-subs/temp-unit]
+ (fn [[twt-type reduced-firing? avg-temp-band? avg-temp? avg-raw-temp?
+      data config settings temp-unit]
+     [_ level-key row-index]]
+   (cond->
+       (twt-graph-row-data data config settings temp-unit
+                           level-key row-index twt-type)
+     (not reduced-firing?) (assoc :burner-on? nil)
+     (not avg-temp-band?) (assoc :avg-temp-band nil)
+     (not avg-raw-temp?) (assoc :avg-raw-temp nil)
+     (not avg-temp?) (assoc :avg-temp nil))))
+
+
+;; BURNER-STATUS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-sub
+ ::burner-status-front-side
+ :<- [::view]
+ (fn [view  [_ ch-index]]
+   (get-in view [:burner-status-front-side ch-index] 0)))
+
 
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

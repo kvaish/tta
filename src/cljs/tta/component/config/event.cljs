@@ -11,9 +11,10 @@
                                             set-field set-field-text
                                             set-field-number
                                             validate-field parse-value]]
+            [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.component.config.subs :as subs]
-            [tta.app.subs :as app-subs]))
+            [reagent.core :as r]))
 
 (defonce ^:const comp-path [:component :config])
 (defonce ^:const data-path (conj comp-path :data))
@@ -113,67 +114,124 @@
 (rf/reg-event-fx
  ::sync-after-save
  [(inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::app-subs/plant]} [_ [eid]]]
-   (cond-> {:forward-events {:unregister ::sync-after-save}}
-     (= eid ::app-event/fetch-plant-success)
-     (assoc :db (assoc-in db data-path (:config plant))))))
+ (fn [{:keys [db ::app-subs/plant]} [_ close? [eid]]]
+   (let [success? (= eid ::app-event/fetch-plant-success)]
+     (cond-> {:forward-events {:unregister ::sync-after-save}}
+       ;; sync data on success
+       success?
+       (assoc :db (assoc-in db data-path (:config plant)))
+       ;; leave if asked for
+       (and success? close?)
+       (assoc :dispatch [:tta.component.root.event/activate-content :home])))))
 
 (rf/reg-event-fx
  ::do-upload
  [(inject-cofx ::inject/sub [::app-subs/client])]
- (fn [{:keys [::app-subs/client]} [_ config plant]]
-   (merge {:forward-events {:register ::sync-after-save
-                            :events #{::app-event/fetch-plant-success
-                                      ::ht-event/service-failure}
-                            :dispatch-to [::sync-after-save]}}
-          (if (:config plant)
-            ;; existing plant, update config => fetch-plant
-            {:dispatch [::ht-event/set-busy? true]
-             :service/update-plant-config
-             {:client-id (:id client), :plant-id (:id plant)
-              :change-id (:change-id plant)
-              :config config
-              :evt-success [::app-event/fetch-plant (:id client) (:id plant)]}}
-            ;; new plant, create plant => save-client
-            (let [{:keys [firing sf-config tf-config]} config
-                  settings (case firing
-                             "top" {:tf-settings
-                                    {:tube-rows
-                                     (mapv (fn [{tc :tube-count}]
-                                             {:tube-prefs (vec (repeat tc nil))})
-                                           (:tube-rows tf-config))}}
-                             "side" {:sf-settings
-                                     {:chambers
-                                      (mapv (fn [{tc :tube-count}]
-                                              {:tube-prefs (vec (repeat tc nil))})
-                                            (:chambers sf-config))}})]
-              {:dispatch [::ht-event/set-busy? true]
-               :service/create-plant
-               {:client-id (:id client)
-                :plant (assoc plant :config config, :settings settings)
-                :evt-success [::update-client-plants client plant]}})))))
+ (fn [{:keys [::app-subs/client]} [_ config plant commit? close?]]
+   (let [next-event (if commit?
+                      [::update-client-plants client plant]
+                      [::app-event/fetch-plant (:id client) (:id plant)])]
+     ;;IMPORTANT: app-event/fetch-client is assummed to invoke fetch-plant
+     (merge
+      {:forward-events {:register ::sync-after-save
+                        :events #{::app-event/fetch-plant-success
+                                  ::ht-event/service-failure}
+                        :dispatch-to [::sync-after-save close?]}}
+      (if (:config plant)
+        ;; existing plant, update config => fetch-plant
+        {:dispatch [::ht-event/set-busy? true]
+         :service/update-plant-config
+         {:client-id (:id client), :plant-id (:id plant)
+          :change-id (:change-id plant)
+          :config config
+          :evt-success next-event}}
+        ;; new plant, create plant => save-client
+        (let [{:keys [firing sf-config tf-config]} config
+              settings (case firing
+                         "top" {:tf-settings
+                                {:tube-rows
+                                 (mapv (fn [{tc :tube-count}]
+                                         {:tube-prefs (vec (repeat tc nil))})
+                                       (:tube-rows tf-config))}}
+                         "side" {:sf-settings
+                                 {:chambers
+                                  (mapv (fn [{tc :tube-count}]
+                                          {:tube-prefs (vec (repeat tc nil))})
+                                        (:chambers sf-config))}})]
+          {:dispatch [::ht-event/set-busy? true]
+           :service/create-plant
+           {:client-id (:id client)
+            :plant (assoc plant :config config, :settings settings)
+            :evt-success next-event}}))))))
+
+;; check if critical change and warn
+;; then move to home view
+(defn event-upload-with-version-check [data plant]
+  (if (bump-version? data (:config plant))
+    ;; warn and then upload
+    [::ht-event/show-message-box
+     {:message (translate [:config :critical-change :message]
+                          "You are going to make critical changes to configruation. Existing datasets will no longer be compatible. You can view them but not edit!")
+      :title (translate [:config :critical-change :title]
+                        "Major configuration change!")
+      :level :warning
+      :label-ok (translate [:action :continue :label] "Continue")
+      :event-ok [::do-upload data plant false true]
+      :label-cancel (translate [:action :cancel :label] "Cancel")}]
+    ;; no need to war. directly upload
+    [::do-upload data plant false true]))
+
+;; show a message that plant is ready for use after upload
+;; then move to home view
+(defn event-upload-and-commit [data plant]
+  ;; unset draft? before upload
+  (let [data (assoc data :draft? false)]
+    [::ht-event/show-message-box
+     {:message (translate [:config :commit :message]
+                          "Plant configuration is complete. It will now be visible to external users!")
+      :title (translate [:config :commit :title]
+                        "Commit and publish the plant?")
+      :level :warning
+      :label-ok (translate [:action :continue :label] "Continue")
+      :event-ok [::do-upload data plant true true]
+      :label-cancel (translate [:action :cancel :label] "Cancel")}]))
+
+;; show a message that plant will not available for use
+;; stay in current view
+(defn event-upload-draft [data plant]
+  [::ht-event/show-message-box
+   {:message (translate [:config :no-view-factor :message]
+                        "You have not completed view factors. Plant will be saved but not visible to external users!")
+    :title (translate [:config :no-view-factor :title]
+                      "Missing view factor!")
+    :level :warning
+    :label-ok (translate [:action :continue :label] "Continue")
+    :event-ok [::do-upload data plant false false]
+    :label-cancel (translate [:action :cancel :label] "Cancel")}])
 
 (rf/reg-event-fx
  ::upload
  [(inject-cofx ::inject/sub [::subs/can-submit?])
+  (inject-cofx ::inject/sub [::subs/draft?])
+  (inject-cofx ::inject/sub [::subs/view-factor-valid?])
   (inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::subs/can-submit? ::subs/data ::app-subs/plant]} _]
+ ;; allow upload without view-factor if draft?, but with warning.
+ ;; if draft? and view-factor valid? then commit and unset draft?
+ (fn [{:keys [db ::subs/can-submit?
+             ::subs/draft? ::subs/view-factor-valid?
+             ::subs/data ::app-subs/plant]} _]
    (merge (when can-submit?
             {:dispatch
-             (if (bump-version? data (:config plant))
-               ;; warn and then upload
-               [::ht-event/show-message-box
-                {:message (translate [:config :critical-change :message]
-                                     "You are going to make critical changes to configruation. Existing datasets will no longer be compatible. You can view them but not edit!")
-                 :title (translate [:config :critical-change :title]
-                                   "Major configuration change!")
-                 :level :warning
-                 :label-ok (translate [:action :continue :label] "Continue")
-                 :event-ok [::do-upload data plant]
-                 :label-cancel (translate [:action :cancel :label] "Cancel")}]
-               ;; no need to war. directly upload
-               [::do-upload data plant])})
+             (if draft?
+               ;; upload and commit if ready
+               (if view-factor-valid?
+                 ;; upload and commit
+                 (event-upload-and-commit data plant)
+                 ;; upload as draft, no commit
+                 (event-upload-draft data plant))
+               ;; upload with check for critical change
+               (event-upload-with-version-check data plant))})
           {:db (update-in db comp-path assoc :show-error? true)})))
 
 (rf/reg-event-fx
@@ -602,3 +660,17 @@
      [_ ch-index sel-id]]
    {:db (set-sf-numbers-selection db data :burner ch-index sel-id
                                   sf-burner-numbers-options)}))
+
+(rf/reg-event-fx
+ ::open-view-factor
+ [(inject-cofx ::inject/sub [::subs/tf-view-factor-matching-config?])]
+ (fn [{:keys [::subs/tf-view-factor-matching-config?]} _]
+   {:dispatch [:tta.dialog.view-factor.event/open
+               (not tf-view-factor-matching-config?)]}))
+
+(rf/reg-event-fx
+ ::set-view-factor
+ [(inject-cofx ::inject/sub [::subs/data])]
+ (fn [{:keys [db ::subs/data]} [_ view-factor]]
+   {:db (assoc-in db data-path
+                  (assoc-in data [:tf-config :view-factor] view-factor))}))
