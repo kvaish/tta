@@ -176,13 +176,18 @@
 
 ;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(rf/reg-sub
+ ::fetching?
+ :<- [::view]
+ (fn [view _] (:fetching? view)))
+
 (rf/reg-sub-raw
  ::mode-opts
  (fn [_ _]
    (reaction
     (let [mode-read (translate [:dataset :mode :read] "Graph")
           mode-edit (translate [:dataset :mode :edit] "Data")]
-      [{:id :view
+      [{:id :read
         :label mode-read}
        {:id :edit
         :label mode-edit}]))))
@@ -202,27 +207,36 @@
           burner? @(rf/subscribe [::burner?])]
       (->> [{:id :overall
              :label (translate [:data-analyzer :area :overall] "Overall")
-             :show? (and (= mode :view) (= firing "top"))}
+             :show? (and (= mode :read) (= firing "top"))}
             {:id :twt
              :label (case mode
-                      :view (translate [:data-entry :area :twt] "TWT")
-                      (translate [:data-analyzer :area :twt] "Tube/Wall"))
+                      :edit (translate [:data-entry :area :twt] "Tube/Wall")
+                      (translate [:data-analyzer :area :twt] "TWT"))
              :show? true}
-            {:id :burner-status
-             :label (translate [:data-entry :area :burner] "Burner Status")
-             :show? (or (= mode :read))}
             {:id :burner
              :label (translate [:data-entry :area :burner] "Burners")
              :show? (or (= mode :edit) burner?)}
             {:id :gold-cup
              :label (translate [:data-entry :area :gold-cup] "Gold Cup")
              :show? gold-cup?}]
-           (filter :show?))))))
+           (filter :show?)
+           (vec))))))
+
+(rf/reg-sub
+ ::area-id
+ :<- [::area-opts]
+ (fn [opts [_ index]] (:id (get opts index))))
 
 (rf/reg-sub
  ::selected-area ;; the top tab selected
  :<- [::view]
  (fn [view _] (or (:selected-area view) 0)))
+
+(rf/reg-sub
+ ::selected-area-id
+ :<- [::area-opts]
+ :<- [::selected-area]
+ (fn [[opts index] _] (:id (get opts index))))
 
 (rf/reg-sub-raw
  ::level-opts ;; bottom tab selection options
@@ -297,11 +311,14 @@
  (fn [view [_ scope]] (get-in view [:twt-entry-index scope]
                              (if (= scope :wall) :north 0))))
 
+;; checks if can nav to left or right
 (rf/reg-sub
  ::twt-entry-nav-disabled?
+ ;; signal fn
  (fn [[_ scope _] _]
    [(rf/subscribe [::config])
     (rf/subscribe [::twt-entry-index scope])])
+ ;; sub fn
  (fn [[config index] [_ scope dir]]
    (if (= scope :wall) false
        (case dir
@@ -312,194 +329,183 @@
          :prev (= 0 index)
          nil))))
 
-;;DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TWT-GRAPH ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TWT  raw or corrected
-(rf/reg-sub
- ::twt-temp-opts
+(rf/reg-sub-raw
+ ::twt-type-opts
  (fn [_ _]
-   [{:id :raw-temp
-     :label "Raw"}
-    {:id :corrected-temp
-     :label "Corrected"}]))
+   (reaction
+    [{:id :raw
+      :label (translate [:twt-graph :twt-type :raw] "Raw")}
+     {:id :corrected
+      :label (translate [:twt-graph :twt-type :corrected] "Corrected")}])))
 
 (rf/reg-sub
- ::twt-temp
- :<- [::twt-temp-opts]
+ ::twt-type
  :<- [::view]
- (fn [[twt-temp-opts view] _] (or (get-in view [:twt-temp])
-                                 (:id (first twt-temp-opts)))))
-(rf/reg-sub
- ::reduced-firing-filter
- :<- [::view]
- (fn [view _]
-   (get-in view [:reduced-firing]))) 
+ (fn [view _] (get view :twt-type :corrected)))
 
 (rf/reg-sub
- ::avg-temp-band-filter
+ ::reduced-firing?
  :<- [::view]
- (fn [view _] (get-in view [:avg-temp-band])))
+ (fn [view _] (get view :reduced-firing? true)))
+
+(rf/reg-sub
+ ::avg-temp-band?
+ :<- [::view]
+ (fn [view _] (get view :avg-temp-band? true)))
 
 (rf/reg-sub
  ::avg-temp-band
  :<- [::app-subs/temp-unit]
  (fn [temp-unit _]
-   (au/to-temp-unit 20 temp-unit)))
+   (str (au/to-temp-unit 20 temp-unit)
+        " " temp-unit)))
 
 (rf/reg-sub
- ::avg-raw-temp-filter
+ ::avg-raw-temp?
  :<- [::view]
- (fn [view _] (get-in view [:avg-raw-temp])))
+ (fn [view _] (get view :avg-raw-temp? true)))
 
 (rf/reg-sub
- ::avg-corrected-temp-filter
+ ::avg-temp?
  :<- [::view]
- (fn [view _] (get-in view [:avg-corrected-temp])))
+ (fn [view _] (get view :avg-temp? true)))
 
-;;;tf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn tf-avg-temp [{:keys [config data row level temp-unit]} temp-type]
-  (let [tube-count (get-in config [:tf-config :tube-rows row :tube-count])
-        tubes (get-in data [:top-fired :levels level
-                            :rows row :sides])]
-    (/ (->> (map :tubes tubes)
-            flatten
-            (map temp-type)
-            (map #(au/to-temp-unit % temp-unit))
-            (apply +)) tube-count)))
+;; twt-graph data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;twt-temp :raw-temp or corrected-temp
-(defn tf-parse-temps [temp-row twt-temp]
-  (let [temps (map :tubes temp-row)]
-    (vector (map twt-temp (first temps))
-            (map twt-temp (last temps)))))
+(defn tf-burner-on? [{:keys [deg-open]}]
+  ;; missing burners not to be treated as off
+  (or (nil? deg-open)
+      (>= deg-open 90)))
 
-(defn tf-parse-burners [burners]
-  (map #(not (some (fn [{:keys [deg-open]}]
-                     (< deg-open 90)) %)) burners))
+(defn sf-burner-on? [{:keys [state]}]
+  ;; missing burners not to be treated as off
+  (or (nil? state)
+      (= "on" state)))
+
+(defn tf-twt-chart-burner-on? [burners tube-row-index config]
+  (if (seq burners)
+    (let [{bf? :burner-first?, bn :burner-row-count} (:tf-config config)
+          ti tube-row-index
+          bis (if bf?
+                [ti (inc ti)]
+                (if (zero? ti) [0]
+                    (if (< ti bn) [(dec ti) ti]
+                        [(dec ti)])))]
+      (->> bis
+           (map #(get burners %))
+           (apply map list)
+           (map #(every? tf-burner-on? %))))))
+
+(defn sf-twt-chart-burner-on? [sides]
+  (->> sides
+       (map :burners)
+       (map (fn [burners]
+              (if (seq burners)
+                (->> burners
+                     (apply map list)
+                     (map #(every? sf-burner-on? %))))))
+       (apply map list)
+       (map #(every? true? %))
+       (not-empty)))
+
+(defn twt-graph-row-data [data config settings temp-unit
+                          level-key row-index twt-type]
+  (let [tf? (= "top" (:firing config))
+         ;; row info
+         {:keys [start-tube end-tube name]}
+         (if tf?
+           (get-in config [:tf-config :tube-rows row-index])
+           (get-in config [:sf-config :chambers row-index]))
+         ;; side names
+         side-names
+         (if tf?
+           (let [{:keys [west east]} (get-in config [:tf-config :wall-names])]
+             [west east])
+           (get-in config [:sf-config :chambers row-index :side-names]))
+         ;; temperatures
+         temp-key (case twt-type :raw :raw-temp :corrected-temp)
+         temps (->>
+                (if tf?
+                  (get-in data [:top-fired :levels level-key :rows row-index :sides])
+                  (get-in data [:side-fired :chambers row-index :sides]))
+                (map (fn [side]
+                       (map temp-key (:tubes side)))))
+         ;; burner status
+         burner-on? (if tf?
+                       (tf-twt-chart-burner-on?
+                        (get-in data [:top-fired :burners]) row-index config)
+                       (sf-twt-chart-burner-on?
+                        (get-in data [:side-fired :chambers row-index :sides])))
+
+         ;; summary - max/min
+         {:keys [max-temp min-temp max-raw-temp min-raw-temp]}
+         (if tf?
+           (get-in data [:summary :levels level-key])
+           (:summary data))
+         max-temp (if (and max-temp max-raw-temp)
+                    (max max-temp max-raw-temp)
+                    (or max-temp max-raw-temp))
+         min-temp (if (and min-temp min-raw-temp)
+                    (min min-temp min-raw-temp)
+                    (or min-temp min-raw-temp))
+         ;; summary - avg temp & band
+         {:keys [avg-temp avg-raw-temp]}
+         (if tf?
+           (get-in data [:summary :levels level-key :rows row-index])
+           (get-in data [:summary :rows row-index]))
+         avg-temp (or avg-temp avg-raw-temp)
+         avg-temp-band (if avg-temp
+                         [(- avg-temp 20) (+ avg-temp 20)])]
+
+    {:row-name name
+     :side-names side-names
+     :start-tube start-tube
+     :end-tube end-tube
+     :max-temp max-temp
+     :min-temp min-temp
+     :design-temp (:design-temp settings)
+     :target-temp (:target-temp settings)
+     :temps temps
+     :raw? (= twt-type :raw)
+     :burner-on? burner-on?
+     :avg-temp-band avg-temp-band
+     :avg-temp avg-temp
+     :avg-raw-temp avg-raw-temp}))
+
 (rf/reg-sub
- ::tf-twt-chart-row
- :<- [::twt-temp]
- :<- [::reduced-firing-filter]
- :<- [::avg-temp-band-filter]
- :<- [::avg-corrected-temp-filter]
- :<- [::avg-raw-temp-filter]
+ ::twt-graph-row-data
+ :<- [::twt-type]
+ :<- [::reduced-firing?]
+ :<- [::avg-temp-band?]
+ :<- [::avg-temp?]
+ :<- [::avg-raw-temp?]
  :<- [::data]
  :<- [::config]
  :<- [::settings]
  :<- [::app-subs/temp-unit]
- :<- [::selected-level-key]
- (fn [[twt-temp reduced-firing-filter avg-temp-band-filter
-      avg-corrected-temp-filter avg-raw-temp-filter
-      data config settings temp-unit selected-level-key] [_ row]]
-   (let [{:keys [start-tube end-tube name]} (get-in config [:tf-config :tube-rows row])
-         side-names  (vector (get-in config [:tf-config :wall-names :east])
-                             (get-in config [:tf-config :wall-names :west]))
-         temps (tf-parse-temps (get-in data [:top-fired :levels selected-level-key
-                                             :rows row :sides]) twt-temp)
-         burners-on? (tf-parse-burners (get-in data [:top-fired :burners]))
-         params      {:config    config
-                      :settings  settings 
-                      :data      data
-                      :twt-temp  twt-temp 
-                      :level     selected-level-key
-                      :row       row 
-                      :temp-unit (if (= temp-unit "°C") au/deg-C au/deg-F)}
-         tf-avg (tf-avg-temp params twt-temp)]
-
-     (cond-> {:row-name name
-              :start-tube start-tube
-              :end-tube end-tube
-              :max-temp 930 ;;TODO: fetch from summary
-              :min-temp 100 ;;TODO: fetch from summary 
-              :design-temp (:design-temp settings)
-              :target-temp (:target-temp settings)
-              :side-names side-names
-              :temps temps} 
-       
-       (and avg-temp-band-filter tf-avg-temp) ;;TODO: fetch avg from summary
-       (assoc :avg-temp-band [(+ tf-avg 20) (- tf-avg 20)])
-
-       reduced-firing-filter
-       (assoc :burner-on?  burners-on?)
-
-       avg-raw-temp-filter
-       (assoc :avg-raw-temp (tf-avg-temp params :raw-temp)) ;;TODO: fetch from summary
-
-       avg-corrected-temp-filter                        ;;TODO: fetch from summary
-       (assoc :avg-corrected-temp (tf-avg-temp params :corrected-temp))))))
+ (fn [[twt-type reduced-firing? avg-temp-band? avg-temp? avg-raw-temp?
+      data config settings temp-unit]
+     [_ level-key row-index]]
+   (cond->
+       (twt-graph-row-data data config settings temp-unit
+                           level-key row-index twt-type)
+     (not reduced-firing?) (assoc :burner-on? nil)
+     (not avg-temp-band?) (assoc :avg-temp-band nil)
+     (not avg-raw-temp?) (assoc :avg-raw-temp nil)
+     (not avg-temp?) (assoc :avg-temp nil))))
 
 
-;;;sf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn sf-parse-burners [ch-data]
-  (let [da (->> (:sides ch-data)
-                (map :burners)
-                (mapv (fn [b]
-                        (mapv (fn [c] (mapv :state c)) b))))]
-    (->> (map (fn [sa sb]
-                (map (fn [b1 b2]
-                       (and (= "on" b1) (= "on" b2)))
-                     sa sb))
-              (first da) (last da))
-         (map #(some (fn [cl] (false? cl)) %))
-         (map not))))
-
-(defn sf-parse-temps [ch-data twt-temp]
-  (->> (:sides ch-data)
-       (map :tubes)
-       (map (fn [t]
-              (map twt-temp t)))))  
+;; BURNER-STATUS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
- ::sf-twt-chart-row
- :<- [::twt-temp]
- :<- [::reduced-firing-filter]
- :<- [::avg-temp-band-filter]
- :<- [::avg-corrected-temp-filter]
- :<- [::avg-raw-temp-filter]
- :<- [::data]
- :<- [::config]
- :<- [::settings]
- :<- [::app-subs/temp-unit]
- (fn [[twt-temp reduced-firing-filter avg-temp-band-filter
-      avg-corrected-temp-filter avg-raw-temp-filter
-      data config settings temp-unit] [_ row]]
-   (let [{:keys [start-tube end-tube name side-names]}
-         (get-in config [:sf-config :chambers row])
-         ch-data (get-in data [:side-fired :chambers row])
-         burners-on? (sf-parse-burners ch-data)
-         temps (sf-parse-temps ch-data twt-temp)]
-
-     (cond-> {:row-name name
-              :start-tube start-tube
-              :end-tube end-tube
-              :max-temp 930 ;;TODO: fetch from summary
-              :min-temp 100 ;;TODO: fetch from summary 
-              :design-temp (:design-temp settings)
-              :target-temp (:target-temp settings)
-              :side-names side-names
-              :temps temps} 
-       
-       (and avg-temp-band-filter tf-avg-temp) ;;TODO: fetch avg from summary
-       (assoc :avg-temp-band [(+ 800 20) (- 800 20)])
-
-       reduced-firing-filter
-       (assoc :burner-on?  burners-on?)
-
-       avg-raw-temp-filter
-       (assoc :avg-raw-temp 600) ;;TODO: fetch from summary
-
-       avg-corrected-temp-filter ;;TODO: fetch from summary
-       (assoc :avg-corrected-temp 800)))))
-
-
-(rf/reg-sub
- ::burner-status-active-side
+ ::burner-status-front-side
  :<- [::view]
  (fn [view  [_ ch-index]]
-   (get-in view [:burner-status-active-side ch-index])))
+   (get-in view [:burner-status-front-side ch-index] 0)))
 
- 
+
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub

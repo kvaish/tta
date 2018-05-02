@@ -14,149 +14,82 @@
             [tta.component.dataset.burner-entry
              :refer [tf-burner-entry sf-burner-legend]]
             [tta.component.dataset.subs :as subs]
-            [tta.component.dataset.event :as event]))
-;;;;side fired;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def sf-burner-style
-  (let [col-on      (color-hex :green)
-        col-off     (color-hex :red)
-        col-off-aux (color-hex :orange)
-        col-off-fix (color-hex :brown)
-        circle      {:width         "24px", :height "24px"
-                     :position      "absolute"
-                     :top           "24px", :left   "24px"
-                     :border-radius "50%"
-                     :background    (color-hex :white)
-                     :box-shadow    "inset -6px -6px 10px rgba(0,0,0,0.3)"}
-        side-circle (assoc circle :left "14px" :top "15px")]
-    
-    {:height   "48px", :width "48px"
-     :display  "inline-block"
-     :position "relative"
-     ::stylefy/sub-styles
-     {:side-on      (assoc side-circle  :background col-on)
-      :side-off     (assoc side-circle  :background col-off)
-      :side-off-aux (assoc side-circle :background col-off-aux)
-      :side-off-fix (assoc side-circle :background col-off-fix)
-      :on           (assoc circle :background col-on)
-      :off          (assoc circle :background col-off)
-      :off-aux      (assoc circle :background col-off-aux)
-      :off-fix      (assoc circle :background col-off-fix)
-      :circle       (assoc circle
-                           :top "36px", :left "36px"
-                           :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")}}))
-(defn sf-burner-value-fn [ch-index row col side-names]
-  (let [dataset @(rf/subscribe [::subs/data])]
-    
-    {(first side-names) (get-in dataset [:side-fired :chambers ch-index :sides
-                                         0 :burners row col :state])
-     (second side-names) (get-in dataset [:side-fired :chambers ch-index  :sides
-                                          1 :burners row col :state])}))
+            [tta.component.dataset.event :as event]
+            [tta.component.dataset.style :as style]))
 
-(defn sf-burner [{:keys [row col ch-index] :as props}]
-  (let [side-names
-        (get-in @(rf/subscribe [::subs/config])
-                [:sf-config :chambers ch-index :side-names]) 
-        style sf-burner-style]
-    (fn [props]
-      (let [sel-side (or @(rf/subscribe [::subs/burner-status-active-side ch-index])
-                         (first side-names))
-            value (sf-burner-value-fn ch-index row col side-names)
-            sel-side-val (get value sel-side)
-            other-val (first (map val (dissoc value sel-side)))
-            bg-color (if-not (= sel-side-val other-val)
-                       (color-hex :yellow)
-                       (color-hex :alumina-grey))
-            circle-border {:style {:border (str "1px solid" bg-color)}}]
-        
-        [:div {:style {:width            64 :height 64
-                       :background-color bg-color
-                       :border           (str "1px solid" (color-hex :white))}}
-         [:div  (merge (stylefy/use-sub-style style 
-                                              (keyword (str "side-"(or other-val  "off"))))
-                       circle-border)]
-         [:div  (merge (stylefy/use-sub-style style
-                                              (keyword (or sel-side-val "off")))
-                       circle-border)]])))) 
+;;;;side fired;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn sf-burner [{:keys [row col ch-index]}]
+  (let [dataset @(rf/subscribe [::subs/data])
+        front @(rf/subscribe [::subs/burner-status-front-side ch-index])
+        [b0 b1] (map #(get-in dataset [:side-fired :chambers ch-index
+                                       :sides % :burners row col :state])
+                     (range 2))
+        bg-color (if (apply = (map #(= "on" %) [b0 b1]))
+                   (color-hex :alumina-grey)
+                   (color-hex :yellow))
+        styles (style/sf-burner-status-styles bg-color)
+        [bf bb] (map keyword (if (zero? front) [b0 b1] [b1 b0]))]
+    [:div (use-style (:cell styles))
+     [:div (use-style (get-in styles [:back bb]))]
+     [:div (use-style (get-in styles [:front bf]))]]))
 
 (defn sf-burner-table
-  [width height row-count col-count dual-nozzle? ch-index]
+  [width height row-count col-count dual-nozzle? ch-index burner-no]
   [table-grid
    {:height              height
     :width               width
     :row-header-width    64
     :col-header-height   30
-    :row-count           row-count
-    :col-count           col-count
+    :row-count           (inc row-count)
+    :col-count           (inc col-count)
     :row-height          64
     :col-width           64
     :labels              ["Row" "Burner"]
-    :gutter              [20 20]
+    :gutter              [10 10]
     :table-count         [1 1]
-    :padding             [3 3 15 15]
+    :padding             [3 3 3 3]
     :row-header-renderer (fn [row [t-row t-col]]
-                           [:div {:style {:text-align   "center"
-                                          :line-height  "64px"
-                                          :border-right "1px solid"
-                                          :border-color (color-hex :sky-blue)
-                                          :height       "inherit"}}
-                            (inc row)])
+                           [:div (use-sub-style style/sf-burner-table :row-head)
+                            (if (< row row-count) (inc row))])
     :col-header-renderer (fn [col [t-row t-col]]
-                           [:div {:style {:text-align    "center"
-                                          :border-bottom "1px solid"
-                                          :border-color  (color-hex :sky-blue)
-                                          :height        "inherit"}}
-                            (inc col)])
+                           [:div (use-sub-style style/sf-burner-table :col-head)
+                            (if (< col col-count) (burner-no col))])
     :cell-renderer       (fn [row col [t-row t-col]]
-                           [sf-burner
-                            {:row          row
-                             :ch-index     ch-index
-                             :col          col}])}])
+                           (if (and (< row row-count) (< col col-count))
+                             [sf-burner {:row row, :col col
+                                         :ch-index ch-index}]))}])
 
-(defn sf-chamber-burner-status [width height ch-name side-names ch-index
-                                dual-nozzle? burner-row-count burner-count-per-row]
-  (let [col-width 64
-        width (- width 20)
-        w (* burner-count-per-row col-width)
-        w (if (> (+ w 20) width) width w)
-        h1          100
-        h3          50
-        h2          (- height (+ h1 h3 40))]
-    (fn [width height ch-name side-names] 
-      (let [active-side (or @(rf/subscribe [::subs/burner-status-active-side ch-index])
-                            (first side-names))]
-        [:div {:style {:height        height
-                       :width         width
-                       :border        (str "1px solid" (color-hex :sky-blue))
-                       :border-radius "6px"
-                       :padding "10px"}}
-
-         [:div {:style {:height h1 :width width}}
-          [:div {:style {:width      width
-                         :text-align "center"}} ch-name]
-          [:div {:style {:font-size "14px"
-                         :color     (color-hex :sky-blue)}}
-           [:div  {:style {:display    "inline-block"
-                           :margin-top "14px"}}
-            (translate [::dataset :side-on-front :label] "side on front")]
-           [:div {:style {:display        "inline-block"
-                          :vertical-align "top"}}
-            [app-comp/selector
-             {:item-width 150
-              :options    side-names
-              :selected   active-side
-              :on-select  #(rf/dispatch [::event/set-burner-status-active-side
-                                         ch-index %])}]]] ]
-
-         [:div {:style {:height h2 :width width}}
-          [:div {:style {:width w :margin "auto"}}
-           [sf-burner-table (- width 40) (- h2 10)
-            burner-row-count burner-count-per-row
-            dual-nozzle? ch-index]]]
-
-         
-         [:div {:style {:height h3 :width width :text-align  "center"}}
-          [sf-burner-legend dual-nozzle?]]
-         ]))))
+(defn sf-chamber-burner-status [_ _ ch-name side-names ch-index dual-nozzle?
+                                burner-row-count burner-count-per-row burner-no]
+  (fn [width height _ _ _ _ _ _ _]
+    (let [col-width 64
+          w (- width 40)
+          w2 (* (inc burner-count-per-row) col-width)
+          w2 (if (> w2 w) w w2)
+          h1 60
+          h2 (- height (+ h1 48 40))
+          front-side @(rf/subscribe [::subs/burner-status-front-side ch-index])]
+      [:div (update (use-sub-style style/sf-burner-table :body) :style
+                    assoc :height height, :width width)
+       [:div {:style {:height h1}}
+        [:div (update (use-sub-style style/sf-burner-table :title) :style
+                      assoc :width w)
+         ch-name]
+        [:div {:style {:position "absolute", :top 10, :left 20}}
+         [:div (use-sub-style style/sf-burner-table :label)
+          (translate [:dataset :select-front-side :label] "Choose side on front")]
+         [app-comp/selector
+          {:item-width 100
+           :options [0 1]
+           :selected front-side
+           :label-fn #(get side-names %)
+           :on-select #(rf/dispatch [::event/set-burner-status-front-side ch-index %])}]]]
+       [:div {:style {:height h2, :width w}}
+        [:div {:style {:width w2, :margin "auto", :color (color-hex :royal-blue)}}
+         [sf-burner-table w2 h2
+          burner-row-count burner-count-per-row dual-nozzle? ch-index burner-no]]]
+       [sf-burner-legend dual-nozzle?]])))
 
 (defn sf-burner-status [width height]
   (let [config @(rf/subscribe [::subs/config])
@@ -164,13 +97,16 @@
         dual-nozzle? (get-in config [:sf-config :dual-nozzle?])
         render-fn (fn [indexes _]
                     (map (fn [ch-index]
-                           (let [{:keys [burner-row-count burner-count-per-row]}
-                                 (get-in config [:sf-config :chambers ch-index])]
+                           (let [{:keys [burner-row-count burner-count-per-row
+                                         start-burner end-burner name side-names]}
+                                 (get-in config [:sf-config :chambers ch-index])
+                                 burner-no #(if (> end-burner start-burner)
+                                              (+ start-burner %)
+                                              (- start-burner %))]
                              [sf-chamber-burner-status (- width 20) (- height 30)
-                              (get-in config [:sf-config :chambers ch-index :name])
-                              (get-in config [:sf-config :chambers ch-index :side-names])
+                              name side-names
                               ch-index dual-nozzle?
-                              burner-row-count burner-count-per-row]))
+                              burner-row-count burner-count-per-row burner-no]))
                          indexes))]
     [lazy-cols {:width width, :height height
                 :item-width width

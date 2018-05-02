@@ -221,6 +221,6 @@
                  (merge {:type "text"
                          :rows (or rows 5)
                          :cols (or cols 10)
-                         :text (or value "")
+                         :value (or value "")
                          :on-change #(on-change (i/oget-in % [:target :value]))
                          :read-only read-only?}))]]))

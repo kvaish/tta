@@ -25,12 +25,16 @@
             [tta.component.dataset-selector.event :as event]))
 
 (defn left-icon [topsoe?]
-  [:span {:style {:margin "0px 10px"
-                 :color (color-hex :bitumen-grey)}}
+  [:span {:style {:margin "2px 10px"
+                  :display "inline-block"
+                  :vertical-align "top"
+                  :color (color-hex :bitumen-grey)}}
    (if topsoe? "◆" "")])
 
 (defn right-icon [tubes%]
-  [:span {:style {:margin "0px 10px"}}
+  [:span {:style {:margin "0px 10px"
+                  :display "inline-block"
+                  :vertical-align "top"}}
    (if (< tubes% 70)
      [ic/dataset-inadequate {:style {:color (color-hex :red)
                                      :position "absolute"}}]
@@ -39,80 +43,73 @@
                                        :position "absolute"}}]
        nil))])
 
-(defn display-date [data-date style]
+(defn display-date [style data-date]
   (let [{:keys [year month day hour minute]}
         (u/to-date-time-map data-date)]
-
     [:div (use-sub-style style :display-date)
      (format "%4d-%02d-%02d | %02d:%02d"
              year month day hour minute)]))
 
-(defn warn-on-change [selected-id]
-  (js/console.log selected-id)
-  (rf/dispatch
-    [::ht-event/show-message-box
-     {:message      (translate [:warning :warn-on-change :message]
-                               "The current draft will be disacrded on selection change.")
-      :title        (translate [:warning :reset-draft :title]
-                               "Discard current data?")
-      :level        :warning
-      :label-ok     (translate [:action :discard :label] "Discard")
-      :event-ok     [::event/select-dataset selected-id]
-      :label-cancel (translate [:action :cancel :label] "Cancel")}]))
+(defn dataset-list-item [state style index selected-id warn?]
+  (let [items @(rf/subscribe [::subs/data])
+        {:keys [id data-date topsoe?] :as item} (get items index)
+        tubes% (get-in item [:summary :tubes%])
+        selected? (= id selected-id)]
+    [:div (if selected?
+            (use-sub-style style :selected-item)
+            (use-sub-style style :item))
+     [:div
+      {:id id
+       :on-click (fn []
+                   (swap! state assoc :open? false)
+                   (rf/dispatch [::event/select-dataset id warn?]))}
+      ;;left icon
+      [:div {:style {:width 40, :display "inline-block"}}
+       (left-icon topsoe?)]
+      ;;date
+      [display-date style data-date]
+      ;;right icon
+      [:div {:style {:width 40, :display "inline-block"}}
+       (right-icon tubes%)]]]))
 
-(defn dataset-list [datasets selected-id state
-                    style warn-on-selection-change?]
+(defn dataset-list [state style selected-id warn?]
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
-        h (* height 0.4), w 220]
+        h (* height 0.3)
+        {:keys [w]} (:data (meta style))
+        items @(rf/subscribe [::subs/data])]
     [lazy-rows
-     {:width       w
-      :height      h
+     {:width w, :height h
       :item-height 32
-      :item-count  (count datasets)
+      :item-count (count items)
       :items-render-fn
-                   #(map (fn [item]
-                           [:div (if (= selected-id (:id item))
-                                   (use-sub-style style :selected-item)
-                                   (use-sub-style style :item))
-                            [:div
-                             {:id       (:id item)
-                              :on-click (fn []
-                                          (swap! state assoc :open? false)
-                                          (if warn-on-selection-change?
-                                            (warn-on-change (:id item))
-                                            (rf/dispatch [::event/select-dataset (:id item)])))}
-                             ;;left icon
-                             [:div {:style {:width   40
-                                            :display "inline-block"}}
-                              (left-icon (:topsoe? item))]
-                             ;;date
-                             [display-date (:data-date item) style]
-                             ;;right icon
-                             [:div {:style {:width   40
-                                            :display "inline-block"}}
-                              (right-icon (:tubes% item))]]]) datasets)}]))
+      (fn [indexes _]
+        (map (fn [index]
+               [dataset-list-item state style index selected-id warn?])
+             indexes))}]))
 
-(defn menu [state selected-id warn-on-selection-change?]
+(defn menu [state selected-id warn?]
   (let [fetching? @(rf/subscribe [::subs/fetching?])
         style (style/dataset-list-style)
-        datasets @(rf/subscribe [::subs/data])]
-    [ui/menu {:value selected-id
-              :menu-item-style (use-sub-style
-                                 style :menu-item-style)}
+        items @(rf/subscribe [::subs/data])
+        {:keys [w iw]} (:data (meta style))]
+    [ui/menu {:width w, :auto-width false
+              :menu-item-style {:width iw, :height 20
+                                :font-size   "12px"
+                                :line-height "24px"
+                                :min-height  "24px"
+                                :color (color-hex :royal-blue)}}
      (cond
        ;; show busy
        fetching?
-       [ui/menu-item {}
-        [ui/circular-progress
-         {:width "20px", :height "20px"}]]
+       [ui/menu-item {:disabled true}
+        [ui/linear-progress {:style {:margin-top "20px"}}]]
        ;; show not found
-       (empty? datasets)
-       [ui/menu-item {}
-        (translate [:dataset-selector :message :not-found]
-                   "no datasets found")]
+       (empty? items)
+       [ui/menu-item {:disabled true}
+        (translate [:dataset-selector :message :not-found] "No datasets found!")]
        ;; dataset list
        :found-datasets
-       [dataset-list datasets selected-id state style warn-on-selection-change?])]))
+       [dataset-list state style selected-id warn?])]))
 
 (defn dataset-selector [{:keys [selected-id warn-on-selection-change?]}]
   (let [state (r/atom {:open? false})]

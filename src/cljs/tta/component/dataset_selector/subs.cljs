@@ -66,22 +66,21 @@
              date-range @(rf/subscribe [::date-range])]
          (rf/dispatch [:tta.component.dataset-selector.event/fetch-datasets
                        plant date-range])
+         ;; return empty while fetching
          [])))))
 
+;;TODO: define filters
+(defn filter-by-f1 [dataset] true)
+
 (rf/reg-sub
-  ::data
-  :<- [::datasets]
-  :<- [::ht-subs/topsoe?]
-  (fn [[datasets topsoe?] _]
-    (into []
-          (map (fn [i]
-                 (if topsoe?
-                   {:data-date (str (:data-date i))
-                    :tubes%    (get-in i [:summary :tubes%])
-                    :topsoe?   topsoe?
-                    :id (:id i)}
-                   (if-not (:topsoe? i)
-                     {:data-date (str (:data-date i))
-                      :tubes%    (get-in i [:summary :tubes%])
-                      :topsoe?   topsoe?
-                      :id (:id i)}))) datasets))))
+ ::data
+ :<- [::datasets]
+ :<- [::ht-subs/topsoe?]
+ :<- [::filters]
+ (fn [[datasets topsoe? filters] _]
+   (let [{:keys [f1]} filters]
+     (vec
+      (cond->> datasets
+        (not topsoe?) (remove :topsoe?)
+        ;;TODO: define and apply filters
+        f1 (filter filter-by-f1))))))

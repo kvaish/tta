@@ -313,13 +313,6 @@
            :width "0"
            :height (px (- height 40))}}})
 
-
-(defn horizontal-line [width]
-  {:width (px width)
-   :border (str "1px solid " widget-bg-e)
-   :margin "10px 0 0 10px"})
-
-
 (defn layout-main [view-size]
   (let [w (:width view-size)
         h (content-height view-size)

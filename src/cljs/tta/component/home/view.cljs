@@ -97,7 +97,8 @@
                                 "Analyze Dataset")
               :desc (translate [:home-card :dataset-analyzer :description]
                                "Preview the Overall, TWT, Burner status of latest published dataset")
-              :icon "images/analyze-dataset.svg"}
+              :icon "images/analyze-dataset.svg"
+              :on-select #(on-select :dataset {:mode :read})}
              {:id :trendline
               :primary? true
               :title (translate [:home-card :trendline :title]
@@ -105,8 +106,10 @@
               :desc (translate [:home-card :trendline :description]
                                "Overview of all the recorded datasets")
               :icon "images/trendline-graph.svg"}]
-            (map #(assoc % :access (get-in access-rule [:card (:id %)])
-                         :on-select on-select))
+            (map (fn [{:keys [id] :as card}]
+                   (-> card
+                       (assoc :access (get-in access-rule [:card id]))
+                       (update :on-select #(or % on-select)))))
             (remove #(= :hidden (:access %)))
             (map (fn [props]
                    ^{:key (or (:key props)
