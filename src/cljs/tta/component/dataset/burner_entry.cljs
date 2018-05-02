@@ -16,7 +16,8 @@
             [tta.app.view :as app-view]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
-            [tta.app.d3 :refer [d3-svg]]))
+            [tta.component.dataset.style :as style]
+            [tta.app.d3 :refer [d3-svg get-value]]))
 
 ;; TOP FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -38,6 +39,24 @@
                      :width "24px", :height "25px"}
       :temp-scale   {:vertical-align "top"
                      :margin-left "5px", :font-size "12px"}}}))
+
+(def fill-all-field-style
+  {:display "inline-block"
+   :position "relative"
+   :float "right"
+   :padding "0 0 8px 12px"
+   ::stylefy/sub-styles
+   {:label {:font-size "12px"
+            :font-weight 300
+            :margin-top "14px"
+            :color (color-hex :royal-blue)
+            :vertical-align "top"
+            :display "inline-block"}
+    :error {:position "absolute"
+            :color "red"
+            :font-size "10px"
+            :bottom 0, :left "12px"}}})
+
 (def opening-color-map
   {5 "rgb(255, 0, 0)"
    10 "rgb(255, 0, 64)"
@@ -82,33 +101,115 @@
                             :padding-right "6px"
                             :margin-top "-7px"}}) "0°"]]))
 
-(defn dwg [y1 y2 data ch-width ch-height]
-  {:view-box (str "0 0 " (+ ch-width 10) " " ch-height)
+(defn label-attr
+  ([x y] (label-attr x y false nil))
+  ([x y v?] (label-attr x y v? nil))
+  ([x y v? a]
+   {:stroke "none", :fill "black"
+    :x x, :y y
+    :transform #(if (get-value v? %1 %2 %3)
+                  (let [x (get-value x %1 %2 %3)
+                        y (get-value y %1 %2 %3)]
+                    (str "rotate(270," x "," y ")")))
+    :text-anchor a}))
+
+(defn tf-nodes [ch-width ch-height]
+  (let [w ch-width, h ch-height, m 30, p 20
+        x 80, y m, w (- w x x), h (- h m m)
+        xe (+ x w), ye (+ y h)
+        xm (+ x (/ w 2)), ym (+ y (/ h 2))
+        y1 (+ y p), y2 (- ye p)]
+    [{:tag   :g, :class :reformer
+      :nodes [;; chamber box
+              {:tag  :rect, :class :ch-box
+               :attr {:x x, :y y, :width w, :height h
+                      :stroke "black", :stroke-width "5px"}}
+              ;; wall label
+              {:tag    :text, :class :w-label
+               :attr   (merge (label-attr :x :y :v? :a)
+                              {:font-size "18px"})
+               :text   :text
+               :multi? true
+               :data   (fn [c] (map (fn [[key value]]
+                                      (let [[x y v?] (case key
+                                                       :north [xm (- y 6) false]
+                                                       :south [xm (+ ye 19) false]
+                                                       :east [(+ xe 19) ym true]
+                                                       :west [(- x 6) ym true]
+                                                       nil)]
+                                        {:text value
+                                         :x    x, :y y, :v? v?, :a "middle"}))
+                                    (get-in c [:tf-config :wall-names])))}
+              ;; chamber group
+              {:tag   :g, :class :chamber
+               :data  (fn [c] (let [{tc :tube-row-count, bc :burner-row-count
+                                     :keys [tube-rows burner-rows]} (:tf-config c)
+                                    sc (+ tc 1)
+                                    sp (/ w sc)
+                                    xt (map #(+ x sp (* sp %)) (range tc))]
+                                {:xt-pos  xt
+                                 :tubes   tube-rows}))
+               :nodes [;; row labels
+                       {:tag    :text, :class :r-label
+                        :attr   (merge
+                                  (label-attr #(- (:x %) 6) y1 true "end")
+                                  {:font-size "16px"
+                                   :stroke    "black"})
+                        :text   :text
+                        :multi? true
+                        :data   (fn [{:keys [xt-pos tubes]}]
+                                  (map (fn [x {name :name}]
+                                         {:x x :text name})
+                                       xt-pos tubes))}
+                       ;; tube row
+                       {:tag    :line, :class :t-row
+                        :attr   {:x1             identity, :y1 y1, :x2 identity, :y2 y2
+                                 :stroke-width   "5px"
+                                 :stroke-linecap "round"}
+                        :multi? true
+                        :data   :xt-pos}]}]}]))
+
+(defn dwg [ch-width ch-height]
+  {:view-box (str "0 0 " ch-width" " ch-height)
    :style    {:color          "grey"
               :user-select    "none"
               :fill           "none"
               :stroke         "grey"
-              :stroke-width   "2px"
+              :stroke-width   "1px"
               :font-size      "14px"
               :font-family    "open_sans"
               :vertical-align "top"}
    :node     {:tag   :g, :class :reformer
               :nodes [{:tag  :rect, :class :back
-                       :attr {:x     5, :y 0
-                              :width ch-width, :height ch-height}}
-                      {:tag   :g, :class :tube-rows
-                       :nodes [{:tag    :line, :class :t-row
-                                :multi? true
-                                :attr   {:x1 identity, :y1 y1, :x2 identity, :y2 y2
-                                         :stroke-width "5px" :stroke-linecap "round"}
-                                :data   data}]}]}})
+                       :attr {:x     0, :y 0
+                              :width ch-width, :height ch-height
+                              :fill  "lightgrey"}}
+                      {:tag   :g, :class :top-fired
+                       :nodes (tf-nodes ch-width ch-height)}]}})
 
-(defn tf-svg [{:keys [width height preserve-aspect-ratio data]}]
-  (let [y1 30, y2 (- height 30)]
-    [d3-svg (merge (dwg y1 y2 data width height)
-                   {:height height
-                    :width width
-                    :preserve-aspect-ratio preserve-aspect-ratio})]))
+(defn tf-svg [{:keys [width height]}]
+  [d3-svg (merge (dwg width height)
+                 {:height height
+                  :width  width
+                  :data   @(rf/subscribe [::subs/config])})])
+
+(defn fill-all []
+  (let [{:keys [value valid? error]} @(rf/subscribe [::subs/field [:top-fired :burners :fill-all]])
+        error (if (fn? error) (error) error)
+        style fill-all-field-style]
+    [:div (use-style style)
+     [app-comp/text-input
+      {:on-change (fn [value]
+                    (if (<= 0 (js/Number value) 90)
+                      (rf/dispatch [::event/set-fill-all-field value])))
+       :value value, :valid? valid?}]
+     [:span (use-sub-style style :error) error]
+     [app-comp/button
+      {:disabled? (or (not valid?)
+                      (empty? value))
+       :icon      ic/dataset
+       :label     (translate [:action :fill-all :label] "Fill all")
+       :on-click  #(rf/dispatch [::event/fill-all])}]]))
 
 (defn tf-burner-table
   "TODO:
@@ -118,45 +219,47 @@
   [width height
    burner-row-count burner-count-per-row
    wall-labels tube-row-count burner-first?]
-  (let [w2 200
+  (let [w2 150
         w1 (- width w2)
-        h (- height 40)]
+        h (- height 48)]
     [:div {:style {:height    height
                    :width     width
                    :font-size "12px"}}
      [:div {:style {:width w1, :height height
                     :display "inline-block"
                     :vertical-align "top"}}
-      [scroll/scroll-box {:style {:width w1, :height height}}
-       (let [x-offset 160
-             ch-width (* x-offset (inc tube-row-count))
-             w-new (if (> w1 ch-width) w1 ch-width)
-             data (map #(* (inc %) x-offset)
-                       (range tube-row-count))]
-         [:div {:style {:position "relative"
-                        :padding  "20px 40px"}}
-          ;; tube rows svg
-          [:div {:style {:position "absolute"}}
-           [tf-svg {:width w-new, :height h, :data data}]]
+      ;;fill all
+      [fill-all]
+      (let [x-offset 150
+            ch-width (js/Math.ceil (* x-offset (inc tube-row-count)))
+            w-new ch-width]
+        [:div {:style {:width w-new, :margin "auto"}}
+         ;; scrolling area
+         [scroll/scroll-box {:style {:width w1, :height (- h 20)}}
 
-          ;; burner input
-          [:div {:style {:margin-left (if-not burner-first? "150px" "0px")
-                         :margin-top "50px" :width w-new}}
-           (into [:div]
-                 (map (fn [row]
-                        [input/list-burner-input
-                         {:height     (- height 100)
-                          :item-count burner-count-per-row
-                          :field-fn   #(deref (rf/subscribe [::subs/tf-burner [row %]]))
-                          :on-change  (fn [index value]
-                                        (if (<= 0 (js/Number value) 90)
-                                          (rf/dispatch [::event/set-tf-burner row index value])))
-                          :color-fn   opening->color}])
-                      (range burner-row-count)))]])]]
+          [:div {:style {:position "relative"
+                         :padding  "5px"}}
+           ;; tube rows svg
+           [:div {:style {:position "absolute"}}
+            [tf-svg {:width w-new, :height (- h 60)}]]
+
+           ;; burner input
+           [:div {:style {:margin-top "50px" :width w-new}}
+            [input/list-burner-input
+             {:height        (- h 120)
+              :width         (+ w-new 50)
+              :item-count    burner-count-per-row
+              :row-count     burner-row-count
+              :burner-first? burner-first?
+              :field-fn      #(deref (rf/subscribe [::subs/tf-burner [%2 %1]]))
+              :on-change     (fn [row index value]
+                               (if (<= 0 (js/Number value) 90)
+                                 (rf/dispatch [::event/set-tf-burner index row value])))
+              :color-fn      opening->color}]]]]])]
      [:div {:style {:width w2, :height height
                     :display "inline-block"
                     :vertical-align "top"
-                    :padding "10px 0 0 100px"}}
+                    :padding "10px 0 0 60px"}}
       [color-palette]]]))
 
 

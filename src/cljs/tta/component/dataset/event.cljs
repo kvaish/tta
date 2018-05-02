@@ -302,6 +302,30 @@
                           value data data-path form-path false
                           {:max 90, :min 0})}))
 
+(rf/reg-event-db
+  ::set-fill-all-field
+  (fn [db [_ value]]
+    (set-field-number db [:top-fired :burners :fill-all] value nil
+                       nil form-path false {:max 90, :min 0})))
+
+(rf/reg-event-fx
+  ::fill-all
+  [(inject-cofx ::inject/sub [::subs/data])
+   (inject-cofx ::inject/sub [::subs/form])
+   (inject-cofx ::inject/sub [::subs/config])
+   (inject-cofx ::inject/sub [::subs/field [:top-fired :burners :fill-all]])]
+  (fn [{:keys [db ::subs/data ::subs/form ::subs/config ::subs/field]} _]
+    (let [{:keys [burner-rows]} (:tf-config config)]
+      {:db (-> db
+               (assoc-in data-path
+                         (assoc-in data [:top-fired :burners]
+                                   (mapv (fn [{:keys [burner-count]}]
+                                           (vec (repeat burner-count {:deg-open (js/Number (:value field))})))
+                                         burner-rows)))
+               (assoc-in form-path
+                         (assoc-in form [:top-fired :burners]
+                                   (select-keys (get-in form [:top-fired :burners]) [:fill-all]))))})))
+
 (rf/reg-event-fx
  ::set-temp
  [(inject-cofx ::inject/sub [::subs/data])

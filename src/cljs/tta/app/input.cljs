@@ -312,41 +312,46 @@
            :item-height 38
            :items-render-fn items-render-fn}]]))))
 
-(defn- list-row-burner-input [color-fn state item-count index]
+(defn- list-row-burner-input [width color-fn row-count burner-first? state item-count index]
   (let [{:keys [field-fn]} (:props @state)
-        style (app-style/tube-list-row)
-        field (field-fn index)]
-    [:span (-> (use-style style)
-               (update :style assoc :margin-left 20))
-     [list-input state index 0 style field color-fn]]))
+        style (app-style/burner-input-list-row (- width 80) row-count burner-first?)
+        burner-label-style app-style/burner-label]
+    [:span
+     [:span (use-style burner-label-style) index]
+     [:span (-> (use-style style)
+                ;(update :style assoc :padding-left 30)
+                )
+      (doall (map (fn [i]
+                    ^{:key i}
+                    [list-input state index i style (field-fn index i) color-fn])
+                  (range row-count)))]]))
 
 (defn list-burner-input
-  "[{:keys [height item-count
+  "[{:keys [height item-count row-count
             field-fn on-change on-paste color-fn]}]"
   [props]
   (let [state (atom {}) ;; props, counts, show-row
-        {:keys [color-fn]} props
+        {:keys [width color-fn row-count burner-first?]} props
         items-render-fn (fn [indexes show-row]
                           (let [ic (get-in (swap! state assoc :show-row show-row)
                                            [:props :item-count])]
-                            (map #(vector list-row-burner-input color-fn state ic %)
+                            (map #(vector list-row-burner-input (- width 130) color-fn row-count burner-first? state ic %)
                                  indexes)))]
     ;; Form-2 render fn
-    (fn [{:keys [label height item-count] :as props}]
+    (fn [{:keys [label height width item-count] :as props}]
       (swap! state assoc
              ;; ensure the arity of on-change and on-paste
              ;; since col is not applicable here
              :props (-> props
-                        (update :on-change #(fn [row _ val] (% row val)))
                         (update :on-paste #(if %
                                              (fn [row _ val] (% row val)))))
-             :counts [item-count 1])
-      (let [width 160, w (- width 12)]
+             :counts [item-count row-count])
+      (let [w (- width 12)]
         [:div {:style {:width width, :height height
                        :display "inline-block"
                        :vertical-align "top"}}
          [app-scroll/lazy-rows
           {:width w, :height (- height 48)
-           :item-count (inc item-count) ;; one row extra for add btn
+           :item-count item-count ;; one row extra for add btn
            :item-height 38
            :items-render-fn items-render-fn}]]))))

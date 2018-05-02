@@ -425,6 +425,49 @@
         :add-icon add-icon
         :add-label add-label}})))
 
+(defn burner-input-list-row [width row-count burner-first?]
+  (let [tc (if burner-first? (dec row-count) (inc row-count))
+        sc (inc tc)
+        cell-width (/ width sc)
+        margin (/ (- cell-width 68) 2)
+        margin-burner-input (str "0px " margin "px")
+        widget-border (color-rgba :sky-blue 0 0.6)
+        widget-border-imp (color-rgba :monet-pink 0 0.6)
+        widget-selection (color-rgba :sky-blue 0 0.6)
+        tube-input {:width "68px":height "30px"
+                    :border (str "1px solid " widget-border)
+                    :border-radius "16px"
+                    :padding "0 12px"
+                    :text-align "center"
+                    :vertical-align "top"
+                    :font-size "12px"
+                    :color widget-bg-e
+                    :margin margin-burner-input
+                    ::stylefy/mode {:selection {:background widget-selection}}}]
+    {:height  "38px"
+     :display "inline-block"
+     ;:padding "4px 12px"
+     :margin  (str "0px " (if burner-first? 0 cell-width) "px")
+     ::stylefy/sub-styles
+              {:input         tube-input
+               :invalid-input (assoc tube-input
+                                :border (str "1px solid " widget-err)
+                                :color widget-err)}}))
+
+(def burner-label
+  {:display "inline-block"
+   :user-select "none"
+   :border-radius "50%"
+   :border (str "2px solid " (color-rgba :white 0 0.6))
+   :font-size "10px"
+   :line-height "26px"
+   :font-weight 600
+   :color (color-rgba :white 0 0.6)
+   :text-align "center"
+   :vertical-align "top"
+   :width "30px", :height "30px"
+   :margin "0px 25px"})
+
 (defn tab-layout [top-tabs? bot-tabs? width height]
   (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))
         w2 width
