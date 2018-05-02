@@ -60,19 +60,19 @@
   em : emissivity
   F : view-factor"
   [Tm Tw lam em F]
-  (if (= Tm Tw) 0
-      (if (and (pos? Tm) (pos? Tw) (pos? lam) (<= 0 em 1)
-               (< Tm Tw) (<= 0 F 1))
-        (let [C 14388 ;; constant
-              Tw (+ K Tw)
-              Tm (+ K Tm)
-              X (/ C lam)
-              Y (- (js/Math.exp (/ C lam Tm)) 1)
-              Z (* F (- 1 em))
-              Q (- (js/Math.exp (/ C lam Tw)) 1)
-              a (- (/ 1 Y) (/ Z Q))
-              Tc (/ X (js/Math.log (+ (/ em a) 1)))]
-          (- Tm Tc)))))
+  (if (and (pos? Tm) (pos? Tw))
+    (if (= Tm Tw) 0
+        (if (and (pos? lam) (<= 0 em 1) (< Tm Tw) (<= 0 F 1))
+          (let [C 14388 ;; constant
+                Tw (+ K Tw)
+                Tm (+ K Tm)
+                X (/ C lam)
+                Y (- (js/Math.exp (/ C lam Tm)) 1)
+                Z (* F (- 1 em))
+                Q (- (js/Math.exp (/ C lam Tw)) 1)
+                a (- (/ 1 Y) (/ Z Q))
+                Tc (/ X (js/Math.log (+ (/ em a) 1)))]
+            (- Tm Tc))))))
 
 (defn- avg [nums]
   (let [nums (remove nil? nums)
@@ -273,7 +273,8 @@
                         F (:view-factor tube)
                         dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
                                 (remove nil?) not-empty)]
-                    (if dT (+ Tm (apply + dT)))))]
+                    (if dT (js/console.log em lam Tm F dT Tw))
+                    (if dT (- Tm (apply + dT)))))]
     (assoc tube :corrected-temp Tc)
     (dissoc tube :corrected-temp)))
 
@@ -370,7 +371,7 @@
                         Tm (:raw-temp tube)
                         F 1
                         dT (calc-dT-corr Tm Tw lam em F)]
-                    (if dT (+ Tm dT))))]
+                    (if dT (- Tm dT))))]
     (assoc tube :corrected-temp Tc)
     (dissoc tube :corrected-temp)))
 

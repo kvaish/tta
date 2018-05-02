@@ -399,16 +399,17 @@
            (map #(every? tf-burner-on? %))))))
 
 (defn sf-twt-chart-burner-on? [sides]
-  (->> sides
-       (map :burners)
-       (map (fn [burners]
-              (if (seq burners)
-                (->> burners
-                     (apply map list)
-                     (map #(every? sf-burner-on? %))))))
-       (apply map list)
-       (map #(every? true? %))
-       (not-empty)))
+  (if (seq sides)
+    (->> sides
+         (map :burners)
+         (map (fn [burners]
+                (if (seq burners)
+                  (->> burners
+                       (apply map list)
+                       (map #(every? sf-burner-on? %))))))
+         (apply map list)
+         (map #(every? true? %))
+         (not-empty))))
 
 (defn twt-graph-row-data [data config settings temp-unit
                           level-key row-index twt-type]
