@@ -185,6 +185,38 @@
                  ((if (= dir :next) inc dec) twt-entry-index))]
      {:db (assoc-in db (conj view-path :twt-entry-index scope) index)})))
 
+;; DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-event-db
+ ::set-twt-temp
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :twt-temp) value)))
+
+(rf/reg-event-db
+ ::set-reduced-firing-filter
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :reduced-firing) value)))
+
+(rf/reg-event-db
+ ::set-avg-temp-band-filter
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-temp-band) value)))
+
+(rf/reg-event-db
+ ::set-avg-raw-temp-filter
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-raw-temp) value)))
+
+(rf/reg-event-db
+ ::set-avg-corrected-temp-filter
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-corrected-temp) value)))
+
+(rf/reg-event-db
+ ::set-burner-status-active-side
+ (fn [db [_ ch-index side]]
+   (assoc-in db (conj view-path :burner-status-active-side ch-index) side)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
@@ -248,10 +280,10 @@
   (inject-cofx ::inject/sub [::app-subs/client])]
  (fn [{:keys [::subs/data ::subs/can-submit? ::app-subs/client ::app-subs/plant]} _]
    #_(if can-submit?
-     {:service/create-dataset {:client (:id client)
-                               :plant-id (:id plant)
-                               :dataset data
-                               :evt-success [::create-dataset-success]}})))
+       {:service/create-dataset {:client (:id client)
+                                 :plant-id (:id plant)
+                                 :dataset data
+                                 :evt-success [::create-dataset-success]}})))
 
 (rf/reg-event-fx
  ::add-burners

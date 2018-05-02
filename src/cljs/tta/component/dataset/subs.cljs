@@ -312,6 +312,194 @@
          :prev (= 0 index)
          nil))))
 
+;;DATASET PREVIEW STATE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TWT  raw or corrected
+(rf/reg-sub
+ ::twt-temp-opts
+ (fn [_ _]
+   [{:id :raw-temp
+     :label "Raw"}
+    {:id :corrected-temp
+     :label "Corrected"}]))
+
+(rf/reg-sub
+ ::twt-temp
+ :<- [::twt-temp-opts]
+ :<- [::view]
+ (fn [[twt-temp-opts view] _] (or (get-in view [:twt-temp])
+                                 (:id (first twt-temp-opts)))))
+(rf/reg-sub
+ ::reduced-firing-filter
+ :<- [::view]
+ (fn [view _]
+   (get-in view [:reduced-firing]))) 
+
+(rf/reg-sub
+ ::avg-temp-band-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-temp-band])))
+
+(rf/reg-sub
+ ::avg-temp-band
+ :<- [::app-subs/temp-unit]
+ (fn [temp-unit _]
+   (au/to-temp-unit 20 temp-unit)))
+
+(rf/reg-sub
+ ::avg-raw-temp-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-raw-temp])))
+
+(rf/reg-sub
+ ::avg-corrected-temp-filter
+ :<- [::view]
+ (fn [view _] (get-in view [:avg-corrected-temp])))
+
+;;;tf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn tf-avg-temp [{:keys [config data row level temp-unit]} temp-type]
+  (let [tube-count (get-in config [:tf-config :tube-rows row :tube-count])
+        tubes (get-in data [:top-fired :levels level
+                            :rows row :sides])]
+    (/ (->> (map :tubes tubes)
+            flatten
+            (map temp-type)
+            (map #(au/to-temp-unit % temp-unit))
+            (apply +)) tube-count)))
+
+;;twt-temp :raw-temp or corrected-temp
+(defn tf-parse-temps [temp-row twt-temp]
+  (let [temps (map :tubes temp-row)]
+    (vector (map twt-temp (first temps))
+            (map twt-temp (last temps)))))
+
+(defn tf-parse-burners [burners]
+  (map #(not (some (fn [{:keys [deg-open]}]
+                     (< deg-open 90)) %)) burners))
+(rf/reg-sub
+ ::tf-twt-chart-row
+ :<- [::twt-temp]
+ :<- [::reduced-firing-filter]
+ :<- [::avg-temp-band-filter]
+ :<- [::avg-corrected-temp-filter]
+ :<- [::avg-raw-temp-filter]
+ :<- [::data]
+ :<- [::config]
+ :<- [::settings]
+ :<- [::app-subs/temp-unit]
+ :<- [::selected-level-key]
+ (fn [[twt-temp reduced-firing-filter avg-temp-band-filter
+      avg-corrected-temp-filter avg-raw-temp-filter
+      data config settings temp-unit selected-level-key] [_ row]]
+   (let [{:keys [start-tube end-tube name]} (get-in config [:tf-config :tube-rows row])
+         side-names  (vector (get-in config [:tf-config :wall-names :east])
+                             (get-in config [:tf-config :wall-names :west]))
+         temps (tf-parse-temps (get-in data [:top-fired :levels selected-level-key
+                                             :rows row :sides]) twt-temp)
+         burners-on? (tf-parse-burners (get-in data [:top-fired :burners]))
+         params      {:config    config
+                      :settings  settings 
+                      :data      data
+                      :twt-temp  twt-temp 
+                      :level     selected-level-key
+                      :row       row 
+                      :temp-unit (if (= temp-unit "°C") au/deg-C au/deg-F)}
+         tf-avg (tf-avg-temp params twt-temp)]
+
+     (cond-> {:row-name name
+              :start-tube start-tube
+              :end-tube end-tube
+              :max-temp 930 ;;TODO: fetch from summary
+              :min-temp 100 ;;TODO: fetch from summary 
+              :design-temp (:design-temp settings)
+              :target-temp (:target-temp settings)
+              :side-names side-names
+              :temps temps} 
+       
+       (and avg-temp-band-filter tf-avg-temp) ;;TODO: fetch avg from summary
+       (assoc :avg-temp-band [(+ tf-avg 20) (- tf-avg 20)])
+
+       reduced-firing-filter
+       (assoc :burner-on?  burners-on?)
+
+       avg-raw-temp-filter
+       (assoc :avg-raw-temp (tf-avg-temp params :raw-temp)) ;;TODO: fetch from summary
+
+       avg-corrected-temp-filter                        ;;TODO: fetch from summary
+       (assoc :avg-corrected-temp (tf-avg-temp params :corrected-temp))))))
+
+
+;;;sf-twt-data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn sf-parse-burners [ch-data]
+  (let [da (->> (:sides ch-data)
+                (map :burners)
+                (mapv (fn [b]
+                        (mapv (fn [c] (mapv :state c)) b))))]
+    (->> (map (fn [sa sb]
+                (map (fn [b1 b2]
+                       (and (= "on" b1) (= "on" b2)))
+                     sa sb))
+              (first da) (last da))
+         (map #(some (fn [cl] (false? cl)) %))
+         (map not))))
+
+(defn sf-parse-temps [ch-data twt-temp]
+  (->> (:sides ch-data)
+       (map :tubes)
+       (map (fn [t]
+              (map twt-temp t)))))  
+
+(rf/reg-sub
+ ::sf-twt-chart-row
+ :<- [::twt-temp]
+ :<- [::reduced-firing-filter]
+ :<- [::avg-temp-band-filter]
+ :<- [::avg-corrected-temp-filter]
+ :<- [::avg-raw-temp-filter]
+ :<- [::data]
+ :<- [::config]
+ :<- [::settings]
+ :<- [::app-subs/temp-unit]
+ (fn [[twt-temp reduced-firing-filter avg-temp-band-filter
+      avg-corrected-temp-filter avg-raw-temp-filter
+      data config settings temp-unit] [_ row]]
+   (let [{:keys [start-tube end-tube name side-names]}
+         (get-in config [:sf-config :chambers row])
+         ch-data (get-in data [:side-fired :chambers row])
+         burners-on? (sf-parse-burners ch-data)
+         temps (sf-parse-temps ch-data twt-temp)]
+
+     (cond-> {:row-name name
+              :start-tube start-tube
+              :end-tube end-tube
+              :max-temp 930 ;;TODO: fetch from summary
+              :min-temp 100 ;;TODO: fetch from summary 
+              :design-temp (:design-temp settings)
+              :target-temp (:target-temp settings)
+              :side-names side-names
+              :temps temps} 
+       
+       (and avg-temp-band-filter tf-avg-temp) ;;TODO: fetch avg from summary
+       (assoc :avg-temp-band [(+ 800 20) (- 800 20)])
+
+       reduced-firing-filter
+       (assoc :burner-on?  burners-on?)
+
+       avg-raw-temp-filter
+       (assoc :avg-raw-temp 600) ;;TODO: fetch from summary
+
+       avg-corrected-temp-filter ;;TODO: fetch from summary
+       (assoc :avg-corrected-temp 800)))))
+
+
+(rf/reg-sub
+ ::burner-status-active-side
+ :<- [::view]
+ (fn [view  [_ ch-index]]
+   (get-in view [:burner-status-active-side ch-index])))
+
+ 
 ;; DATASET ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub

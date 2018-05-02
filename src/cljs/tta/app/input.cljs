@@ -7,6 +7,7 @@
             [ht.util.interop :as i]
             [ht.app.subs :refer [translate]]
             [ht.app.style :as ht-style]
+            [ht.style :as ht :refer [color color-hex color-rgba]]
             [tta.app.style :as app-style]
             [tta.app.icon :as ic]
             [tta.app.comp :as app-comp]
@@ -147,22 +148,51 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#_(defn- list-input-tube-factor [state row col _ _]
+  (let [on-paste (partial on-paste-input state row col)
+        on-change (partial on-change-input state row col)
+        on-key-down (partial shift-focus state row col)]
+    (r/create-class
+     {:component-did-mount
+      (fn [this]
+        (register-input state row col (dom/dom-node this)))
+      :component-will-unmount
+      (fn [_]
+        (register-input state row col nil))
+      :reagent-render
+      (fn [_ _ _ style field]
+        (let [{:keys [value valid?]} field]
+          [:input (merge (use-sub-style style
+                                        (if valid? :input :invalid-input))
+                         {:style {:margin-right "10px"
+                                  :margin-left "10px"}}
+                         {:value (or value "")
+                          ;; :ref #(register-input index side %)
+                          :on-focus on-focus-input
+                          :on-paste on-paste
+                          :on-change on-change
+                          :on-key-down on-key-down})]))})))
+
 ;; 220x*
 (defn- list-tubes
   "!!! should not be used directly !!!  
   render list of tubes using specified renderer for each tube.  
-  [width row-height row-render-fn  
-   {:keys [label height start-tube end-tube on-clear]}]  
+  [width row-height row-render-fn props  
+   sub-head props-fn]  
   **on-clear**: (fn []) should clear out all, provide nil to disable button"
-  [width row-height row-render-fn props]
+  [width row-height row-render-fn props
+   ;; additional parameters
+   sub-head props-fn]
   ;; uses lazy-rows
   ;; for each item, renders using list-row-tube-both-sides
   (let [state (atom {}) ;; props, tube-number-fn, show-row, counts
         items-render-fn (fn [indexes show-row]
                           (swap! state assoc :show-row show-row)
                           (map #(vector row-render-fn state %) indexes))]
-    (fn [{:keys [label height start-tube end-tube on-clear] :as props}]
-      (let [w (- width 12) ;; content width
+    (fn [props]
+      (let [props (if props-fn (props-fn props) props)
+            {:keys [label height start-tube end-tube on-clear]} props
+            w (- width 12) ;; content width
             [tube-count tube-number-fn]
             (if (> end-tube start-tube)
               [(- end-tube (dec start-tube))
@@ -170,19 +200,20 @@
               [(- start-tube (dec end-tube))
                #(- start-tube %)])]
         (swap! state assoc :props props
-               :counts [tube-count 2]
+               :counts [tube-count (or (:field-count props) 2)]
                :tube-number-fn tube-number-fn)
         [:div {:style {:width width, :height height
                        :display "inline-block"
                        :vertical-align "top"}}
          [list-head w label on-clear]
+         (if sub-head [sub-head w props])
          [app-scroll/lazy-rows
-          {:width w, :height (- height 48) ;; leave 48 for list-head
+          {:width w :height (- height 48) ;; leave 48 for list-head
            :item-count tube-count
            :item-height row-height
            :items-render-fn items-render-fn}]]))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LIST-TUBE-BOTH-SIDES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 208x38
 (defn- list-row-tube-both-sides
@@ -194,10 +225,11 @@
         right-field (field-fn index 1)
         label-style-key (if (or (:value left-field) (:value right-field))
                           :filled :label)]
-    [:span (use-style style)
+    [:span (merge (use-style style))
      [list-input state index 0 style left-field]
      [:span (use-sub-style style label-style-key) (tube-number-fn index)]
      [list-input state index 1 style right-field]]))
+
 
 ;; 220x(48+i38)
 (defn list-tube-both-sides
@@ -211,9 +243,9 @@
   [{:keys [label height start-tube end-tube on-clear
            field-fn pref-fn on-change on-paste]
     :as props}]
-  (list-tubes 220 38 list-row-tube-both-sides props))
+  (list-tubes 220 38 list-row-tube-both-sides props nil nil))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LIST-TUBE-PREFS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 300x(48+i38)
 (defn- list-row-tube-prefs
@@ -246,7 +278,129 @@
   [{:keys [label height start-tube end-tube on-clear
            selected-fn on-select]
     :as props}]
-  (list-tubes 310 48 list-row-tube-prefs props))
+  (list-tubes 310 48 list-row-tube-prefs props nil nil))
+
+;; LIST-TUBE-VIEW-FACTOR ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#_(defn- list-tubes-view-factors
+  "!!! should not be used directly !!!  
+  render list of tubes using specified renderer for each tube.  
+  [width row-height row-render-fn  
+   {:keys [label height start-tube end-tube on-clear]}]  
+  **on-clear**: (fn []) should clear out all, provide nil to disable button"
+  [width row-height row-render-fn props]
+  ;; uses lazy-rows
+  ;; for each item, renders using list-row-tube-both-sides
+  (let [state (atom {}) ;; props, tube-number-fn, show-row, counts
+        items-render-fn (fn [indexes show-row]
+                          (swap! state assoc :show-row show-row)
+                          (map #(vector row-render-fn state %) indexes))]
+    (fn [{:keys [label height start-tube end-tube on-clear] :as props}]
+      (let [w (- width 12) ;; content width
+            [tube-count tube-number-fn]
+            (if (> end-tube start-tube)
+              [(- end-tube (dec start-tube))
+               #(+ start-tube %)]
+              [(- start-tube (dec end-tube))
+               #(- start-tube %)])]
+        (swap! state assoc :props props
+               :counts [tube-count 2]
+               :tube-number-fn tube-number-fn)
+        [:div {:style {:width width, :height height
+                       :display "inline-block"
+                       :vertical-align "top"}}
+         [list-head w label on-clear]
+         [list-sub-head w props]
+         [app-scroll/lazy-rows
+          {:width w :height (- height 48) ;; leave 48 for list-head
+           :item-count tube-count
+           :item-height row-height
+           :items-render-fn items-render-fn}]]))))
+
+(defn- list-sub-head-view-factors [width {:keys [level-key]}]
+  (let [wall (translate [:config :wall :label] "Wall")
+        ceiling (translate [:config :ceiling :label] "Ceiling")
+        floor (translate [:config :floor :label] "Floor")
+        names (case level-key
+                :top [wall ceiling nil ceiling wall]
+                :bottom [wall floor nil floor wall]
+                :middle [wall nil wall])]
+    [:div {:style {:height 10
+                   :padding "0 12px"
+                   :display "inline-block"
+                   :font-size "10px", :line-height "10px"
+                   :color (color-hex :sky-blue)}}
+     (doall
+      (map-indexed (fn [i t]
+                     ^{:key i}
+                     [:span {:style {:width (if t 68 30)
+                                     :height 10
+                                     :margin "0 8px"
+                                     :text-align "center"
+                                     :display "inline-block"}}
+                      t])
+                   names))]))
+
+(defn- list-row-tube-view-factors
+  "for a tube of given index, a row with 2 inputs, one for each side of the tube"
+  [state index]
+  (let [{:keys [tube-number-fn]
+         {:keys [field-fn pref-fn field-count]} :props} @state
+        style (app-style/tube-list-row-view-factors (pref-fn index))
+        label-style-key (if (some #(:value (field-fn index %))
+                                  (range field-count))
+                          :filled :label)]
+    [:span (use-style style)
+     (doall (map (fn [i]
+                   ^{:key i}
+                   [list-input state index i style (field-fn index i)])
+                 (range (/ field-count 2))))
+     [:span (use-sub-style style label-style-key) (tube-number-fn index)]
+     (doall (map (fn [i]
+                   ^{:key i}
+                   [list-input state index i style (field-fn index i)])
+                 (range (/ field-count 2) field-count)))]))
+
+(defn list-tube-view-factors
+  "For view factor
+  *wall-type* is one of :wall, :ceiling or :floor, while
+  *side* is 0 or 1, and *index* is the tube index  
+  **field-fn**: (fn [index side wall-type]) should return the form field  
+  **pref-fn**: (fn [index]), should return \\\"imp\\\" or \\\"pin\\\" or nil  
+  **on-clear**: (fn []) should clear out all, provide nil to disable button  
+  **on-change**: (fn [index side wall-type value]) to update value  
+  **on-paste**: (fn [index side wall-type value]) to update value  
+  if on-paste is nil, on-change is used instead."
+  [{:keys [level-key
+           label height start-tube end-tube
+           field-fn pref-fn on-change on-paste on-clear]
+    :as props}]
+  (let [field-count (if (= level-key :middle) 2 4)
+        w (+ 10 24 46 (* field-count 86))
+        ;; helper fn to resolve side-index and wall-type from field-index
+        f-i-fn (fn [i] (case level-key
+                        :middle [:wall i]
+                        [(if (< 0 i 3)
+                           (case level-key :top :ceiling, :floor)
+                           :wall)
+                         (get {0 0, 1 0, 2 1, 3 1} i)]))
+        f-field-fn (fn [f]
+                     (fn [ti fi]
+                       (let [[wt si] (f-i-fn fi)]
+                         (f ti si wt))))
+        f-on-change (fn [f]
+                      (if f
+                        (fn [ti fi v]
+                          (let [[wt si] (f-i-fn fi)]
+                            (f ti si wt v)))))]
+    (list-tubes w 38 list-row-tube-view-factors props
+                ;; additional parameters
+                list-sub-head-view-factors
+                #(-> %
+                     (assoc :field-count field-count)
+                     (update :field-fn f-field-fn)
+                     (update :on-change f-on-change)
+                     (update :on-paste f-on-change)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -259,10 +413,10 @@
 (defn- list-row-add-button [state style]
   (let [{:keys [on-add wall-count]} (:props @state)
         on-click (fn []
-                    (on-add)
-                    (js/setTimeout #(shift-focus state (dec wall-count) 0
-                                                 key-down-event)
-                                   100))]
+                   (on-add)
+                   (js/setTimeout #(shift-focus state (dec wall-count) 0
+                                                key-down-event)
+                                  100))]
     [:div (-> (use-sub-style style :add-btn)
               (assoc :on-click on-click))
      [ic/plus (use-sub-style style :add-icon)]

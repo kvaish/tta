@@ -4,6 +4,7 @@
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
+            [ht.style :refer [color-hex]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -19,6 +20,7 @@
             [tta.component.root.event :as root-event]
             [tta.component.config.subs :as subs]
             [tta.component.config.event :as event]
+            [tta.dialog.view-factor.view :refer [view-factor]]
             [tta.component.reformer-dwg.view :refer [reformer-dwg]]
             [clojure.string :as str]))
 
@@ -495,19 +497,39 @@
       [form style]]
      [app-view/vertical-line {:height h}]
      [reformer-dwg {:width  w, :height h
-                    :config @(rf/subscribe [::subs/sketch-config])}]]))
+                    :config @(rf/subscribe [::subs/sketch-config])}]
+     ;;dialogs
+     (if @(rf/subscribe [:tta.dialog.view-factor.subs/open?])
+       [view-factor])]))
 
 (defn config [props]
-  [app-view/layout-main
-   (translate [:config :title :text] "Configuration")
-   (translate [:config :title :sub-text] "Reformer configuration")
-   [[app-comp/button {:disabled? (if (show-error?)
-                                   (not @(rf/subscribe [::subs/can-submit?]))
-                                   (not @(rf/subscribe [::subs/dirty?])))
-                      :icon ic/upload
-                      :label (translate [:action :upload :label] "Upload")
-                      :on-click #(rf/dispatch [::event/upload])}]
-    [app-comp/button {:icon ic/cancel
-                      :label (translate [:action :cancel :label] "Cancel")
-                      :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
-   body])
+  (let [firing @(rf/subscribe [::subs/firing])
+        vf-ready? @(rf/subscribe [::subs/ready-for-view-factor?])
+        vf-valid? @(rf/subscribe [::subs/view-factor-valid?])
+        show-error? (show-error?)]
+    [app-view/layout-main
+     (translate [:config :title :text] "Configuration")
+     (translate [:config :title :sub-text] "Reformer configuration")
+     [(if (and show-error? (= "top" firing) vf-ready? (not vf-valid?))
+        [:span {:style {:color (color-hex :red)
+                        :font-size "12px"}}
+         "* "
+         (translate [:config :view-factor :incomplete]
+                    "Incomplete view factor!")
+         " -->"])
+      (if (= "top" firing)
+        [app-comp/button {:disabled? (not vf-ready?)
+                          :icon ic/view-factor
+                          :label (translate [:action :view-factor :label]
+                                            "View Factor")
+                          :on-click #(rf/dispatch [::event/open-view-factor])}])
+      [app-comp/button {:disabled? (if show-error?
+                                     (not @(rf/subscribe [::subs/can-submit?]))
+                                     (not @(rf/subscribe [::subs/dirty?])))
+                        :icon ic/upload
+                        :label (translate [:action :upload :label] "Upload")
+                        :on-click #(rf/dispatch [::event/upload])}]
+      [app-comp/button {:icon ic/cancel
+                        :label (translate [:action :cancel :label] "Cancel")
+                        :on-click #(rf/dispatch [::root-event/activate-content :home])}]]
+     body]))

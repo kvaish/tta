@@ -212,10 +212,6 @@
        :on-click  #(rf/dispatch [::event/fill-all])}]]))
 
 (defn tf-burner-table
-  "TODO:
-  **value-fn**
-  **label-fn**
-  **on-change**"
   [width height
    burner-row-count burner-count-per-row
    wall-labels tube-row-count burner-first?]
@@ -465,10 +461,11 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
 
 (defn burner-entry [{{:keys [width height]} :view-size}]
   (if @(rf/subscribe [::subs/burner?])
-    (if-let [firing @(rf/subscribe [::subs/firing])]
+    (let [firing @(rf/subscribe [::subs/firing])
+          mode @(rf/subscribe [::subs/mode])]
       (case firing
         "side" [sf-burner-entry width height]
-        "top" [tf-burner-entry width height]))
+        "top" [tf-burner-entry width height false]))
     ;; burner entry not started yet
     [app-comp/button
      {:icon ic/plus

@@ -27,9 +27,7 @@
                                  :stroke-width 1
                                  :display "inline-block"
                                  :user-select "none"
-                                 :width "24px", :height "24px"})
-
-    ))
+                                 :width "24px", :height "24px"})))
 
 (def widget-transition {:std "450ms ease-in-out"})
 
@@ -315,6 +313,13 @@
            :width "0"
            :height (px (- height 40))}}})
 
+
+(defn horizontal-line [width]
+  {:width (px width)
+   :border (str "1px solid " widget-bg-e)
+   :margin "10px 0 0 10px"})
+
+
 (defn layout-main [view-size]
   (let [w (:width view-size)
         h (content-height view-size)
@@ -467,6 +472,14 @@
    :vertical-align "top"
    :width "30px", :height "30px"
    :margin "0px 25px"})
+
+(defn tube-list-row-view-factors [pref]
+  (let [style (tube-list-row pref)]
+    (update style ::stylefy/sub-styles
+            #(let [m {:margin "0 8px"}]
+              (-> %
+                  (update :input merge m)
+                  (update :invalid-input merge m))))))
 
 (defn tab-layout [top-tabs? bot-tabs? width height]
   (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))

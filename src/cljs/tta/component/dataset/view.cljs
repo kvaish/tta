@@ -114,8 +114,8 @@
 (defn action-dataset-list []
   (let [disabled? (if (= :read @(rf/subscribe [::subs/mode]))
                     false true)]
-    [dataset-selector {:selected (:id @(rf/subscribe [::subs/data]))
-                       :disabled? disabled?}]))
+    [dataset-selector {:selected-id (:id @(rf/subscribe [::subs/data]))
+                       :warn-on-selection-change? @(rf/subscribe [::subs/warn-on-close?])}]))
 
 (defn action-publish-gold-cup []
   [app-comp/button
@@ -181,7 +181,7 @@
                 2 ;; gold-cup-entry
                 [:div {:style view-size} "gold-cup entry topfired"])
 
-              (= :read mode)
+              (= :view mode)
               (case sel-top
                 0 ;; overall
                 [overall-graph {:level sel-bottom
@@ -207,7 +207,7 @@
                 2 ;; gold-cup-entry
                 [:div {:style view-size} "gold-cup entry sidefired"])
 
-              (= :read mode)
+              (= :view mode)
               (case sel-top
                 0 ;; twt-graph
                 [twt-graph {:view-size view-size}]
