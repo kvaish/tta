@@ -139,7 +139,7 @@ you should always use 1.0")])))
       {:selected selected
        :width 120
        :items emissivity-opts
-       :label-fn :label, :value-fn :id
+       :label-fn :label, :value-fn :id, :disabled?-fn :disabled?
        :on-select #(rf/dispatch [::event/set-emissivity-type (:id %)])}]]))
 
 (defn tube-emissivity [style]
@@ -193,14 +193,14 @@ you should always use 1.0")])))
        :on-change #(rf/dispatch [::event/set-field [:shift] % false])}]]))
 
 (defn comments [style]
-  (let [{:keys [value valid? error]} (query-id ::subs/field [:comments])]
+  (let [{:keys [value valid? error]} (query-id ::subs/field [:comment])]
     [form-cell-1 style error
-     (translate [:dataset-settings :comments :label] "Comments")
+     (translate [:dataset-settings :comment :label] "Comment")
      [app-comp/text-area
       {:width (get-in style [::stylefy/sub-styles :data :c-w-1])
-       :text value
+       :value value
        :height 100
-       :on-change #(rf/dispatch [::event/set-field [:comments] % false])}]]))
+       :on-change #(rf/dispatch [::event/set-field [:comment] % false])}]]))
 
 (defn form []
   (let [state (r/atom {:width 600})]

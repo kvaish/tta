@@ -144,6 +144,7 @@
                                     (repeat 2)
                                     (vec))})
                      tube-counts)}]
+    ;; (js/console.log level)
     (assoc draft :top-fired
            (cond->
                {:levels (cond-> {}

@@ -5,7 +5,9 @@
             [reagent.format :refer [format]]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.util.common :as au]
-            [tta.app.subs :as app-subs]))
+            [tta.app.subs :as app-subs]
+            [tta.component.settings.subs :refer [has-emissivity?
+                                                 emissivity-type-opts]]))
 
 ;; Do NOT use rf/subscribe
 ;; instead add input signals like :<- [::query-id]
@@ -117,22 +119,14 @@
 (rf/reg-sub
  ::has-gold-cup-emissivity?
  :<- [::settings]
- :<- [::firing]
- (fn [[settings firing] _]
-   (some :gold-cup-emissivity (if (= firing "side")
-                                (get-in settings [:sf-settings :chambers])
-                                (some :tube-rows
-                                      (get-in settings [:tf-settings :levels]))))))
+ (fn [settings _]
+   (has-emissivity? settings :gold-cup-emissivity)))
 
 (rf/reg-sub
  ::has-custom-emissivity?
  :<- [::settings]
- :<- [::firing]
- (fn [[settings firing] _]
-   (some :custom-emissivity (if (= firing "side")
-                              (get-in settings [:sf-settings :chambers])
-                              (some :tube-rows
-                                    (get-in settings [:tf-settings :levels]))))))
+ (fn [settings _]
+   (has-emissivity? settings :custom-emissivity)))
 
 (rf/reg-sub
  ::active-pyrometer
@@ -149,22 +143,13 @@
  :<- [::data]
  (fn [data _] (:emissivity data)))
 
-
 (rf/reg-sub-raw
  ::emissivity-types
  (fn [_ _]
    (reaction
     (let [gold-cup? @(rf/subscribe [::has-gold-cup-emissivity?])
-          custom? @(rf/subscribe [::has-custom-emissivity?])
-          lbl-common (translate [:settings :emissivity-type :common]
-                                    "Common for all tubes")
-          lbl-gold-cup (translate [:settings :emissivity-type :gold-cup]
-                                      "Gold cup")
-          lbl-custom (translate [:settings :emissivity-type :custom]
-                                    "Custom for each tube")]
-      [{:id "common" :label lbl-common}
-       {:id "goldcup" :label lbl-gold-cup :disabled? (not gold-cup?)}
-       {:id "custom" :label lbl-custom :disabled? (not custom?)}]))))
+          custom? @(rf/subscribe [::has-custom-emissivity?])]
+      (emissivity-type-opts gold-cup? custom?)))))
 
 (rf/reg-sub
  ::hour-opts

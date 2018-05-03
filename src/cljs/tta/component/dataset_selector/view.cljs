@@ -15,6 +15,7 @@
             [tta.app.subs :as app-subs]
             [tta.app.event :as app-event]
             [tta.app.icon :as ic]
+            [tta.app.scroll :refer [lazy-rows]]
             [ht.util.interop :as i]
             [ht.util.common :as u]
             [tta.app.comp :as app-comp]
@@ -24,12 +25,16 @@
             [tta.component.dataset-selector.event :as event]))
 
 (defn left-icon [topsoe?]
-  [:span {:style {:margin "0px 10px"
-                 :color (color-hex :bitumen-grey)}}
+  [:span {:style {:margin "2px 10px"
+                  :display "inline-block"
+                  :vertical-align "top"
+                  :color (color-hex :bitumen-grey)}}
    (if topsoe? "◆" "")])
 
 (defn right-icon [tubes%]
-  [:span
+  [:span {:style {:margin "0px 10px"
+                  :display "inline-block"
+                  :vertical-align "top"}}
    (if (< tubes% 70)
      [ic/dataset-inadequate {:style {:color (color-hex :red)
                                      :position "absolute"}}]
@@ -38,67 +43,73 @@
                                        :position "absolute"}}]
        nil))])
 
-(defn display-date [data-date]
+(defn display-date [style data-date]
   (let [{:keys [year month day hour minute]}
         (u/to-date-time-map data-date)]
-    (format "%4d-%02d-%02d | %02d:%02d"
-            year month day hour minute)))
+    [:div (use-sub-style style :display-date)
+     (format "%4d-%02d-%02d | %02d:%02d"
+             year month day hour minute)]))
 
-(defn dataset-list [datasets]
+(defn dataset-list-item [state style index selected-id warn?]
+  (let [items @(rf/subscribe [::subs/data])
+        {:keys [id data-date topsoe?] :as item} (get items index)
+        tubes% (get-in item [:summary :tubes%])
+        selected? (= id selected-id)]
+    [:div (if selected?
+            (use-sub-style style :selected-item)
+            (use-sub-style style :item))
+     [:div
+      {:id id
+       :on-click (fn []
+                   (swap! state assoc :open? false)
+                   (rf/dispatch [::event/select-dataset id warn?]))}
+      ;;left icon
+      [:div {:style {:width 40, :display "inline-block"}}
+       (left-icon topsoe?)]
+      ;;date
+      [display-date style data-date]
+      ;;right icon
+      [:div {:style {:width 40, :display "inline-block"}}
+       (right-icon tubes%)]]]))
+
+(defn dataset-list [state style selected-id warn?]
   (let [{:keys [height]} @(rf/subscribe [::ht-subs/view-size])
-        h (/ height 2)]
-    [:div {:style {:height h, :width 200}}])
-  #_(->> datasets
-       (map
-        (fn [item] ;; item = dataset
-          [ui/menu-item
-           {:key             (:id item)
-            :primary-text    (display-date (:data-date item))
-                                        ;:left-icon       (r/as-element [left-icon (:topsoe? item)])
-            :left-icon      (r/as-element (right-icon (:tubes% item)))
-            :on-click        (fn []
-                               (swap! state assoc :open? false)
-                               (rf/dispatch [::event/select-dataset (:id item)]))
-            :disabled        (= selected-id (:id item))
-            :value           (:id item)
-                                        ;:inner-div-style {:padding "0px 40px"}
-            }]))
-       (doall)))
+        h (* height 0.3)
+        {:keys [w]} (:data (meta style))
+        items @(rf/subscribe [::subs/data])]
+    [lazy-rows
+     {:width w, :height h
+      :item-height 32
+      :item-count (count items)
+      :items-render-fn
+      (fn [indexes _]
+        (map (fn [index]
+               [dataset-list-item state style index selected-id warn?])
+             indexes))}]))
 
-(defn menu [state selected-id warn-on-selection-change?]
+(defn menu [state selected-id warn?]
   (let [fetching? @(rf/subscribe [::subs/fetching?])
-        datasets @(rf/subscribe [::subs/data])
-        datasets [{:id "a"
-                   :data-date (js/Date.)
-                   :topsoe? true
-                   :tubes% 65}
-                  {:id "b"
-                   :data-date (js/Date.)
-                   :topsoe? true
-                   :tubes% 85}
-                  {:id "c"
-                   :data-date (js/Date.)
-                   :topsoe? false
-                   :tubes% 80}
-                  {:id "d"
-                   :data-date (js/Date.)
-                   :topsoe? false
-                   :tubes% 70}]]
-    [ui/menu {:value           selected-id
-              :menu-item-style {:font-size   "12px"
+        style (style/dataset-list-style)
+        items @(rf/subscribe [::subs/data])
+        {:keys [w iw]} (:data (meta style))]
+    [ui/menu {:width w, :auto-width false
+              :menu-item-style {:width iw, :height 20
+                                :font-size   "12px"
                                 :line-height "24px"
                                 :min-height  "24px"
                                 :color (color-hex :royal-blue)}}
      (cond
        ;; show busy
-       fetching? [ui/menu-item {}
-                  [ui/circular-progress {:width "20px", :height "20px"}]]
+       fetching?
+       [ui/menu-item {:disabled true}
+        [ui/linear-progress {:style {:margin-top "20px"}}]]
        ;; show not found
-       (empty? datasets) [ui/menu-item {}
-                          (translate [:dataset-selector :message :not-found]
-                                     "no datasets found")]
+       (empty? items)
+       [ui/menu-item {:disabled true}
+        (translate [:dataset-selector :message :not-found] "No datasets found!")]
        ;; dataset list
-       :found-datasets [dataset-list datasets])]))
+       :found-datasets
+       [dataset-list state style selected-id warn?])]))
 
 (defn dataset-selector [{:keys [selected-id warn-on-selection-change?]}]
   (let [state (r/atom {:open? false})]

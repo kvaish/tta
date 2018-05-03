@@ -46,10 +46,15 @@
 (rf/reg-event-fx
  ::sync-after-save
  [(inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::app-subs/plant]} [_ [eid]]]
-   (cond-> {:forward-events {:unregister ::sync-after-save}}
-     (= eid ::app-event/fetch-plant-success)
-     (assoc :db (assoc-in db data-path (:settings plant))))))
+ (fn [{:keys [db ::app-subs/plant]} [_ close? [eid]]]
+   (let [success? (= eid ::app-event/fetch-plant-success)]
+     (cond-> {:forward-events {:unregister ::sync-after-save}}
+       ;; sync data on success
+       success?
+       (assoc :db (assoc-in db data-path (:settings plant)))
+       ;; leave if asked for
+       (and success? close?)
+       (assoc :dispatch [:tta.component.root.event/activate-content :home])))))
 
 (defn archive-std-temp [settings old-settings]
   (let [std-temp (select-keys old-settings [:target-temp :design-temp])]
@@ -90,7 +95,7 @@
             {:forward-events {:register ::sync-after-save
                               :events #{::app-event/fetch-plant-success
                                         ::ht-event/service-failure}
-                              :dispatch-to [::sync-after-save]}
+                              :dispatch-to [::sync-after-save true]}
              :dispatch [::ht-event/set-busy? true]
              :service/update-plant-settings
              {:client-id (:id client)
@@ -167,14 +172,15 @@
  (fn [db [_ path value required?]]
    (let [has-custom-emissivity @(rf/subscribe [::subs/has-custom-emissivity?])
          data @(rf/subscribe [::subs/data])]
-     (if (and (nil? has-custom-emissivity) (= value "custom"))
-       (assoc-in db (into form-path path)
+     (cond-> (set-field db path value data data-path form-path required?)
+       ;; show error when custom is chosen but custom-emissivity is missing
+       (and (not has-custom-emissivity) (= value "custom"))
+       (assoc-in (into form-path path)
                  {:value value
                   :valid? false
                   :error
                   (translate [::settings :custom-emissivity :error]
-                             "Please provide each tube emissivity")})
-       (set-field db path value data data-path form-path required?)))))
+                             "Please provide each tube emissivity")})))))
 
 
 ;; set custom emissivity

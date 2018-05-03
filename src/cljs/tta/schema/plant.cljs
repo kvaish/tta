@@ -39,7 +39,8 @@
                   :modified-by         "modifiedBy"}
 
         ;; configuration
-        config {:name          "name"
+        config {:draft?        "isDraft"
+                :name          "name"
                 :version       "version"
                 :firing        "firing"
                 :sf-config     {:name   "sfConfig"
@@ -163,11 +164,10 @@
                                      :schema
                                      {:top    {:name   "top"
                                                :schema ::tf-view-factor}
-                                      :middle {:name   "top"
+                                      :middle {:name   "middle"
                                                :schema ::tf-view-factor}
                                       :bottom {:name   "bottom"
-                                               :schema ::tf-view-factor}}}
-                  :draft?           "isDraft"}
+                                               :schema ::tf-view-factor}}}}
 
      ::tf-view-factor
      {:tube-rows {:name   "tubeRows"

@@ -27,9 +27,7 @@
                                  :stroke-width 1
                                  :display "inline-block"
                                  :user-select "none"
-                                 :width "24px", :height "24px"})
-
-    ))
+                                 :width "24px", :height "24px"})))
 
 (def widget-transition {:std "450ms ease-in-out"})
 
@@ -424,6 +422,14 @@
         :add-btn add-btn
         :add-icon add-icon
         :add-label add-label}})))
+
+(defn tube-list-row-view-factors [pref]
+  (let [style (tube-list-row pref)]
+    (update style ::stylefy/sub-styles
+            #(let [m {:margin "0 8px"}]
+              (-> %
+                  (update :input merge m)
+                  (update :invalid-input merge m))))))
 
 (defn tab-layout [top-tabs? bot-tabs? width height]
   (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))

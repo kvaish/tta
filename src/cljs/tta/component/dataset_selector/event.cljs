@@ -2,6 +2,7 @@
 (ns tta.component.dataset-selector.event
   (:require [re-frame.core :as rf]
             [re-frame.cofx :refer [inject-cofx]]
+            [ht.app.subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.event :as app-event]))
 
@@ -14,9 +15,21 @@
 
 (rf/reg-event-fx
  ::select-dataset
- (fn [_ [_ dataset-id]]
-   {:dispatch [:tta.component.root.event/activate-content
-               :dataset {:dataset-id dataset-id}]}))
+ (fn [_ [_ id warn?]]
+   (let [next-event [:tta.component.root.event/activate-content
+                     :dataset {:dataset-id id, :mode :read}]]
+     {:dispatch
+      (if warn?
+        [::ht-event/show-message-box
+         {:message (translate [:warning :unsaved :message]
+                              "Unsaved changes will be lost!")
+          :title (translate [:warning :unsaved :title]
+                            "Discard current changes?")
+          :level :warning
+          :label-ok (translate [:action :discard :label] "Discard")
+          :event-ok next-event
+          :label-cancel (translate [:action :cancel :label] "Cancel")}]
+        next-event)})))
 
 (rf/reg-event-fx
  ::fetch-datasets

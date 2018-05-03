@@ -6,15 +6,16 @@
             [vimsical.re-frame.cofx.inject :as inject]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
-            [tta.app.event :as app-event]
-            [tta.app.subs :as app-subs]
-            [tta.util.common :as au]
-            [tta.component.dataset.subs :as subs]
             [tta.util.common :as au :refer [make-field missing-field
                                             set-field set-field-text
                                             set-field-number
                                             set-field-temperature
-                                            validate-field parse-value]]))
+                                            validate-field parse-value]]
+            [tta.app.event :as app-event]
+            [tta.app.subs :as app-subs]
+            [tta.component.dataset.calc :refer [update-calc-summary
+                                                apply-settings]]
+            [tta.component.dataset.subs :as subs]))
 
 (defonce comp-path [:component :dataset])
 (defonce view-path (conj comp-path :view))
@@ -74,29 +75,34 @@
  (fn [{:keys [db ::app-subs/plant]
       {:keys [draft]} :storage}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
-   (let [draft (if (and
-                    (= (:plant-id draft) (:id plant))
-                    (= (:reformer-version draft) (get-in plant [:config :version])))
-                 (au/dataset-from-storage draft))
-         {:keys [client-id], plant-id :id} plant
-         fetch-params {:client-id client-id
-                       :plant-id plant-id
-                       :evt-success [::fetch-success]
-                       :evt-failure [::fetch-failure]}]
-     (if dataset
-       {:db (-> db
-                (assoc-in (conj comp-path :dataset) dataset)
-                (assoc-in data-path nil)
-                (assoc-in form-path (init-form dataset)))}
+   (if dataset
+     ;; load the given dataset
+     {:db (-> db
+              (assoc-in (conj comp-path :dataset) dataset)
+              (assoc-in data-path nil)
+              (assoc-in form-path (init-form dataset)))
+      :dispatch [::init-settings]}
+     ;; load draft or create or fetch a dataset as specified in parameters
+     (let [draft (if (and
+                      (= (:plant-id draft) (:id plant))
+                      (= (:reformer-version draft)
+                         (get-in plant [:config :version])))
+                   (au/dataset-from-storage draft))
+           {:keys [client-id], plant-id :id} plant
+           fetch-params {:client-id client-id
+                         :plant-id plant-id
+                         :evt-success [::fetch-success]
+                         :evt-failure [::fetch-failure]}]
        (cond
          dataset-id
-         {:service/fetch-dataset
-          (assoc fetch-params :dataset-id dataset-id)
-          :db (assoc-in db (conj view-path :mode) :read)}
+         {:service/fetch-dataset (assoc fetch-params :dataset-id dataset-id)
+          :db (update-in db view-path assoc
+                         :mode :read, :fetching? true)}
 
          (= mode :read)
          {:service/fetch-latest-dataset fetch-params
-          :db (assoc-in db (conj view-path :mode) :read)}
+          :db (update-in db view-path assoc
+                         :mode :read, :fetching? true)}
 
          logger-data
          {:dispatch [:tta.dialog.dataset-settings.event/open
@@ -112,8 +118,23 @@
                       [:tta.dialog.dataset-settings.event/open
                        {:gold-cup? gold-cup?}])))
 
+         ;; not usual, while raising this event take care to add
+         ;; right parameters so as to avoid one extra step
+         ;; for better performance
          :default
          {:dispatch [::init {:mode (if draft :edit :read)}]})))))
+
+(rf/reg-event-fx
+ ::init-settings
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/settings])
+  (inject-cofx ::inject/sub [::subs/config])
+  (inject-cofx ::inject/sub [::subs/mode])]
+ (fn [{:keys [db ::subs/data ::subs/settings ::subs/config ::subs/mode]} _]
+   ;; update settings in edit mode only
+   (if (= :edit mode)
+     {:db (assoc-in db (conj comp-path :dataset)
+                    (apply-settings data settings config))})))
 
 (rf/reg-event-db
  ::close
@@ -121,8 +142,15 @@
 
 (rf/reg-event-fx
  ::fetch-success
- (fn [_ [_ dataset]]
-   {:dispatch [::init {:dataset dataset}]}))
+ (fn [{:keys [db]} [_ dataset]]
+   (if dataset
+     {:dispatch [::init {:dataset dataset}]
+      :db (assoc-in db (conj view-path :fetching?) false)}
+     {:db (-> db
+              (assoc-in (conj comp-path :dataset) nil)
+              (assoc-in data-path nil)
+              (assoc-in form-path nil)
+              (assoc-in (conj view-path :fetching?) false ))})))
 
 (rf/reg-event-fx
  ::fetch-failure
@@ -130,12 +158,30 @@
    {:dispatch-n (list (into [::ht-event/service-failure false] params)
                       [:tta.component.root.event/activate-content :home])}))
 
+
 ;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::set-mode
- (fn [db [_ mode]] ;; mode => :read or :edit
-   (assoc-in db (conj view-path :mode) mode)))
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/config])
+  (inject-cofx ::inject/sub [::subs/selected-area-id])]
+ (fn [{:keys [db ::subs/data ::subs/config
+             ::subs/selected-area-id]}
+     [_ mode]] ;; mode => :read or :edit
+   {:db (cond-> (assoc-in db (conj view-path :mode) mode)
+          ;; while switching to graph mode update calculations
+          (= mode :read) (assoc-in data-path
+                                   (update-calc-summary data config)))
+    :dispatch [::select-area-by-id selected-area-id]}))
+
+(rf/reg-event-fx
+ ::select-area-by-id
+ (inject-cofx ::inject/sub [::subs/area-opts])
+ (fn [{:keys [::subs/area-opts]} [_ area-id]]
+   (let [area (some #(if (= (:id (second %)) area-id) (first %))
+                    (map-indexed list area-opts))]
+     {:dispatch [::select-area (or area 0)]})))
 
 (rf/reg-event-db
  ::select-area
@@ -185,16 +231,50 @@
                  ((if (= dir :next) inc dec) twt-entry-index))]
      {:db (assoc-in db (conj view-path :twt-entry-index scope) index)})))
 
+;; TWT-GRAPH ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(rf/reg-event-db
+ ::set-twt-type
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :twt-type) value)))
+
+(rf/reg-event-db
+ ::set-reduced-firing?
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :reduced-firing?) value)))
+
+(rf/reg-event-db
+ ::set-avg-temp-band?
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-temp-band?) value)))
+
+(rf/reg-event-db
+ ::set-avg-raw-temp?
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-raw-temp?) value)))
+
+(rf/reg-event-db
+ ::set-avg-temp?
+ (fn [db [_ value]]
+   (assoc-in db (conj view-path :avg-temp?) value)))
+
+;; BURNER-STATUS
+
+(rf/reg-event-db
+ ::set-burner-status-front-side
+ (fn [db [_ ch-index side]]
+   (assoc-in db (conj view-path :burner-status-front-side ch-index) side)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
- ::excel
+ ::datasheet
  (fn [_ _])
  ;;TODO: excel report
  )
 
 (rf/reg-event-fx
- ::pdf
+ ::report
  (fn [_ _])
  ;;TODO: pdf report
  )
@@ -225,10 +305,12 @@
 (rf/reg-event-fx
  ::save-draft
  [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/can-submit?])]
- (fn [{:keys [db ::subs/data ::subs/can-submit?]} _]
+  (inject-cofx ::inject/sub [::subs/can-submit?])
+  (inject-cofx ::inject/sub [::subs/config])]
+ (fn [{:keys [db ::subs/data ::subs/can-submit? ::subs/config]} _]
    (if can-submit?
-     (let [data (assoc data :last-saved (js/Date.))]
+     (let [data (-> (update-calc-summary data config)
+                    (assoc :last-saved (js/Date.)))]
        {:storage/set {:key :draft
                       :value (au/dataset-to-storage data)}
         :db (-> db
@@ -243,15 +325,17 @@
 (rf/reg-event-fx
  ::upload
  [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/can-submit?])
   (inject-cofx ::inject/sub [::app-subs/plant])
   (inject-cofx ::inject/sub [::app-subs/client])]
- (fn [{:keys [::subs/data ::subs/can-submit? ::app-subs/client ::app-subs/plant]} _]
+ (fn [{:keys [::subs/data ::subs/config ::subs/can-submit?
+             ::app-subs/client ::app-subs/plant]} _]
    #_(if can-submit?
-     {:service/create-dataset {:client (:id client)
-                               :plant-id (:id plant)
-                               :dataset data
-                               :evt-success [::create-dataset-success]}})))
+       {:service/create-dataset {:client (:id client)
+                                 :plant-id (:id plant)
+                                 :dataset (update-calc-summary data config)
+                                 :evt-success [::create-dataset-success]}})))
 
 (rf/reg-event-fx
  ::add-burners
@@ -264,7 +348,8 @@
            (let [{:keys [burner-row-count burner-count-per-row]}
                  (get-in config [:sf-config :chambers 0])
                  bs (vec (repeat burner-row-count
-                                 (vec (repeat burner-count-per-row nil))))]
+                                 (vec (repeat burner-count-per-row
+                                              {:state "on"}))))]
              (assoc-in db data-path
                        (update-in data [:side-fired :chambers]
                                   (fn [chs]
@@ -281,7 +366,8 @@
              (assoc-in db data-path
                        (assoc-in data [:top-fired :burners]
                                  (mapv (fn [{:keys [burner-count]}]
-                                         (vec (repeat burner-count nil)))
+                                         (vec (repeat burner-count
+                                                      {:deg-open 90})))
                                        burner-rows)))))]
      {:db db})))
 
