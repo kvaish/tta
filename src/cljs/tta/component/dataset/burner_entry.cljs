@@ -193,7 +193,7 @@
                   :width  width
                   :data   @(rf/subscribe [::subs/config])})])
 
-(defn fill-all []
+(defn fill-all [mode]
   (let [{:keys [value valid? error]} @(rf/subscribe [::subs/field [:top-fired :burners :fill-all]])
         error (if (fn? error) (error) error)
         style fill-all-field-style]
@@ -202,7 +202,8 @@
       {:on-change (fn [value]
                     (if (<= 0 (js/Number value) 90)
                       (rf/dispatch [::event/set-fill-all-field value])))
-       :value value, :valid? valid?}]
+       :value value, :valid? valid?
+       :read-only? (if-not (= :edit mode) true)}]
      [:span (use-sub-style style :error) error]
      [app-comp/button
       {:disabled? (or (not valid?)
@@ -217,7 +218,8 @@
    wall-labels tube-row-count burner-first?]
   (let [w2 150
         w1 (- width w2)
-        h (- height 48)]
+        h (- height 48)
+        mode @(rf/subscribe [::subs/mode])]
     [:div {:style {:height    height
                    :width     width
                    :font-size "12px"}}
@@ -225,7 +227,7 @@
                     :display "inline-block"
                     :vertical-align "top"}}
       ;;fill all
-      [fill-all]
+      [fill-all mode]
       (let [x-offset 150
             ch-width (js/Math.ceil (* x-offset (inc tube-row-count)))
             w-new ch-width]
@@ -251,7 +253,8 @@
               :on-change     (fn [row index value]
                                (if (<= 0 (js/Number value) 90)
                                  (rf/dispatch [::event/set-tf-burner index row value])))
-              :color-fn      opening->color}]]]]])]
+              :color-fn      opening->color
+              :input-read-only? (if-not (= :edit mode) true)}]]]]])]
      [:div {:style {:width w2, :height height
                     :display "inline-block"
                     :vertical-align "top"

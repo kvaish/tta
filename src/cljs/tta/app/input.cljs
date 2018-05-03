@@ -136,9 +136,6 @@
                bg-color (if color-fn (color-fn value))]
            [:input (merge (use-sub-style style
                                          (if valid? :input :invalid-input))
-                          (if (and bg-color (not= bg-color "#fff"))
-                            {:style {:background-color bg-color
-                                     :color "#fff"}})
                           {:value       (or value "")
                            ;; :ref #(register-input index side %)
                            :on-focus    on-focus-input
@@ -466,7 +463,37 @@
            :item-height 38
            :items-render-fn items-render-fn}]]))))
 
-(defn- list-row-burner-input [width color-fn row-count burner-first? state item-count index]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- burner-input [state row col _ _ color-fn read-only?]
+  (let [on-paste (partial on-paste-input state row col)
+        on-change (partial on-change-input state row col)
+        on-key-down (partial shift-focus state row col)]
+    (r/create-class
+      {:component-did-mount
+       (fn [this]
+         (register-input state row col (dom/dom-node this)))
+       :component-will-unmount
+       (fn [_]
+         (register-input state row col nil))
+       :reagent-render
+       (fn [_ _ _ style field]
+         (let [{:keys [value valid?]} field
+               bg-color (if color-fn (color-fn value))]
+           [:input (merge (use-sub-style style
+                                         (if valid? :input :invalid-input))
+                          (if (and bg-color (not= bg-color "#fff"))
+                            {:style {:background-color bg-color
+                                     :color "#fff"}})
+                          {:value       (or value "")
+                           ;; :ref #(register-input index side %)
+                           :on-focus    on-focus-input
+                           :on-paste    on-paste
+                           :on-change   on-change
+                           :on-key-down on-key-down
+                           :read-only  read-only?})]))})))
+
+(defn- list-row-burner-input [width read-only? color-fn row-count burner-first? state item-count index]
   (let [{:keys [field-fn]} (:props @state)
         style (app-style/burner-input-list-row (- width 80) row-count burner-first?)
         burner-label-style app-style/burner-label]
@@ -477,19 +504,19 @@
                 )
       (doall (map (fn [i]
                     ^{:key i}
-                    [list-input state index i style (field-fn index i) color-fn])
+                    [burner-input state index i style (field-fn index i) color-fn read-only?])
                   (range row-count)))]]))
 
 (defn list-burner-input
   "[{:keys [height item-count row-count
-            field-fn on-change on-paste color-fn]}]"
+            field-fn on-change on-paste color-fn input-read-only?]}]"
   [props]
   (let [state (atom {}) ;; props, counts, show-row
-        {:keys [width color-fn row-count burner-first?]} props
+        {:keys [width color-fn row-count burner-first? input-read-only?]} props
         items-render-fn (fn [indexes show-row]
                           (let [ic (get-in (swap! state assoc :show-row show-row)
                                            [:props :item-count])]
-                            (map #(vector list-row-burner-input (- width 130) color-fn row-count burner-first? state ic %)
+                            (map #(vector list-row-burner-input (- width 130) input-read-only? color-fn row-count burner-first? state ic %)
                                  indexes)))]
     ;; Form-2 render fn
     (fn [{:keys [label height width item-count] :as props}]

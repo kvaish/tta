@@ -463,11 +463,11 @@
   {:display "inline-block"
    :user-select "none"
    :border-radius "50%"
-   :border (str "2px solid " (color-rgba :white 0 0.6))
+   :border (str "2px solid " (color-hex :white))
    :font-size "10px"
    :line-height "26px"
    :font-weight 600
-   :color (color-rgba :white 0 0.6)
+   :color (color-hex :white)
    :text-align "center"
    :vertical-align "top"
    :width "30px", :height "30px"
