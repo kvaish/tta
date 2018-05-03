@@ -104,11 +104,11 @@
        {:key :selector
         :valid? valid?
         :width (- (get-in style [::stylefy/sub-styles :data :c-w]) 100)
-        :on-select #(rf/dispatch [::event/set-emissivity-type 
-                                  [:emissivity-type] 
+        :on-select #(rf/dispatch [::event/set-emissivity-type
+                                  [:emissivity-type]
                                   (:id %) true])
         :selected selected, :items options
-        :value-fn :id, :label-fn :name, :disabled?-fn :disabled?}]
+        :value-fn :id, :label-fn :label, :disabled?-fn :disabled?}]
       (if (= value "custom")
         [app-comp/button {:key :edit
                           :icon ic/emissivity+

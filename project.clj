@@ -1,8 +1,8 @@
-(defproject tta "1.0.0.D.12"
+(defproject tta "1.0.0.D.13"
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.10.64"] ;;  "1.9.946"
+                 [org.clojure/clojurescript "1.10.238"] ;;  "1.9.64"
                  [org.clojure/core.async "0.4.474"] ;; "0.3.465"
-                 [reagent "0.7.0"
+                 [reagent "0.8.0" ;; "0.7.0"
                   :exclusions [cljsjs/react
                                cljsjs/react-dom
                                cljsjs/react-dom-server]]
@@ -10,28 +10,30 @@
                  [re-frame "0.10.5"] ;; "0.10.2"
                  [re-frame-utils "0.1.0"]
                  [day8.re-frame/forward-events-fx "0.0.5"]
+                 #_[day8.re-frame/tracing-stubs "0.5.1"]
                  [cljsjs/material-ui "0.19.2-0"]
                  [cljs-react-material-ui "0.2.50"
                   :exclusions [org.clojure/clojure
                                cljsjs/material-ui]]
-                 [cljsjs/react "16.2.0-3"] ;; "16.1.1-0"
-                 [cljsjs/react-dom "16.2.0-3"] ;; "16.1.1-0"
-                 [cljsjs/react-dom-server "16.2.0-3"] ;; "16.1.1-0"
-                 [garden "1.3.4"] ;; "1.3.3"
-                 [stylefy "1.2.0" ;; "1.1.0"
+                 [cljsjs/react "16.3.2-0"] ;; "16.2.0-3"
+                 [cljsjs/react-dom "16.3.2-0"] ;; "16.2.0-3"
+                 [cljsjs/react-dom-server "16.3.2-0"] ;; "16.2.0-3"
+                 [garden "1.3.5"] ;;  "1.3.4"
+                 [stylefy "1.4.2" ;; "1.2.0"
                   :exclusions [garden]]
-                 [cljs-http "0.1.44"
+                 [cljs-http "0.1.45" ;; "0.1.44"
                   :exclusions [com.cognitect/transit-cljs]]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljsjs/d3 "4.12.0-0"]
                  [cljsjs/react-motion "0.5.0-0"]
                  [cljsjs/filesaverjs "1.3.3-0"]
-                 [com.cognitect/transit-cljs "0.8.243"]
+                 [com.cognitect/transit-cljs "0.8.256"] ;; "0.8.243"
                  [figwheel-sidecar "0.5.15" ;; "0.5.14"
                   :exclusions [org.clojure/tools.nrepl]]]
 
   :plugins [[lein-figwheel "0.5.15" ;; "0.5.14"
              :exclusions [org.clojure/clojure]]
+            ;; [lein-re-frisk "0.5.8"]
             [lein-cljsbuild "1.1.7"]
             [lein-garden "0.3.0"
              :exclusions [garden org.clojure/clojure]]
@@ -65,12 +67,16 @@
 
   :profiles
   {:dev
-   {:dependencies [[binaryage/devtools "0.9.9"] ;; "0.9.8"
-                   [re-frisk "0.5.3" ;; "0.5.2"
+   {:dependencies [[binaryage/devtools "0.9.10"] ;; "0.9.9"
+                   [re-frisk "0.5.4" ;; "0.5.3"
+                    :exclusions [org.clojure/clojure]]
+                   #_[re-frisk-remote "0.5.5"
                     :exclusions [org.clojure/clojure]]
                    [com.cemerick/piggieback "0.2.2"]
                    [org.clojure/data.json "0.2.6"
-                    :exclusions [org.clojure/clojure]]]
+                    :exclusions [org.clojure/clojure]]
+                   #_[day8.re-frame/tracing "0.5.1"]
+                   #_[day8.re-frame/re-frame-10x "0.3.3-react16"]]
 
     :garden
     {:builds
@@ -100,8 +106,12 @@
                     :output-dir           "resources/public/js/dev/out"
                     :asset-path           "js/dev/out"
                     :source-map-timestamp true
+                    :closure-defines
+                    {"day8.re_frame.tracing.trace_enabled_QMARK_" true
+                     "re_frame.trace.trace_enabled_QMARK_" true}
                     :preloads             [devtools.preload
-                                           re-frisk.preload]
+                                           re-frisk.preload
+                                           #_day8.re-frame-10x.preload]
                     :external-config      {:devtools/config
                                            {:features-to-install
                                             [:formatters :hints]}}}}

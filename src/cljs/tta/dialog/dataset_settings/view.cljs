@@ -139,7 +139,7 @@ you should always use 1.0")])))
       {:selected selected
        :width 120
        :items emissivity-opts
-       :label-fn :label, :value-fn :id
+       :label-fn :label, :value-fn :id, :disabled?-fn :disabled?
        :on-select #(rf/dispatch [::event/set-emissivity-type (:id %)])}]]))
 
 (defn tube-emissivity [style]

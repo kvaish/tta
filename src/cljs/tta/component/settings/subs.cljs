@@ -1,6 +1,7 @@
 ;; subscriptions for component settings
 (ns tta.component.settings.subs
-  (:require [re-frame.core :as rf]
+  (:require [reagent.ratom :refer [reaction]]
+            [re-frame.core :as rf]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
             [tta.util.auth :as auth]
@@ -89,13 +90,17 @@
    (if config?
      (or dirty? (not valid?)))))
 
-(defn has-emissivity? [data ekey]
-  (if-let [chs (get-in data [:sf-settings :chambers])]
-    ;; check side-fired
-    (some ekey chs)
-    (if-let [levels (get-in data [:tf-settings :levels])]
-      ;; top-fired
-      (some #(some ekey (:tube-rows %)) levels))))
+(defn has-emissivity? [settings ekey]
+  (and (keyword? ekey)
+       (some?
+        (if-let [chs (get-in settings [:sf-settings :chambers])]
+          ;; check side-fired
+          (some ekey chs)
+          (if-let [rs (->> (get-in settings[:tf-settings :levels])
+                           vals
+                           (mapcat :tube-rows))]
+            ;; top-fired
+            (some ekey rs))))))
 
 (rf/reg-sub
  ::has-gold-cup-emissivity?
@@ -109,19 +114,23 @@
  (fn [data _]
    (has-emissivity? data :custom-emissivity)))
 
-(rf/reg-sub
+(defn emissivity-type-opts [gold-cup? custom?]
+  (let [lbl-common (translate [:settings :emissivity-type :common]
+                              "Common for all tubes")
+        lbl-gold-cup (translate [:settings :emissivity-type :gold-cup]
+                                "Gold cup")
+        lbl-custom (translate [:settings :emissivity-type :custom]
+                              "Custom for each tube")]
+    [{:id "common", :label lbl-common}
+     {:id "goldcup", :label lbl-gold-cup, :disabled? (not gold-cup?)}
+     {:id "custom", :label lbl-custom, :disabled? (not custom?)}]))
+
+(rf/reg-sub-raw
  ::emissivity-types
- :<- [::has-gold-cup-emissivity?]
- :<- [::ht-subs/translation [:settings :emissivity-type :common]]
- :<- [::ht-subs/translation [:settings :emissivity-type :gold-cup]]
- :<- [::ht-subs/translation [:settings :emissivity-type :custom]]
- (fn [[gold-cup?  common gold-cup custom] _]
-   [{:id "common"
-     :name (or common "Common for all tubes")}
-    {:id "goldcup", :disabled? (not gold-cup?)
-     :name (or gold-cup "Gold cup")}
-    {:id "custom", :disabled? false
-     :name (or custom "Custom for each tube")}]))
+ (fn [_ _]
+   (reaction
+    (let [gold-cup? @(rf/subscribe [::has-gold-cup-emissivity?])]
+      (emissivity-type-opts gold-cup? true)))))
 
 (rf/reg-sub
  ::pyrometers

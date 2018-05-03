@@ -172,14 +172,15 @@
  (fn [db [_ path value required?]]
    (let [has-custom-emissivity @(rf/subscribe [::subs/has-custom-emissivity?])
          data @(rf/subscribe [::subs/data])]
-     (if (and (nil? has-custom-emissivity) (= value "custom"))
-       (assoc-in db (into form-path path)
+     (cond-> (set-field db path value data data-path form-path required?)
+       ;; show error when custom is chosen but custom-emissivity is missing
+       (and (not has-custom-emissivity) (= value "custom"))
+       (assoc-in (into form-path path)
                  {:value value
                   :valid? false
                   :error
                   (translate [::settings :custom-emissivity :error]
-                             "Please provide each tube emissivity")})
-       (set-field db path value data data-path form-path required?)))))
+                             "Please provide each tube emissivity")})))))
 
 
 ;; set custom emissivity

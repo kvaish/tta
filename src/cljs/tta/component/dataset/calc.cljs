@@ -60,19 +60,21 @@
   em : emissivity
   F : view-factor"
   [Tm Tw lam em F]
-  (if (and (pos? Tm) (pos? Tw))
-    (if (= Tm Tw) 0
-        (if (and (pos? lam) (<= 0 em 1) (< Tm Tw) (<= 0 F 1))
-          (let [C 14388 ;; constant
-                Tw (+ K Tw)
-                Tm (+ K Tm)
-                X (/ C lam)
-                Y (- (js/Math.exp (/ C lam Tm)) 1)
-                Z (* F (- 1 em))
-                Q (- (js/Math.exp (/ C lam Tw)) 1)
-                a (- (/ 1 Y) (/ Z Q))
-                Tc (/ X (js/Math.log (+ (/ em a) 1)))]
-            (- Tm Tc))))))
+  (let [dT
+        (if (and (pos? Tm) (pos? Tw) (pos? F) (pos? em) (pos? lam))
+          (if (= Tm Tw) 0
+              (if (and (pos? lam) (<= 0 em 1) (< Tm Tw) (<= 0 F 1))
+                (let [C 14388 ;; constant
+                      Tw (+ K Tw)
+                      Tm (+ K Tm)
+                      X (/ C lam)
+                      Y (- (js/Math.exp (/ C lam Tm)) 1)
+                      Z (* F (- 1 em))
+                      Q (- (js/Math.exp (/ C lam Tw)) 1)
+                      a (- (/ 1 Y) (/ Z Q))
+                      Tc (/ X (js/Math.log (+ (/ em a) 1)))]
+                  (- Tm Tc)))))]
+    (if (js/isFinite dT) dT)))
 
 (defn- avg [nums]
   (let [nums (remove nil? nums)
@@ -229,7 +231,8 @@
    (fn [rows level-key]
      (mapv #(apply-emissivity %1 %2 (:emissivity-type dataset))
            rows
-           (get-in settings [:tf-settings :levels level-key :tube-rows])))))
+           (get-in settings [:tf-settings :levels level-key :tube-rows]
+                   (repeat nil))))))
 
 (defn tf-apply-pinched? [dataset settings]
   (tf-levels-update-rows
@@ -261,22 +264,24 @@
      (drop (- n 6) tubes)]))
 
 (defn- tf-calc-tube [dataset tube Tw]
-  (if-let [Tc (if (:pinched? tube) nil
-                  (let [py (:pyrometer dataset)
-                        em (or (:emissivity-override tube)
-                               (:emissivity-calculated tube)
-                               (:emissivity tube)
-                               (:emissivity dataset)
-                               (:tube-emissivity py))
-                        lam (:wavelength py)
-                        Tm (:raw-temp tube)
-                        F (:view-factor tube)
-                        dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
-                                (remove nil?) not-empty)]
-                    (if dT (js/console.log em lam Tm F dT Tw))
-                    (if dT (- Tm (apply + dT)))))]
-    (assoc tube :corrected-temp Tc)
-    (dissoc tube :corrected-temp)))
+  (let [Tc (if (:pinched? tube) nil
+               (let [py (:pyrometer dataset)
+                     em (or (:emissivity-override tube)
+                            (:emissivity-calculated tube)
+                            (:emissivity tube)
+                            (:emissivity dataset)
+                            (:tube-emissivity py))
+                     lam (:wavelength py)
+                     Tm (:raw-temp tube)
+                     F (:view-factor tube)
+                     dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
+                             (remove nil?)
+                             not-empty)]
+                 ;; (if dT (js/console.log em lam F Tw Tm dT))
+                 (if dT (- Tm (apply + dT)))))]
+    (if (pos? Tc)
+      (assoc tube :corrected-temp Tc)
+      (dissoc tube :corrected-temp))))
 
 (defn tf-calc-Tc [dataset]
   (let [Tw-n (get-in dataset [:top-fired :wall-temps :north :avg])
@@ -360,20 +365,21 @@
       ts)))
 
 (defn- sf-calc-tube [dataset tube Tw]
-  (if-let [Tc (if (:pinched? tube) nil
-                  (let [py (:pyrometer dataset)
-                        em (or (:emissivity-override tube)
-                               (:emissivity-calculated tube)
-                               (:emissivity tube)
-                               (:emissivity dataset)
-                               (:tube-emissivity py))
-                        lam (:wavelength py)
-                        Tm (:raw-temp tube)
-                        F 1
-                        dT (calc-dT-corr Tm Tw lam em F)]
-                    (if dT (- Tm dT))))]
-    (assoc tube :corrected-temp Tc)
-    (dissoc tube :corrected-temp)))
+  (let [Tc (if (:pinched? tube) nil
+               (let [py (:pyrometer dataset)
+                     em (or (:emissivity-override tube)
+                            (:emissivity-calculated tube)
+                            (:emissivity tube)
+                            (:emissivity dataset)
+                            (:tube-emissivity py))
+                     lam (:wavelength py)
+                     Tm (:raw-temp tube)
+                     F 1
+                     dT (calc-dT-corr Tm Tw lam em F)]
+                 (if dT (- Tm dT))))]
+    (if (pos? Tc)
+      (assoc tube :corrected-temp Tc)
+      (dissoc tube :corrected-temp))))
 
 (defn sf-calc-Tc [dataset config]
   (sf-update-sides dataset
