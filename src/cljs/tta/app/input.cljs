@@ -477,7 +477,7 @@
        (fn [_]
          (register-input state row col nil))
        :reagent-render
-       (fn [_ _ _ style field]
+       (fn [_ _ _ style field _ _]
          (let [{:keys [value valid?]} field
                bg-color (if color-fn (color-fn value))]
            [:input (merge (use-sub-style style
@@ -499,9 +499,7 @@
         burner-label-style app-style/burner-label]
     [:span
      [:span (use-style burner-label-style) index]
-     [:span (-> (use-style style)
-                ;(update :style assoc :padding-left 30)
-                )
+     [:span (use-style style)
       (doall (map (fn [i]
                     ^{:key i}
                     [burner-input state index i style (field-fn index i) color-fn read-only?])

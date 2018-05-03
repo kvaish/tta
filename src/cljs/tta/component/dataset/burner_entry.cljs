@@ -195,7 +195,8 @@
                   :data   @(rf/subscribe [::subs/config])})])
 
 (defn fill-all [mode]
-  (let [{:keys [value valid? error]} @(rf/subscribe [::subs/field [:top-fired :burners :fill-all]])
+  (let [{:keys [value valid? error]}
+        @(rf/subscribe [::subs/field [:top-fired :burners :fill-all]])
         error (if (fn? error) (error) error)
         style fill-all-field-style]
     [:div (use-style style)
@@ -211,7 +212,9 @@
                       (empty? value))
        :icon      ic/dataset
        :label     (translate [:action :fill-all :label] "Fill all")
-       :on-click  #(rf/dispatch [::event/fill-all])}]]))
+       :on-click  (if (= :edit mode)
+                    #(rf/dispatch [::event/fill-all])
+                    (fn []))}]]))
 
 (defn tf-burner-table
   [width height
@@ -260,6 +263,13 @@
                     :display "inline-block"
                     :vertical-align "top"
                     :padding "10px 0 0 60px"}}
+      [:label {:style {:display "inline-block"
+                       :color (color-hex :royal-blue)
+                       :font-size "12px"
+                       :vertical-align "top"
+                       :padding "0px"}}
+       (translate [:dataset :burner-entry :burner-valve]
+                  "Burner valve opening:")]
       [color-palette]]]))
 
 
