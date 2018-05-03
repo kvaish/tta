@@ -7,24 +7,22 @@
             [tta.app.style :as app-style]))
 
 (defn dataset-list-style []
-  {:cursor "pointer"
-   ::stylefy/sub-styles
-           {:item {:cursor "pointer"
-                   :width  "inherit"
-                   :color       (color-hex :royal-blue)
-                   ::stylefy/mode
-                           {:hover
-                            {:background-color (color-hex :alumina-grey)}}}
-            :selected-item {:cursor "pointer"
-                            :color  (color-hex :monet-pink)
-                            ::stylefy/mode {:hover {:background-color "none"}}}
-            :icon-style {:width   40
-                         :display "inline-block"}
-            :menu-item-style {:font-size   "12px"
-                              :line-height "24px"
-                              :min-height  "24px"}
-            :display-date {:width       120
-                           :font-size   "12px"
-                           :line-height "24px"
-                           :min-height  "24px"
-                           :display     "inline-block"}}})
+  (let [w 220
+        iw (- w 20)]
+    ^{:data {:w w}}
+    {:display "inline-block"
+     ::stylefy/sub-styles
+     {:item {:cursor "pointer"
+             :margin "0 10px"
+             :width (px iw)
+             :color (color-hex :royal-blue)
+             ::stylefy/mode {:hover {:background-color (color-hex :alumina-grey)}}}
+      :selected-item {:width (px iw)
+                      :color  (color-hex :monet-pink)
+                      ::stylefy/mode {:hover {:background-color "none"}}}
+      :display-date {:width "120px"
+                     :font-size "12px"
+                     :line-height "24px"
+                     :min-height "24px"
+                     :display "inline-block"
+                     :vertical-align "top"}}}))

@@ -14,7 +14,6 @@
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols]]
             [tta.app.view :as app-view :refer [vertical-line]]
-            [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
             [tta.component.dataset.twt-selector :refer [twt-selector]]))

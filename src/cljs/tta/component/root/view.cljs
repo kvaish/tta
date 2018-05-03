@@ -262,7 +262,8 @@
                   assoc :height content-height)
      (if content-allowed?
        (case active-content
-         :home [home {:on-select #(rf/dispatch [::event/activate-content %])
+         :home [home {:on-select #(rf/dispatch
+                                   (into [::event/activate-content] %&))
                       :size content-size}]
          ;; primary
          :dataset        [dataset {:size content-size}]

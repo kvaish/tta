@@ -36,10 +36,6 @@
     [:div (use-style style)
      [:div (use-sub-style style :line)]]))
 
-(defn horizontal-line [{:keys [width]}]
-  (let [style (style/horizontal-line width)]
-    [:hr (use-style style)]))
-
 (defn- tab-head [{:keys [index label width last? position
                          on-select selected?]}]
   (let [width (if width (if last? width (dec width)))

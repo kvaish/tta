@@ -9,6 +9,7 @@
             [cljs-time.format :as tf]
             [ht.util.interop :as i]
             [ht.util.common :as u]
+            [ht.style :refer [color-hex]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -94,7 +95,7 @@
     :label (translate [:dataset :action :delete] "Delete")}])
 
 ;;disabled when dataset and plant reformer version mismatched
-(defn action-selector []
+(defn action-select-mode []
   (let [plant-version (get-in @(rf/subscribe [::app-subs/plant])
                               [:config :version])
         reformer-version  @(rf/subscribe [::subs/reformer-version])
@@ -112,10 +113,8 @@
 
 ;; dataset list, visible in read mode only
 (defn action-dataset-list []
-  (let [disabled? (if (= :read @(rf/subscribe [::subs/mode]))
-                    false true)]
-    [dataset-selector {:selected-id (:id @(rf/subscribe [::subs/data]))
-                       :warn-on-selection-change? @(rf/subscribe [::subs/warn-on-close?])}]))
+  [dataset-selector {:selected-id (:id @(rf/subscribe [::subs/data]))
+                     :warn-on-selection-change? @(rf/subscribe [::subs/warn-on-close?])}])
 
 (defn action-publish-gold-cup []
   [app-comp/button
@@ -137,7 +136,7 @@
             (if draft? (action-reset-draft))
             (if draft? (action-save))
             (if (or draft? can-edit?) (action-upload))
-            (action-selector))
+            (action-select-mode))
       ;; read mode
       (list (action-datasheet)
             (action-report)
@@ -145,14 +144,15 @@
             (if (or draft? can-edit?) (action-upload))
             (if (and (not draft?) can-delete?) (action-delete))
             (action-dataset-list)
-            (if (or draft? can-edit?) (action-selector))))))
+            (if (or draft? can-edit?) (action-select-mode))))))
 
 (defn body [{:keys [width height]}]
   (let [area-opts @(rf/subscribe [::subs/area-opts])
         selected-area @(rf/subscribe [::subs/selected-area])
         level-opts @(rf/subscribe [::subs/level-opts])
         selected-level @(rf/subscribe [::subs/selected-level])
-        firing @(rf/subscribe [::subs/firing])]
+        ;; dummy for performance reason
+        _ @(rf/subscribe [::subs/selected-area-id])]
     [app-view/tab-layout
      {:top-tabs {:selected (or selected-area 0)
                  :on-select #(rf/dispatch [::event/select-area %])
@@ -166,68 +166,68 @@
         (let [mode @(rf/subscribe [::subs/mode])
               [sel-top sel-bottom] selected
               view-size {:width width
-                         :height height}]
+                         :height height}
+              area-id @(rf/subscribe [::subs/area-id sel-top])]
           (cond
-            ;; topfired
-            (= "top" firing)
-            (cond
-              (= :edit mode) ;; twt-entry, burner, gold-cup
-              (case sel-top
-                0 ;; twt-entry
-                [twt-entry {:level sel-bottom
-                            :view-size view-size}]
-                1 ;; burner-entry
-                [burner-entry {:view-size view-size}]
-                2 ;; gold-cup-entry
-                [:div {:style view-size} "gold-cup entry topfired"])
+            (= :edit mode) ;; twt-entry, burner, gold-cup
+            (case area-id
+              :twt ;; twt-entry
+              [twt-entry {:level sel-bottom
+                          :view-size view-size}]
+              :burner ;; burner-entry
+              [burner-entry {:view-size view-size}]
+              :gold-cup ;; gold-cup-entry
+              [:div {:style view-size} "gold-cup entry"]
+              nil)
 
-              (= :view mode)
-              (case sel-top
-                0 ;; overall
-                [overall-graph {:level sel-bottom
-                                :view-size view-size}]
-                1 ;; twt-graph
-                [twt-graph {:level sel-bottom
-                            :view-size view-size}]
-                2 ;; burner-status
-                [burner-status {:view-size view-size}]
-                3 ;; gold-cup-view
-                [:div {:style view-size} "gold-cup view topfired"]))
+            (= :read mode)
+            (case area-id
+              :overall ;; overall
+              [overall-graph {:level sel-bottom
+                              :view-size view-size}]
+              :twt ;; twt-graph
+              [twt-graph {:level sel-bottom
+                          :view-size view-size}]
+              :burner ;; burner-status
+              [burner-status {:view-size view-size}]
+              :gold-cup ;; gold-cup-view
+              [:div {:style view-size} "gold-cup view"]
+              nil))))}]))
 
-            ;; sidefired
-            (= "side" firing)
-            (cond
-              (= :edit mode)
-              (case sel-top
-                0 ;; twt-entry
-                [twt-entry {:level sel-bottom
-                            :view-size view-size}]
-                1 ;; burner-entry
-                [burner-entry {:view-size view-size}]
-                2 ;; gold-cup-entry
-                [:div {:style view-size} "gold-cup entry sidefired"])
+(defn fetching [{:keys [width height]}]
+  [:div {:style {:widht width, :height height
+                 :border-radius "8px"
+                 :border (str "1px solid " (color-hex :sky-blue))
+                 :padding "20px"
+                 :background (color-hex :white)}}
+   [ui/circular-progress]])
 
-              (= :view mode)
-              (case sel-top
-                0 ;; twt-graph
-                [twt-graph {:view-size view-size}]
-                1 ;; burner-status
-                [burner-status {:view-size view-size}]
-                2 ;; gold-cup-view
-                [:div {:style view-size} "gold-cup view sidefired"])))))}]))
-
+(defn not-found [{:keys [width height]}]
+  [:div {:style {:width width, :height height
+                 :border-radius "8px"
+                 :border (str "1px solid " (color-hex :sky-blue))
+                 :padding "20px"
+                 :font-size "16px"
+                 :background (color-hex :white)
+                 :color (color-hex :amber)}}
+   [ui/font-icon {:class-name "fa fa-exclamation-triangle"
+                  :style {:color (color-hex :amber)
+                          :margin-right "10px"}}]
+   (translate [:dataset :message :not-found] "Not found!")])
 
 (defn dataset [props]
   (let [last-saved @(rf/subscribe [::subs/last-saved])
-        data-date @(rf/subscribe [::subs/data-date])]
+        data-date @(rf/subscribe [::subs/data-date])
+        fetching? @(rf/subscribe [::subs/fetching?])]
     [:div
      [app-view/layout-main
       (str (translate [:dataset :title :text] "Dataset")
            ": "
-           (let [{:keys [year month day hour minute]}
-                 (u/to-date-time-map data-date)]
-             (format "%4d-%02d-%02d | %02d:%02d"
-                     year month day hour minute)))
+           (if data-date
+             (let [{:keys [year month day hour minute]}
+                   (u/to-date-time-map data-date)]
+               (format "%4d-%02d-%02d | %02d:%02d"
+                       year month day hour minute))))
       (str (translate [:dataset :sub-title :text] "Last saved")
            ": "
            (if last-saved
@@ -235,9 +235,14 @@
                    (u/to-date-time-map last-saved)]
                (format "%4d-%02d-%02d | %02d:%02d:%02d"
                        year month day hour minute second))))
-
-      (get-actions)
-      body]
+      (if data-date
+        (get-actions)
+        (list (action-dataset-list)))
+      (if fetching?
+        fetching
+        (if data-date
+          body
+          not-found))]
 
      ;;dataset settings dialog
      (if @(rf/subscribe [:tta.dialog.dataset-settings.subs/open?])
