@@ -136,38 +136,12 @@
           [:input (merge (use-sub-style style
                                         (if valid? :input :invalid-input))
                          {:value (or value "")
-                          ;; :ref #(register-input index side %)
-                          :on-focus on-focus-input
-                          :on-paste on-paste
-                          :on-change on-change
-                          :on-key-down on-key-down})]))}))) 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-#_(defn- list-input-tube-factor [state row col _ _]
-  (let [on-paste (partial on-paste-input state row col)
-        on-change (partial on-change-input state row col)
-        on-key-down (partial shift-focus state row col)]
-    (r/create-class
-     {:component-did-mount
-      (fn [this]
-        (register-input state row col (dom/dom-node this)))
-      :component-will-unmount
-      (fn [_]
-        (register-input state row col nil))
-      :reagent-render
-      (fn [_ _ _ style field]
-        (let [{:keys [value valid?]} field]
-          [:input (merge (use-sub-style style
-                                        (if valid? :input :invalid-input))
-                         {:style {:margin-right "10px"
-                                  :margin-left "10px"}}
-                         {:value (or value "")
-                          ;; :ref #(register-input index side %)
                           :on-focus on-focus-input
                           :on-paste on-paste
                           :on-change on-change
                           :on-key-down on-key-down})]))})))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 220x*
 (defn- list-tubes
@@ -221,7 +195,7 @@
         right-field (field-fn index 1)
         label-style-key (if (or (:value left-field) (:value right-field))
                           :filled :label)]
-    [:span (merge (use-style style))
+    [:span (use-style style)
      [list-input state index 0 style left-field]
      [:span (use-sub-style style label-style-key) (tube-number-fn index)]
      [list-input state index 1 style right-field]]))
@@ -277,41 +251,6 @@
   (list-tubes 310 48 list-row-tube-prefs props nil nil))
 
 ;; LIST-TUBE-VIEW-FACTOR ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-#_(defn- list-tubes-view-factors
-  "!!! should not be used directly !!!  
-  render list of tubes using specified renderer for each tube.  
-  [width row-height row-render-fn  
-   {:keys [label height start-tube end-tube on-clear]}]  
-  **on-clear**: (fn []) should clear out all, provide nil to disable button"
-  [width row-height row-render-fn props]
-  ;; uses lazy-rows
-  ;; for each item, renders using list-row-tube-both-sides
-  (let [state (atom {}) ;; props, tube-number-fn, show-row, counts
-        items-render-fn (fn [indexes show-row]
-                          (swap! state assoc :show-row show-row)
-                          (map #(vector row-render-fn state %) indexes))]
-    (fn [{:keys [label height start-tube end-tube on-clear] :as props}]
-      (let [w (- width 12) ;; content width
-            [tube-count tube-number-fn]
-            (if (> end-tube start-tube)
-              [(- end-tube (dec start-tube))
-               #(+ start-tube %)]
-              [(- start-tube (dec end-tube))
-               #(- start-tube %)])]
-        (swap! state assoc :props props
-               :counts [tube-count 2]
-               :tube-number-fn tube-number-fn)
-        [:div {:style {:width width, :height height
-                       :display "inline-block"
-                       :vertical-align "top"}}
-         [list-head w label on-clear]
-         [list-sub-head w props]
-         [app-scroll/lazy-rows
-          {:width w :height (- height 48) ;; leave 48 for list-head
-           :item-count tube-count
-           :item-height row-height
-           :items-render-fn items-render-fn}]]))))
 
 (defn- list-sub-head-view-factors [width {:keys [level-key]}]
   (let [wall (translate [:config :wall :label] "Wall")

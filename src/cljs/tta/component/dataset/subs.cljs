@@ -497,6 +497,45 @@
      (not avg-raw-temp?) (assoc :avg-raw-temp nil)
      (not avg-temp?) (assoc :avg-temp nil))))
 
+;; OVERALL-TWT-GRAPH-DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn overall-twt-graph-data [data config settings temp-unit level-key]
+  (let [{:keys [wall-names tube-rows burner-rows]} (:tf-config config)
+        burner-on? (if-let [burners (get-in data [:top-fired :burners])]
+                     (map (fn [row]
+                            (map tf-burner-on? row))
+                          burners))
+        ;; tempeartures
+        temps (map (fn [row]
+                     (map (fn [side]
+                            (map :corrected-temp (:tubes side)))
+                          (:sides row)))
+                   (get-in data [:top-fired :levels level-key :rows]))
+        ;; summary - max/min
+        {:keys [max-temp min-temp]} (get-in data [:summary :levels level-key])
+        {:keys [design-temp]} settings ;; use design-temp if missing max/min
+        max-temp (or max-temp design-temp)
+        min-temp (or min-temp (- design-temp 100))]
+
+    {:wall-names wall-names
+     :tube-rows tube-rows
+     :burner-rows burner-rows
+     :max-temp max-temp
+     :min-temp min-temp
+     :burner-on? burner-on?
+     :temps temps}))
+
+(rf/reg-sub
+ ::overall-twt-graph-data
+ :<- [::reduced-firing?]
+ :<- [::data]
+ :<- [::config]
+ :<- [::settings]
+ :<- [::app-subs/temp-unit]
+ (fn [[reduced-firing? data config settings temp-unit] [_ level-key]]
+   (cond->
+       (overall-twt-graph-data data config settings temp-unit level-key)
+     (not reduced-firing?) (assoc :burner-on? nil))))
 
 ;; BURNER-STATUS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

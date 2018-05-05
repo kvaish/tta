@@ -11,18 +11,10 @@
   (let [diff (- to from)]
     (+ from (rand-int diff))))
 
-(defn temp->color [temp]
-  (cond
-    (and (<= 860 temp) (< temp 880)) "teal"
-    (and (<= 880 temp) (< temp 900)) "orange"
-    (and (<= 900 temp) (< temp 920)) "deepskyblue"
-    (and (<= 920 temp) (< temp 940)) "lime"))
-
 (defn twt-chart []
   (let [temp (partial any-temp 860 930)
         data (merge @state
-                    {;:reduced-firing-bands [[2 3] [7 9]]
-                     :burner-on? [true false true false false true]
+                    {:burner-on? [true false true false false true]
                      :avg-temp-band [880 920]
                      :avg-raw-temp 910, :avg-temp 900
                      :max-temp 930, :min-temp 860
@@ -37,56 +29,39 @@
                        (temp) nil (temp) (temp) (temp)]]})]
     [ht-charts/twt-chart data]))
 
-(defn overall-chart []
-  (let [temp (partial any-temp 860 930)
-        tubes-per-row 20
-        config_twt_overall
-          { :height 350, :width 700
-            :temp->color temp->color
-            :wall-names {:north "North wall" :east "East wall"
-                         :west "West wall" :south "South wall"}
-            :burner-first? false
-            :y-domain [1 tubes-per-row]}
-        data_twt_overall {
-            :tube-data 
-              [{:row-no 1
-                :name "Tube row 1"
-                :red-firing {:a [3 5] :b [6 8]}
-                :tube-count tubes-per-row
-                :start-tube 1
-                :end-tube tubes-per-row
-                :temperatures {:a (repeatedly tubes-per-row temp) 
-                               :b (repeatedly tubes-per-row temp)}}
-               {:row-no 2
-                :name "Tube row 2"
-                :red-firing {:a [3 5] :b [6 8]}
-                :tube-count tubes-per-row
-                :start-tube 1
-                :end-tube tubes-per-row
-                :temperatures {:a (repeatedly tubes-per-row temp) 
-                               :b (repeatedly tubes-per-row temp)}}
-               {:row-no 3
-                :name "Tube row 3"
-                :red-firing {:a [3 5] :b [6 8]}
-                :tube-count tubes-per-row
-                :start-tube 1
-                :end-tube tubes-per-row
-                :temperatures {:a (repeatedly tubes-per-row temp) 
-                               :b (repeatedly tubes-per-row temp)}}
-               {:row-no 4
-                :name "Tube row 4"
-                :red-firing {:a [3 5] :b [6 8]}
-                :tube-count tubes-per-row
-                :start-tube 1
-                :end-tube tubes-per-row
-                :temperatures {:a (repeatedly tubes-per-row temp) 
-                               :b (repeatedly tubes-per-row temp)}}]
-            :burner-data 
-              [{ :burner-count 5 :start-burner 1 :end-burner 5}
-              { :burner-count 5 :start-burner 1 :end-burner 5}
-              { :burner-count 5 :start-burner 1 :end-burner 5}]}]
-    #_[ht-charts/overall-twt-chart config_twt_overall data_twt_overall]))
+(defn overall-twt-chart []
+  (let [max-temp 899, min-temp 701
+        temp #(let [t (any-temp max-temp min-temp)]
+                (if (< 720 t 880) t))
+        trn 5, tn 20, brn 6, bn 10
+        props (merge @state
+                     {:wall-names {:north "North", :east "East"
+                                   :south "South", :west "West"}
+                      :tube-rows (mapv (fn [i]
+                                         {:name (str "Tube row " (inc i))
+                                          :start-tube 1, :end-tube tn})
+                                       (range trn))
+                      :burner-rows (mapv (fn [i]
+                                           {:start-burner bn, :end-burner 1})
+                                         (range brn))
+                      :max-temp max-temp, :min-temp min-temp
+                      :title "Overall tube wall temperature, Middle"
+                      :sub-title "2018-10-14 | 14:50"
+                      :burner-on? (-> (vec (repeat brn (vec (repeat bn true))))
+                                      (assoc-in [0 3] false)
+                                      (assoc-in [1 2] false)
+                                      (assoc-in [1 3] false)
+                                      (assoc-in [5 4] false)
+                                      (assoc-in [5 5] false))
+                      :temps (repeatedly
+                              trn
+                              (fn [] (repeatedly
+                                     2
+                                     (fn [] (repeatedly tn temp)))))})]
+    [ht-charts/overall-twt-chart props]))
 
 (defn charts []
   [:div
-   [twt-chart]])
+   ;; [twt-chart]
+   [overall-twt-chart]
+   ])

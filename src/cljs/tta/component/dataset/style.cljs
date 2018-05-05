@@ -113,3 +113,32 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
       :circle (assoc circle
                      :top "36px", :left "36px"
                      :box-shadow "-3px -3px 10px 3px rgba(0,0,0,0.3)")}}))
+
+
+(defn overall-twt-graph [width height]
+  (let [h1 48
+        h3 48
+        ;; footer (h3) will be overlayed on top of body (h2)
+        h2 (- height h1)]
+    ^{:data {:h1 h1, :h2 h2, :h3 h3
+             :w width}}
+    {:width (px width), :height (px height)
+     :position "relative"
+     ::stylefy/sub-styles
+     {:header {:width (px width), :height (px h1)}
+      :label {:font-size "12px"
+              :display "inline-block"
+              :vertical-align "top"
+              :padding "14px 0"
+              :color (color-hex :royal-blue)}
+      :title {:border-top (str "2px solid " (color-hex :slate-grey))
+              :font-size "14px"
+              :font-weight 700
+              :color (color-hex :bitumen-grey)
+              :padding "5px 0 0 0"}
+      :sub-title {:color (color-hex :bitumen-grey)
+                  :font-size "10px"}
+      :body {:width (px width), :height (px h2)}
+      :footer {:width (px width), :height (px h3)
+               :position "absolute"
+               :bottom 0, :left 0}}}))

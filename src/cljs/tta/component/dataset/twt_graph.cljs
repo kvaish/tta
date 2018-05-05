@@ -1,15 +1,15 @@
 (ns  tta.component.dataset.twt-graph
   (:require [reagent.core :as r]
-            [re-frame.core :as rf]
             [reagent.format :refer [format]]
+            [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
             [cljs-time.core :as t]
+            [ht.util.common :as u]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.view :as app-view]
-            [ht.util.common :as u]
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols]]
             [tta.app.charts :refer [twt-chart]]
@@ -71,7 +71,7 @@
     [:span (use-sub-style style :label)
      (translate [:twt-chart :legend :reduced-firing] "Reduced firing")]
     [app-comp/toggle
-     {:value  @(rf/subscribe [::subs/reduced-firing?])
+     {:value @(rf/subscribe [::subs/reduced-firing?])
       :on-toggle #(rf/dispatch [::event/set-reduced-firing? %])}]]
    ;; toggle-avg-temp-band
    [:span {:style {:margin-left "20px"}}
@@ -113,6 +113,6 @@
         {:keys [year month day hour minute]} (u/to-date-time-map data-date)
         sub-title (format "%4d-%02d-%02d | %02d:%02d" year month day hour minute)]
     [:div (use-style style)
-     (twt-graph-header style level-key title sub-title)
-     (twt-graph-body style level-key title sub-title)
-     (twt-graph-footer style level-key)]))
+     [twt-graph-header style level-key title sub-title]
+     [twt-graph-body style level-key title sub-title]
+     [twt-graph-footer style level-key]]))
