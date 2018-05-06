@@ -12,7 +12,7 @@
             [tta.app.comp :as app-comp]
             [tta.app.scroll :refer [lazy-cols table-grid]]
             [tta.component.dataset.burner-entry
-             :refer [tf-burner-entry sf-burner-legend]]
+             :refer [tf-burners tf-burner-legend sf-burner-legend]]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
             [tta.component.dataset.style :as style]))
@@ -115,7 +115,10 @@
 ;;;top-fired;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn tf-burner-status [width height]
-  [tf-burner-entry width height])
+  (let [style (style/tf-burners-layout width height :read)]
+    [:div (use-style style)
+     [tf-burners style :read]
+     [tf-burner-legend style]]))
 
 ;;;body;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn burner-status [{{:keys [width height]} :view-size}]

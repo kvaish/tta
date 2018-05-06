@@ -401,74 +401,70 @@
            :item-height 38
            :items-render-fn items-render-fn}]]))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; top-fired burners ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- burner-input [state row col _ _ color-fn read-only?]
-  (let [on-paste (partial on-paste-input state row col)
+(defn- tf-burner-input [state row col _]
+  (let [bw 80, tw 30
+        {:keys [field-fn color-fn read-only? burner-first?]} (:props @state)
+        ml (if (pos? col)
+             (+ tw bw -56)
+             (if burner-first?
+               (+ bw -56 -12)
+               (+ tw bw -56 -12)))
+        on-paste (partial on-paste-input state row col)
         on-change (partial on-change-input state row col)
         on-key-down (partial shift-focus state row col)]
     (r/create-class
-      {:component-did-mount
-       (fn [this]
-         (register-input state row col (dom/dom-node this)))
-       :component-will-unmount
-       (fn [_]
-         (register-input state row col nil))
-       :reagent-render
-       (fn [_ _ _ style field _ _]
-         (let [{:keys [value valid?]} field
-               bg-color (if color-fn (color-fn value))]
-           [:input (merge (use-sub-style style
-                                         (if valid? :input :invalid-input))
-                          (if (and bg-color (not= bg-color "#fff"))
-                            {:style {:background-color bg-color
-                                     :color "#fff"}})
-                          {:value       (or value "")
-                           ;; :ref #(register-input index side %)
-                           :on-focus    on-focus-input
-                           :on-paste    on-paste
-                           :on-change   on-change
-                           :on-key-down on-key-down
-                           :read-only  read-only?})]))})))
+     {:component-did-mount
+      (fn [this]
+        (register-input state row col (dom/dom-node this)))
+      :component-will-unmount
+      (fn [_]
+        (register-input state row col nil))
+      :reagent-render
+      (fn [_ _ _ style]
+        (let [{:keys [value]} (field-fn row col)
+              bg-color (if (and value color-fn) (color-fn value))]
+          [:input (merge (update (use-sub-style style :input) :style assoc
+                                 :background-color bg-color
+                                 :margin-left ml)
+                         {:value       (or value "")
+                          :on-focus    on-focus-input
+                          :on-paste    on-paste
+                          :on-change   on-change
+                          :on-key-down on-key-down
+                          :read-only  read-only?})]))})))
 
-(defn- list-row-burner-input [width read-only? color-fn row-count burner-first? state item-count index]
-  (let [{:keys [field-fn]} (:props @state)
-        style (app-style/burner-input-list-row (- width 80) row-count burner-first?)
-        burner-label-style app-style/burner-label]
-    [:span
-     [:span (use-style burner-label-style) index]
-     [:span (use-style style)
-      (doall (map (fn [i]
-                    ^{:key i}
-                    [burner-input state index i style (field-fn index i) color-fn read-only?])
-                  (range row-count)))]]))
+(defn- list-row-tf-burners [state index]
+  (let [{{:keys [row-count]} :props, :keys [item-height]} @state
+        style (app-style/tf-burner-list-row item-height)]
+    [:span (use-style style)
+     [:span (use-sub-style style :label) (inc index)]
+     (doall (map (fn [i]
+                   ^{:key i}
+                   [tf-burner-input state index i style])
+                 (range row-count)))]))
 
-(defn list-burner-input
-  "[{:keys [height item-count row-count
-            field-fn on-change on-paste color-fn input-read-only?]}]"
-  [props]
+(defn list-tf-burners
+  "[{:keys [height item-count row-count burner-first? read-only?
+            color-fn field-fn on-change on-paste]}]"
+  [{:keys [item-count row-count burner-first?]}]
   (let [state (atom {}) ;; props, counts, show-row
-        {:keys [width color-fn row-count burner-first? input-read-only?]} props
+        bw 80, tw 30, p 40
+        w (+ p (* row-count bw)
+             (* tw (if burner-first? (dec row-count) (inc row-count))))
         items-render-fn (fn [indexes show-row]
-                          (let [ic (get-in (swap! state assoc :show-row show-row)
-                                           [:props :item-count])]
-                            (map #(vector list-row-burner-input (- width 130) input-read-only? color-fn row-count burner-first? state ic %)
-                                 indexes)))]
+                          (swap! state assoc :show-row show-row)
+                          (map #(vector list-row-tf-burners state %) indexes))]
     ;; Form-2 render fn
-    (fn [{:keys [label height width item-count] :as props}]
-      (swap! state assoc
-             ;; ensure the arity of on-change and on-paste
-             ;; since col is not applicable here
-             :props (-> props
-                        (update :on-paste #(if %
-                                             (fn [row _ val] (% row val)))))
-             :counts [item-count row-count])
-      (let [w (- width 12)]
-        [:div {:style {:width width, :height height
-                       :display "inline-block"
-                       :vertical-align "top"}}
-         [app-scroll/lazy-rows
-          {:width w, :height (- height 48)
-           :item-count item-count ;; one row extra for add btn
-           :item-height 38
-           :items-render-fn items-render-fn}]]))))
+    (fn [{:keys [height] :as props}]
+      (let [item-height (max 38 (/ height item-count))]
+        (swap! state assoc
+               :props props
+               :item-height item-height
+               :counts [item-count row-count])
+        [app-scroll/lazy-rows
+         {:width w, :height height
+          :item-count item-count
+          :item-height item-height
+          :items-render-fn items-render-fn}]))))

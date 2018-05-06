@@ -423,49 +423,6 @@
         :add-icon add-icon
         :add-label add-label}})))
 
-(defn burner-input-list-row [width row-count burner-first?]
-  (let [tc (if burner-first? (dec row-count) (inc row-count))
-        sc (inc tc)
-        cell-width (/ width sc)
-        margin (/ (- cell-width 68) 2)
-        margin-burner-input (str "0px " margin "px")
-        widget-border (color-rgba :sky-blue 0 0.6)
-        widget-border-imp (color-rgba :monet-pink 0 0.6)
-        widget-selection (color-rgba :sky-blue 0 0.6)
-        tube-input {:width "68px":height "30px"
-                    :border (str "1px solid " widget-border)
-                    :border-radius "16px"
-                    :padding "0 12px"
-                    :text-align "center"
-                    :vertical-align "top"
-                    :font-size "12px"
-                    :color widget-bg-e
-                    :margin margin-burner-input
-                    ::stylefy/mode {:selection {:background widget-selection}}}]
-    {:height  "38px"
-     :display "inline-block"
-     ;:padding "4px 12px"
-     :margin  (str "0px " (if burner-first? 0 cell-width) "px")
-     ::stylefy/sub-styles
-              {:input         tube-input
-               :invalid-input (assoc tube-input
-                                :border (str "1px solid " widget-err)
-                                :color widget-err)}}))
-
-(def burner-label
-  {:display "inline-block"
-   :user-select "none"
-   :border-radius "50%"
-   :border (str "2px solid " (color-hex :white))
-   :font-size "10px"
-   :line-height "26px"
-   :font-weight 600
-   :color (color-hex :white)
-   :text-align "center"
-   :vertical-align "top"
-   :width "30px", :height "30px"
-   :margin "0px 25px"})
-
 (defn tube-list-row-view-factors [pref]
   (let [style (tube-list-row pref)]
     (update style ::stylefy/sub-styles
@@ -473,6 +430,31 @@
               (-> %
                   (update :input merge m)
                   (update :invalid-input merge m))))))
+
+(defn tf-burner-list-row [height]
+  (let [xp 20
+        yp (/ (- height 30) 2)
+        widget-border (color-rgba :sky-blue 0 0.6)
+        widget-selection (color-rgba :alumina-grey 0 0.6)]
+    {:height (px height)
+     :padding-top (px yp)
+     :display "inline-block"
+     ::stylefy/sub-styles
+     {:input {:width "56px", :height "30px"
+              :border (str "1px solid " widget-border)
+              :border-radius "16px"
+              :padding "0 12px"
+              :text-align "center"
+              :vertical-align "top"
+              :font-size "12px"
+              ::stylefy/mode {:selection {:background widget-selection}}}
+      :label {:display "inline-block"
+              :width (px xp)
+              :vertical-align "top"
+              :font-size "12px"
+              :font-weight 700
+              :line-height "30px"
+              :color (color-hex :sky-blue)}}}))
 
 (defn tab-layout [top-tabs? bot-tabs? width height]
   (let [h2 (- height (if top-tabs? 24 0) (if bot-tabs? 24 0))

@@ -24,8 +24,7 @@
             [tta.tube-prefs]
             [tta.tab]
             [tta.wall-list]
-            [tta.component.dataset-selector.view :refer [dataset-selector]]
-            [tta.burner]))
+            [tta.component.dataset-selector.view :refer [dataset-selector]]))
 
 
 (defn work []
@@ -51,6 +50,5 @@
        :tta/charts [tta.charts/charts]
        :tta/wall-list [tta.wall-list/wall-list]
        :tta/dataset-selector [dataset-selector {:selected "597867355705df141c9b58dc"}]
-       :tta/burner [tta.burner/burner]
        ;; default
        [:p "empty workspace"])]))

@@ -397,6 +397,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn ensure-view-factor [dataset config]
+  ;; for top-fired if view-factor is not applied yet, apply it.
+  ;; usually needed when switching to edit mode first time after
+  ;; opening an already published dataset.
+  ;; this is done since, view-factor (unlike emissivity) is not
+  ;; stored with dataset, but is very much required for calculation.
+  (if (and (= "top" (:firing config))
+           (-> (get-in dataset [:top-fired :levels])
+               vals
+               first
+               (get-in [:rows 0 :sides 0 :tubes 0 :view-factor])
+               nil?))
+    (tf-apply-view-factor dataset config)
+    ;; otherwise return as is
+    dataset))
+
 (defn update-calc-summary [dataset config]
   (if (= "top" (:firing config))
     ;; top-fired

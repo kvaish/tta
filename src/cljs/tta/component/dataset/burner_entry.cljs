@@ -10,97 +10,27 @@
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.icon :as ic]
+            [tta.app.d3 :refer [d3-svg get-value]]
+            [tta.app.charts :refer [d3-scale]]
             [tta.app.comp :as app-comp]
-            [tta.app.input :as input]
-            [tta.app.scroll :as scroll :refer [lazy-cols]]
+            [tta.app.input :refer [list-tf-burners]]
+            [tta.app.scroll :as scroll]
             [tta.app.view :as app-view]
             [tta.component.dataset.style :as style]
             [tta.component.dataset.subs :as subs]
             [tta.component.dataset.event :as event]
-            [tta.component.dataset.style :as style]
-            [tta.app.d3 :refer [d3-svg get-value]]))
+            [tta.component.dataset.style :as style]))
 
 ;; TOP FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def tf-burner-style
-  (let [circle {:width "32px", :height "32px"
-                :display "inline-block"
-                :border-radius "50%"
-                :font-size "10px"
-                :line-height "32px"
-                :text-align "center"
-                :vertical-align "top"
-                :margin-top "8px"
-                :color (color-hex :white)}]
-    {:height   "48px", :width "120px"
-     ::stylefy/sub-styles
-     {:circle       circle
-      :palette      {:width "48px"}
-      :palette-unit {:display "inline-block"
-                     :width "24px", :height "25px"}
-      :temp-scale   {:vertical-align "top"
-                     :margin-left "5px", :font-size "12px"}}}))
-
-(def fill-all-field-style
-  {:display "inline-block"
-   :position "relative"
-   :float "right"
-   :padding "0 0 8px 12px"
-   ::stylefy/sub-styles
-   {:label {:font-size "12px"
-            :font-weight 300
-            :margin-top "14px"
-            :color (color-hex :royal-blue)
-            :vertical-align "top"
-            :display "inline-block"}
-    :error {:position "absolute"
-            :color "red"
-            :font-size "10px"
-            :bottom 0, :left "12px"}}})
-
-(def opening-color-map
-  {5 "rgb(255, 0, 0)"
-   10 "rgb(255, 0, 64)"
-   15 "rgb(255, 0, 191)"
-   20 "rgb(255, 0, 255)"
-   25 "rgb(255, 128, 0)"
-   30 "rgb(255, 191, 0)"
-   35 "rgb(255, 255, 0)"
-   40 "rgb(191, 255, 0)"
-   45 "rgb(0, 255, 0)"
-   50 "rgb(0, 255, 255)"
-   55 "rgb(0, 191, 255)"
-   60 "rgb(128, 128, 255)"
-   65 "rgb(77, 77, 255)"
-   70 "rgb(0, 64, 255)"
-   75 "rgb(0, 0, 255)"
-   80 "rgb(0, 0, 77)"
-   85 "rgb(0, 0, 51)"
-   90 "rgb(0, 0, 26)"})
-
-(defn opening->color [opening]
-  (if (and opening (not= opening ""))
-    (some (fn [i]
-            (if (<= opening i)
-              (get opening-color-map i)))
-          (sort (keys opening-color-map)))
-    "#fff"))
-
-(defn color-palette []
-  (let [style tf-burner-style
-        distribution (reverse (map #(* (inc %) 5) (range 18)))]
-    [:div (stylefy/use-sub-style style :palette)
-     (doall
-      (map (fn [i] ^{:key i}
-             [:div {:style {:height "20px"}}
-              [:div (merge (stylefy/use-sub-style style :palette-unit)
-                           {:style {:background (opening->color i)}})]
-              [:span (stylefy/use-sub-style style :temp-scale) (str i "°")]])
-           distribution))
-     [:span (merge (stylefy/use-sub-style style :temp-scale)
-                   {:style {:float "right"
-                            :padding-right "6px"
-                            :margin-top "-7px"}}) "0°"]]))
+(def tf-burner-color-scale
+  [[90 0 (color-hex :red)]
+   [75]
+   [60]
+   [45 50 (color-hex :yellow)]
+   [30]
+   [15]
+   [0 100 (color-hex :sky-blue)]])
 
 (defn label-attr
   ([x y] (label-attr x y false nil))
@@ -114,163 +44,154 @@
                     (str "rotate(270," x "," y ")")))
     :text-anchor a}))
 
-(defn tf-nodes [ch-width ch-height]
-  (let [w ch-width, h ch-height, m 30, p 20
-        x 80, y m, w (- w x x), h (- h m m)
-        xe (+ x w), ye (+ y h)
-        xm (+ x (/ w 2)), ym (+ y (/ h 2))
-        y1 (+ y p), y2 (- ye p)]
-    [{:tag   :g, :class :reformer
-      :nodes [;; chamber box
-              {:tag  :rect, :class :ch-box
-               :attr {:x x, :y y, :width w, :height h
-                      :stroke "black", :stroke-width "5px"}}
-              ;; wall label
-              {:tag    :text, :class :w-label
-               :attr   (merge (label-attr :x :y :v? :a)
-                              {:font-size "18px"})
-               :text   :text
-               :multi? true
-               :data   (fn [c] (map (fn [[key value]]
-                                      (let [[x y v?] (case key
-                                                       :north [xm (- y 6) false]
-                                                       :south [xm (+ ye 19) false]
-                                                       :east [(+ xe 19) ym true]
-                                                       :west [(- x 6) ym true]
-                                                       nil)]
-                                        {:text value
-                                         :x    x, :y y, :v? v?, :a "middle"}))
-                                    (get-in c [:tf-config :wall-names])))}
-              ;; chamber group
-              {:tag   :g, :class :chamber
-               :data  (fn [c] (let [{tc :tube-row-count, bc :burner-row-count
-                                     :keys [tube-rows burner-rows]} (:tf-config c)
-                                    sc (+ tc 1)
-                                    sp (/ w sc)
-                                    xt (map #(+ x sp (* sp %)) (range tc))]
-                                {:xt-pos  xt
-                                 :tubes   tube-rows}))
-               :nodes [;; row labels
-                       {:tag    :text, :class :r-label
-                        :attr   (merge
-                                  (label-attr #(- (:x %) 6) y1 true "end")
-                                  {:font-size "16px"
-                                   :stroke    "black"})
-                        :text   :text
-                        :multi? true
-                        :data   (fn [{:keys [xt-pos tubes]}]
-                                  (map (fn [x {name :name}]
-                                         {:x x :text name})
-                                       xt-pos tubes))}
-                       ;; tube row
-                       {:tag    :line, :class :t-row
-                        :attr   {:x1             identity, :y1 y1, :x2 identity, :y2 y2
-                                 :stroke-width   "5px"
-                                 :stroke-linecap "round"}
-                        :multi? true
-                        :data   :xt-pos}]}]}]))
+(def tf-burners-dwg-node
+  {:tag :g, :class :root
+   :nodes [{:tag :rect, :class :box
+            :data :box
+            :attr {:x :x, :y :y, :rx 8, :ry 8, :width :w, :height :h
+                   :stroke (color-hex :bitumen-grey)
+                   :stroke-width 3, :fill "none"}}
+           {:tag :line, :class :tube-row-lines
+            :data :tube-row-lines, :multi? true
+            :attr {:x1 :x, :x2 :x, :y1 :y1, :y2 :y2
+                   :stroke (color-hex :slate-grey)
+                   :stroke-width 8, :stroke-linecap "round"}}
+           {:tag :text, :class :tube-row-names
+            :data :tube-row-names, :multi? true
+            :attr (assoc (label-attr :x :y true "middle")
+                         :style "font-size:14px;fill:currentColor")
+            :text :text}
+           {:tag :text, :class :wall-names
+            :data :wall-names, :multi? true
+            :attr (assoc (label-attr :x :y :v? "middle")
+                         :style "font-size:14px;font-weight:700;fill:currentColor")
+            :text :text}]})
 
-(defn dwg [ch-width ch-height]
-  {:view-box (str "0 0 " ch-width" " ch-height)
-   :style    {:color          "grey"
-              :user-select    "none"
-              :fill           "none"
-              :stroke         "grey"
-              :stroke-width   "1px"
-              :font-size      "14px"
-              :font-family    "open_sans"
-              :vertical-align "top"}
-   :node     {:tag   :g, :class :reformer
-              :nodes [{:tag  :rect, :class :back
-                       :attr {:x     0, :y 0
-                              :width ch-width, :height ch-height
-                              :fill  "lightgrey"}}
-                      {:tag   :g, :class :top-fired
-                       :nodes (tf-nodes ch-width ch-height)}]}})
+(defn tf-burners-dwg [width height
+                      burner-first? burner-row-count tube-rows wall-names]
+  (let [op 20, ip 30 ;; outer inner padding
+        cx op, cy op, cw (- width op op), ch (- height op op)
+        xm (+ cx (* cw 0.5)), ym (+ cy (* ch 0.5))
+        bn burner-row-count, tn (count tube-rows)
+        bw 80, tw 30
+        ty1 (+ cy 20), ty2 (+ cy ch -20)
+        txe0 (+ cx ip tw (if burner-first? bw 0))
+        txe (map #(+ txe0 (* % (+ bw tw))) (range tn))
+        data {:box {:x cx, :y cy, :w cw, :h ch}
+              :tube-row-lines (map (fn [xe] {:x (- xe 6), :y1 ty1, :y2 ty2}) txe)
+              :tube-row-names (map (fn [xe tr]
+                                     {:x (- xe 16), :y ym, :text (:name tr)})
+                                   txe tube-rows)
+              :wall-names
+              (let [{:keys [north south east west]} wall-names]
+                [{:text north, :x xm, :y (- cy 6), :v? false}
+                 {:text south, :x xm, :y (+ cy ch 16), :v? false}
+                 {:text west, :x (- cx 6), :y ym, :v? true}
+                 {:text east, :x (+ cx cw 16), :y ym, :v? true}])}]
+    [:div {:style {:width width, :height height
+                   :position "absolute", :top 0, :left 0}}
+     [d3-svg {:view-box (str "0 0 " width" " height)
+              :style    {:color (color-hex :bitumen-grey)
+                         :user-select    "none"}
+              :node tf-burners-dwg-node
+              :data data}]]))
 
-(defn tf-svg [{:keys [width height]}]
-  [d3-svg (merge (dwg width height)
-                 {:height height
-                  :width  width
-                  :data   @(rf/subscribe [::subs/config])})])
+(defn tf-burners-table [width height mode
+                        burner-first? burner-count-per-row burner-row-count]
+  (let [yp 50, xp 30, h (- height yp yp)
+        [ds _ cs] (->> tf-burner-color-scale
+                     (filter second)
+                     (apply map list))
+        color-scale (d3-scale ds cs)]
+    [:div {:style {:width width, :height height
+                   :position "absolute", :top 0, :left 0
+                   :padding (str yp "px " xp "px")}}
+     [list-tf-burners
+      {:height h
+       :item-count burner-count-per-row
+       :row-count burner-row-count
+       :burner-first? burner-first?
+       :color-fn color-scale
+       :field-fn (fn [bi bri] @(rf/subscribe [::subs/tf-burner bri bi]))
+       :on-change (fn [bi bri value]
+                    (rf/dispatch [::event/set-tf-burner bri bi value]))
+       :read-only? (= mode :read)}]]))
 
-(defn fill-all [mode]
-  (let [{:keys [value valid? error]}
-        @(rf/subscribe [::subs/field [:top-fired :burners :fill-all]])
-        error (if (fn? error) (error) error)
-        style fill-all-field-style]
+(defn tf-burners [style mode]
+  (let [{:keys [w1 h2]} (:data (meta style))
+        {:keys [burner-first? burner-row-count burner-rows
+                tube-row-count tube-rows
+                wall-names]} (:tf-config @(rf/subscribe [::subs/config]))
+        burner-count-per-row (get-in burner-rows [0 :burner-count])
+        bw 80, tw 30, p 50 ;; 20+30
+        w (+ (* burner-row-count bw) (* tube-row-count tw) p p)
+        h (- h2 20)]
+    [:div (use-sub-style style :burners)
+     [scroll/scroll-box {:style {:width (min w w1), :height h2, :margin "auto"}}
+      [:div {:style {:width w, :height h, :position "relative"}}
+       [tf-burners-dwg w h
+        burner-first? burner-row-count tube-rows wall-names]
+       [tf-burners-table w h mode
+        burner-first? burner-count-per-row burner-row-count]]]]))
+
+(defn tf-burner-legend [style]
+  (let [{:keys [h2]} (:data (meta style))
+        h (min h2 600), dh (/ h 8)
+        p 20, w1 20, w2 20, w3 30
+        w (+ p w1 w2 w3 p)
+        x1 (+ p w1), x2 (+ x1 w2), x3 (+ x2 10)]
+    [:div (use-sub-style style :legend)
+     [:svg {:view-box (str "0 0 " w " " h)
+            :width w, :height h
+            :style {:font-size "12px"}}
+      [:defs
+       (->> tf-burner-color-scale
+            (filter second)
+            (map (fn [[_ pct color]]
+                   [:stop {:offset (str pct "%")
+                           :stop-color color}]))
+            (into [:linearGradient {:id "tf-burner-color-scale"
+                                    :x1 "0%", :x2 "0%", :y1 "0%", :y2 "100%"}]))]
+      (->> tf-burner-color-scale
+           (mapcat (fn [i [deg]]
+                     (let [y (* dh (inc i))]
+                       [[:line {:x1 x1, :x2 (+ x2 6), :y1 y, :y2 y
+                                :stroke (color-hex :bitumen-grey)}]
+                        [:text {:x x3, :y (+ y 5)
+                                :font-size "12px"
+                                :fill (color-hex :bitumen-grey)}
+                         (str deg  "°")]]))
+                   (range))
+           (into [:g
+                  (let [x (- x1 10), y (/ h 2)]
+                    [:text {:x x, :y y, :fill (color-hex :sky-blue)
+                            :text-anchor "middle"
+                            :transform (str "rotate (270," x "," y ")")}
+                     (translate [:dataset :burner :valve-opening]
+                                "Burner valve opening")])
+                  [:rect {:x x1, :y dh, :width w2, :height (* 6 dh)
+                          :fill "url(#tf-burner-color-scale)"}]]))]]))
+
+(defn tf-burner-header [style]
+  ;; value is ensured to be valid always
+  (let [value @(rf/subscribe [::subs/tf-burners-fill-all])]
+    [:div (use-sub-style style :header)
+     [:div (use-sub-style style :fill-all)
+      [app-comp/text-input
+       {:on-change #(rf/dispatch [::event/set-tf-burners-fill-all %])
+        :width 56, :value value}]
+      [app-comp/button
+       {:disabled? (not value)
+        :icon ic/dataset
+        :label (translate [:action :fill-all :label] "Fill all")
+        :on-click #(rf/dispatch [::event/fill-all-tf-burners value])}]]]))
+
+(defn tf-burner-entry [width height]
+  (let [style (style/tf-burners-layout width height :edit)]
     [:div (use-style style)
-     [app-comp/text-input
-      {:on-change (fn [value]
-                    (if (<= 0 (js/Number value) 90)
-                      (rf/dispatch [::event/set-fill-all-field value])))
-       :value value, :valid? valid?
-       :read-only? (if-not (= :edit mode) true)}]
-     [:span (use-sub-style style :error) error]
-     [app-comp/button
-      {:disabled? (or (not valid?)
-                      (empty? value))
-       :icon      ic/dataset
-       :label     (translate [:action :fill-all :label] "Fill all")
-       :on-click  (if (= :edit mode)
-                    #(rf/dispatch [::event/fill-all])
-                    (fn []))}]]))
-
-(defn tf-burner-table
-  [width height
-   burner-row-count burner-count-per-row
-   wall-labels tube-row-count burner-first?]
-  (let [w2 150
-        w1 (- width w2)
-        h (- height 48)
-        mode @(rf/subscribe [::subs/mode])]
-    [:div {:style {:height    height
-                   :width     width
-                   :font-size "12px"}}
-     [:div {:style {:width w1, :height height
-                    :display "inline-block"
-                    :vertical-align "top"}}
-      ;;fill all
-      [fill-all mode]
-      (let [x-offset 150
-            ch-width (js/Math.ceil (* x-offset (inc tube-row-count)))
-            w-new ch-width]
-        [:div {:style {:width w-new, :margin "auto"}}
-         ;; scrolling area
-         [scroll/scroll-box {:style {:width w1, :height (- h 20)}}
-
-          [:div {:style {:position "relative"
-                         :padding  "5px"}}
-           ;; tube rows svg
-           [:div {:style {:position "absolute"}}
-            [tf-svg {:width w-new, :height (- h 60)}]]
-
-           ;; burner input
-           [:div {:style {:margin-top "50px" :width w-new}}
-            [input/list-burner-input
-             {:height        (- h 120)
-              :width         (+ w-new 50)
-              :item-count    burner-count-per-row
-              :row-count     burner-row-count
-              :burner-first? burner-first?
-              :field-fn      #(deref (rf/subscribe [::subs/tf-burner [%2 %1]]))
-              :on-change     (fn [row index value]
-                               (if (<= 0 (js/Number value) 90)
-                                 (rf/dispatch [::event/set-tf-burner index row value])))
-              :color-fn      opening->color
-              :input-read-only? (if-not (= :edit mode) true)}]]]]])]
-     [:div {:style {:width w2, :height height
-                    :display "inline-block"
-                    :vertical-align "top"
-                    :padding "10px 0 0 60px"}}
-      [:label {:style {:display "inline-block"
-                       :color (color-hex :royal-blue)
-                       :font-size "12px"
-                       :vertical-align "top"
-                       :padding "0px"}}
-       (translate [:dataset :burner-entry :burner-valve]
-                  "Burner valve opening:")]
-      [color-palette]]]))
+     [tf-burner-header style]
+     [tf-burners style :edit]
+     [tf-burner-legend style]]))
 
 
 ;; SIDE FIRED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -318,7 +239,7 @@
          [sf-burner-popup {:state state}]]))))
 
 (defn sf-burner-table
-  "TODO:
+  "TODO: doc the fn signatures
   **value-fn**
   **on-change**"
   [width height row-count col-count value-fn on-change dual-nozzle? burner-no]
@@ -346,25 +267,6 @@
                                    :row row
                                    :col col
                                    :side t-col}]))}])
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn tf-burner-label [burner-row index]
-  (let [{:keys [start-burner end-burner]} burner-row]
-    (if (> end-burner start-burner)
-      (+ start-burner index)
-      (- start-burner index))))
-
-(defn tf-burner-entry [width height]
-  (let [{:keys [burner-row-count burner-rows
-                wall-names tube-row-count burner-first?]}
-        (:tf-config @(rf/subscribe [::subs/config]))
-        burner-count (get-in burner-rows [0 :burner-count])]
-    (fn [_ _]
-      [tf-burner-table
-       width height
-       burner-row-count burner-count
-       wall-names tube-row-count burner-first?])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -435,10 +337,10 @@
                               burner-row-count burner-count-per-row
                               burner-no]))
                          indexes))]
-    [lazy-cols {:width width, :height height
-                :item-width width
-                :item-count ch-count
-                :items-render-fn render-fn}]))
+    [scroll/lazy-cols {:width width, :height height
+                       :item-width width
+                       :item-count ch-count
+                       :items-render-fn render-fn}]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -447,7 +349,7 @@
     (let [firing @(rf/subscribe [::subs/firing])]
       (case firing
         "side" [sf-burner-entry width height]
-        "top" [tf-burner-entry width height false]))
+        "top" [tf-burner-entry width height]))
     ;; burner entry not started yet
     [app-comp/button
      {:icon ic/plus

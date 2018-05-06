@@ -329,6 +329,11 @@
          :prev (= 0 index)
          nil))))
 
+(rf/reg-sub
+ ::tf-burners-fill-all
+ :<- [::view]
+ (fn [view _] (get-in view [:tf-burners :fill-all])))
+
 ;; TWT-GRAPH ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub-raw
@@ -595,8 +600,8 @@
  ::tf-burner
  :<- [::form]
  :<- [::data]
- (fn [[form data] [_ [row col]]]
-   (get-field [:top-fired :burners row col :deg-open] form data)))
+ (fn [[form data] [_ row index]]
+   (get-field [:top-fired :burners row index :deg-open] form data)))
 
 (defn get-field-temp [path form data temp-unit]
   (get-field path form data #(au/to-temp-unit % temp-unit)))

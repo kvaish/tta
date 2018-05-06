@@ -142,3 +142,23 @@ inset -3px -3px 10px rgba(0,0,0,0.3)"}
       :footer {:width (px width), :height (px h3)
                :position "absolute"
                :bottom 0, :left 0}}}))
+
+(defn tf-burners-layout [width height mode]
+  (let [h1 (if (= mode :edit) 48 0)
+        h2 (- height h1)
+        w2 150
+        w1 (- width w2)]
+    ^{:data {:h1 h1, :h2 h2, :w1 w1, :w2 w2}}
+    {:width (px width), :height (px height)
+     ::stylefy/sub-styles
+     {:header {:width (px width), :height (px h1)
+               :position "relative"}
+      :burners {:width (px w1), :height (px h2)
+                :display "inline-block"
+                :vertical-align "top"}
+      :legend {:width (px w2), :height (px h2)
+               :display "inline-block"
+               :vertical-align "top"
+               :padding "20px 0 0 20px"}
+      :fill-all {:position "absolute"
+                 :top 0, :right 0}}}))

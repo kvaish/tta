@@ -14,6 +14,7 @@
             [tta.app.event :as app-event]
             [tta.app.subs :as app-subs]
             [tta.component.dataset.calc :refer [update-calc-summary
+                                                ensure-view-factor
                                                 apply-settings]]
             [tta.component.dataset.subs :as subs]))
 
@@ -172,8 +173,17 @@
    {:db (cond-> (assoc-in db (conj view-path :mode) mode)
           ;; while switching to graph mode update calculations
           (= mode :read) (assoc-in data-path
-                                   (update-calc-summary data config)))
-    :dispatch [::select-area-by-id selected-area-id]}))
+                                   (update-calc-summary data config))
+          ;; while switching to edit mode ensure view-factor
+          (= mode :edit) (assoc-in data-path
+                                   (ensure-view-factor data config)))
+    :dispatch [::select-area-by-id
+               (if (and (= mode :read) (= selected-area-id :twt)
+                        (= "top" (:firing config)))
+                 ;; in case of top-fired, prefer overall
+                 ;; when switching to graph from tube/wall entry
+                 :overall
+                 selected-area-id)]}))
 
 (rf/reg-event-fx
  ::select-area-by-id
@@ -337,6 +347,8 @@
                                  :dataset (update-calc-summary data config)
                                  :evt-success [::create-dataset-success]}})))
 
+;; burners ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (rf/reg-event-fx
  ::add-burners
  [(inject-cofx ::inject/sub [::subs/config])
@@ -371,6 +383,8 @@
                                        burner-rows)))))]
      {:db db})))
 
+;; side-fired burners
+
 (rf/reg-event-fx
  ::set-sf-burner
  [(inject-cofx ::inject/sub [::subs/data])]
@@ -380,37 +394,44 @@
                                   :burners row col :state]
                             value))}))
 
+;; top-fired burners
+
 (rf/reg-event-fx
  ::set-tf-burner
  [(inject-cofx ::inject/sub [::subs/data])]
- (fn [{:keys [db ::subs/data]} [_ row col value]]
-   {:db (set-field-number db [:top-fired :burners row col :deg-open]
-                          value data data-path form-path false
-                          {:max 90, :min 0})}))
+ (fn [{:keys [db ::subs/data]} [_ row index value]]
+   (if (<= 0 (js/Number value) 90)
+     {:db (set-field-number db [:top-fired :burners row index :deg-open]
+                            value data data-path form-path false
+                            {:max 90, :min 0})})))
 
 (rf/reg-event-db
-  ::set-fill-all-field
+  ::set-tf-burners-fill-all
   (fn [db [_ value]]
-    (set-field-number db [:top-fired :burners :fill-all] value nil
-                       nil form-path false {:max 90, :min 0})))
+    (let [path (conj view-path :tf-burners :fill-all)]
+      (if (empty? value)
+        (assoc-in db path nil)
+        (let [value (js/Number value)]
+          (if (and (<= 0 value 90) (= value (js/Math.round value)))
+            (assoc-in db path value)
+            db))))))
 
 (rf/reg-event-fx
-  ::fill-all
+  ::fill-all-tf-burners
   [(inject-cofx ::inject/sub [::subs/data])
-   (inject-cofx ::inject/sub [::subs/form])
-   (inject-cofx ::inject/sub [::subs/config])
-   (inject-cofx ::inject/sub [::subs/field [:top-fired :burners :fill-all]])]
-  (fn [{:keys [db ::subs/data ::subs/form ::subs/config ::subs/field]} _]
+   (inject-cofx ::inject/sub [::subs/config])]
+  (fn [{:keys [db ::subs/data ::subs/config]} [_ value]]
     (let [{:keys [burner-rows]} (:tf-config config)]
       {:db (-> db
                (assoc-in data-path
                          (assoc-in data [:top-fired :burners]
                                    (mapv (fn [{:keys [burner-count]}]
-                                           (vec (repeat burner-count {:deg-open (js/Number (:value field))})))
+                                           (vec (repeat burner-count
+                                                        {:deg-open value})))
                                          burner-rows)))
-               (assoc-in form-path
-                         (assoc-in form [:top-fired :burners]
-                                   (select-keys (get-in form [:top-fired :burners]) [:fill-all]))))})))
+               (assoc-in (conj form-path :top-fired :burners) nil))})))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
  ::set-temp
