@@ -93,6 +93,7 @@
      [d3-svg {:view-box (str "0 0 " width" " height)
               :style    {:color (color-hex :bitumen-grey)
                          :user-select    "none"}
+              :width width, :height height
               :node tf-burners-dwg-node
               :data data}]]))
 
@@ -127,8 +128,11 @@
         w (+ (* burner-row-count bw) (* tube-row-count tw) p p)
         h (- h2 20)]
     [:div (use-sub-style style :burners)
-     [scroll/scroll-box {:style {:width (min w w1), :height h2, :margin "auto"}}
-      [:div {:style {:width w, :height h, :position "relative"}}
+     [scroll/scroll-box {:style {:width (min w w1), :height h2
+                                 :margin "auto"}}
+      [:div {:style {:width w, :height h
+                     :position "relative"
+                     :overflow "hidden"}}
        [tf-burners-dwg w h
         burner-first? burner-row-count tube-rows wall-names]
        [tf-burners-table w h mode

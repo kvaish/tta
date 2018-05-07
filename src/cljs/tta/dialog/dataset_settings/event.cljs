@@ -184,14 +184,12 @@
                     (init-sf-dataset plant)
                     (and (= firing "top") (not (:top-fired draft)))
                     (init-tf-dataset plant))]
-        (cond->
-            {:dispatch-n (list
-                          [::close true]
-                          [:tta.component.dataset.event/init {:dataset draft}])}
-          ;; in case of draft, also save to local storage
-          (:draft? draft)
-          (assoc :storage/set {:key :draft
-                               :value (au/dataset-to-storage draft)}))))
+        {:dispatch-n (list
+                      [::close true]
+                      [:tta.component.dataset.event/init {:dataset draft}]
+                      ;; in case of draft update in :home
+                      (if (:draft? draft)
+                        [:tta.component.home.event/set-draft draft]))}))
     {:db (update-in db dlg-path assoc :show-error? true)})))
 
 (rf/reg-event-fx

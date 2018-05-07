@@ -61,13 +61,23 @@
                   [:span (use-sub-style style/card-button :title) label]]))
              buttons))))))
 
+;; purpose of this component is to ensure load the draft from stroage
+(defn draft-loader [has-draft?]
+  (r/create-class
+   {:reagent-render (fn [])
+    :component-did-mount (fn [_]
+                           (if-not has-draft?
+                             (rf/dispatch [::event/load-draft])))}))
+
 (defn home [props]
   (let [{:keys [on-select]} props
         access-rule @(rf/subscribe [::subs/access-rules])
         action-fn #(do
                      (i/ocall %1 :stopPropagation)
-                     (rf/dispatch [%2]))]
+                     (rf/dispatch [%2]))
+        has-draft? @(rf/subscribe [::subs/has-draft?])]
     [:div (use-style style/home)
+     [draft-loader has-draft?]
      [:div (use-sub-style style/home :primary-row)
       (doall
        (->> [{:id :dataset
@@ -79,8 +89,12 @@
               (map
                #(assoc % :access (get-in access-rule [:button (:id %)]))
                [{:id :data-entry
-                 :label (translate [:home :button :data-entry]
-                                   "Data Entry")
+                 :label
+                 (if has-draft?
+                   (translate [:home :button :data-entry-continue]
+                              "Continue Dataset")
+                   (translate [:home :button :data-entry]
+                              "Data Entry"))
                  :action #(action-fn % ::event/nav-data-entry)}
                 {:id :import-logger
                  :label (translate [:home :button :import-logger]

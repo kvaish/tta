@@ -20,7 +20,11 @@
 (defn twt-graph-row [props level-key row-index]
   (let [ch-data @(rf/subscribe [::subs/twt-graph-row-data level-key row-index])
         props (merge ch-data props)]
-    [twt-chart props]))
+    [twt-chart props
+     {:reduced-firing? @(rf/subscribe [::subs/reduced-firing?])
+      :avg-temp-band? @(rf/subscribe [::subs/avg-temp-band?])
+      :avg-raw-temp? @(rf/subscribe [::subs/avg-raw-temp?])
+      :avg-temp? @(rf/subscribe [::subs/avg-temp?])}]))
 
 (defn twt-graph-body [style level-key title sub-title]
   (let [{:keys [w h2]}  (:data (meta style))

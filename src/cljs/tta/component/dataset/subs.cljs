@@ -483,24 +483,14 @@
 (rf/reg-sub
  ::twt-graph-row-data
  :<- [::twt-type]
- :<- [::reduced-firing?]
- :<- [::avg-temp-band?]
- :<- [::avg-temp?]
- :<- [::avg-raw-temp?]
  :<- [::data]
  :<- [::config]
  :<- [::settings]
  :<- [::app-subs/temp-unit]
- (fn [[twt-type reduced-firing? avg-temp-band? avg-temp? avg-raw-temp?
-      data config settings temp-unit]
+ (fn [[twt-type data config settings temp-unit]
      [_ level-key row-index]]
-   (cond->
-       (twt-graph-row-data data config settings temp-unit
-                           level-key row-index twt-type)
-     (not reduced-firing?) (assoc :burner-on? nil)
-     (not avg-temp-band?) (assoc :avg-temp-band nil)
-     (not avg-raw-temp?) (assoc :avg-raw-temp nil)
-     (not avg-temp?) (assoc :avg-temp nil))))
+   (twt-graph-row-data data config settings temp-unit
+                       level-key row-index twt-type)))
 
 ;; OVERALL-TWT-GRAPH-DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -532,15 +522,12 @@
 
 (rf/reg-sub
  ::overall-twt-graph-data
- :<- [::reduced-firing?]
  :<- [::data]
  :<- [::config]
  :<- [::settings]
  :<- [::app-subs/temp-unit]
- (fn [[reduced-firing? data config settings temp-unit] [_ level-key]]
-   (cond->
-       (overall-twt-graph-data data config settings temp-unit level-key)
-     (not reduced-firing?) (assoc :burner-on? nil))))
+ (fn [[data config settings temp-unit] [_ level-key]]
+   (overall-twt-graph-data data config settings temp-unit level-key)))
 
 ;; BURNER-STATUS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

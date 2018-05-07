@@ -210,10 +210,12 @@
                  :font-size "16px"
                  :background (color-hex :white)
                  :color (color-hex :amber)}}
-   [ui/font-icon {:class-name "fa fa-exclamation-triangle"
-                  :style {:color (color-hex :amber)
-                          :margin-right "10px"}}]
-   (translate [:dataset :message :not-found] "Not found!")])
+   (if (= :read @(rf/subscribe [::subs/mode]))
+     [:span
+      [ui/font-icon {:class-name "fa fa-exclamation-triangle"
+                     :style {:color (color-hex :amber)
+                             :margin-right "10px"}}]
+      (translate [:dataset :message :not-found] "Not found!")])])
 
 (defn dataset [props]
   (let [last-saved @(rf/subscribe [::subs/last-saved])

@@ -277,6 +277,30 @@
        ;; have no rights!!
        [no-access])]))
 
+;;; dummy component to keep some subscriptions active
+;;; these are injected to some event handlers as cofx.
+;;; keeping them subscribed will eliminate the warning
+;;; that they are getting disposed.
+;;; OPTIMIZE: re-factor related codes so as to not require this
+(defn my-subs-cache []
+  @(rf/subscribe [:ht.app.subs/user-roles])
+  @(rf/subscribe [:tta.component.dataset.subs/data])
+  @(rf/subscribe [:tta.component.dataset.subs/settings])
+  @(rf/subscribe [:tta.component.dataset.subs/config])
+  @(rf/subscribe [:tta.component.dataset.subs/mode])
+  @(rf/subscribe [:tta.dialog.dataset-settings.subs/active-pyrometer])
+  @(rf/subscribe [:tta.dialog.dataset-settings.subs/emissivity-type])
+  @(rf/subscribe [:tta.dialog.dataset-settings.subs/emissivity])
+  @(rf/subscribe [:tta.dialog.dataset-settings.subs/can-submit?])
+  @(rf/subscribe [:tta.dialog.dataset-settings.subs/firing])
+  @(rf/subscribe [:tta.component.config.subs/data])
+  @(rf/subscribe [:tta.dialog.view-factor.subs/level-opts])
+  @(rf/subscribe [:tta.dialog.view-factor.subs/config])
+  @(rf/subscribe [:tta.component.home.subs/draft])
+
+  ;; dummy
+  [:span])
+
 ;;; root ;;;
 
 (defn root []
@@ -298,4 +322,7 @@
      (if @(rf/subscribe [:tta.dialog.choose-client.subs/open?])
        [choose-client])
      (if @(rf/subscribe [:tta.dialog.choose-plant.subs/open?])
-       [choose-plant])]))
+       [choose-plant])
+
+     ;; dummy subscription cache to improve performance
+     [my-subs-cache]]))

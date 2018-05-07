@@ -71,10 +71,9 @@
 
 (rf/reg-event-fx
  ::init
- [(inject-cofx :storage :draft)
+ [(inject-cofx ::inject/sub [:tta.component.home.subs/draft])
   (inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::app-subs/plant]
-      {:keys [draft]} :storage}
+ (fn [{:keys [db ::app-subs/plant :tta.component.home.subs/draft]}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
    (if dataset
      ;; load the given dataset
@@ -83,13 +82,7 @@
               (assoc-in data-path nil)
               (assoc-in form-path (init-form dataset)))
       :dispatch [::init-settings]}
-     ;; load draft or create or fetch a dataset as specified in parameters
-     (let [draft (if (and
-                      (= (:plant-id draft) (:id plant))
-                      (= (:reformer-version draft)
-                         (get-in plant [:config :version])))
-                   (au/dataset-from-storage draft))
-           {:keys [client-id], plant-id :id} plant
+     (let [{:keys [client-id], plant-id :id} plant
            fetch-params {:client-id client-id
                          :plant-id plant-id
                          :evt-success [::fetch-success]
@@ -127,15 +120,14 @@
 
 (rf/reg-event-fx
  ::init-settings
- [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/settings])
+ [(inject-cofx ::inject/sub [::subs/settings])
   (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/mode])]
- (fn [{:keys [db ::subs/data ::subs/settings ::subs/config ::subs/mode]} _]
+ (fn [{:keys [db ::subs/settings ::subs/config ::subs/mode]} _]
    ;; update settings in edit mode only
    (if (= :edit mode)
-     {:db (assoc-in db (conj comp-path :dataset)
-                    (apply-settings data settings config))})))
+     {:db (update-in db (conj comp-path :dataset)
+                    apply-settings settings config)})))
 
 (rf/reg-event-db
  ::close
@@ -174,9 +166,14 @@
           ;; while switching to graph mode update calculations
           (= mode :read) (assoc-in data-path
                                    (update-calc-summary data config))
-          ;; while switching to edit mode ensure view-factor
-          (= mode :edit) (assoc-in data-path
-                                   (ensure-view-factor data config)))
+          ;; while switching to edit mode ensure view-factor.
+          ;; this will happen only the first time you
+          ;; switch to edit mode, hece data should be nil then.
+          ;; update the src-data only instead of data.
+          ;; otherwise it will result in a dirty state, but the user
+          ;; has not made any changes yet!
+          (= mode :edit) (update-in (conj comp-path :dataset)
+                                   ensure-view-factor config))
     :dispatch [::select-area-by-id
                (if (and (= mode :read) (= selected-area-id :twt)
                         (= "top" (:firing config)))
@@ -307,10 +304,10 @@
  ::do-reset-draft
  (fn [{:keys [db]} _]
    (let [{:keys [gold-cup?]} (get-in db (conj comp-path :dataset))]
-     {:storage/set {:key :draft, :value nil}
-      :db (update-in db comp-path dissoc :dataset :data :form)
-      :dispatch [:tta.dialog.dataset-settings.event/open
-                 {:gold-cup? gold-cup?}]})))
+     {:db (update-in db comp-path dissoc :dataset :data :form)
+      :dispatch-n (list [:tta.dialog.dataset-settings.event/open
+                         {:gold-cup? gold-cup?}]
+                        [:tta.component.home.event/set-draft nil])})))
 
 (rf/reg-event-fx
  ::save-draft
@@ -321,11 +318,10 @@
    (if can-submit?
      (let [data (-> (update-calc-summary data config)
                     (assoc :last-saved (js/Date.)))]
-       {:storage/set {:key :draft
-                      :value (au/dataset-to-storage data)}
-        :db (-> db
+       {:db (-> db
                 (assoc-in (conj comp-path :dataset) data)
-                (assoc-in data-path nil))}))))
+                (assoc-in data-path nil))
+        :dispatch [:tta.component.home.event/set-draft data]}))))
 
 (rf/reg-event-fx
  ::create-dataset-success
@@ -341,6 +337,7 @@
   (inject-cofx ::inject/sub [::app-subs/client])]
  (fn [{:keys [::subs/data ::subs/config ::subs/can-submit?
              ::app-subs/client ::app-subs/plant]} _]
+   ;; TODO: update calculations, upload, clear draft, close and goto :home
    #_(if can-submit?
        {:service/create-dataset {:client (:id client)
                                  :plant-id (:id plant)
