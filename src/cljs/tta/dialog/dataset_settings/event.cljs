@@ -79,12 +79,16 @@
    (let [{:keys [draft settings form]} (parse params plant topsoe?
                                               user-roles (:id client))]
      {:dispatch [::validate-emissivity-type]
-      :db (assoc-in db [:dialog :dataset-settings]
+      :db (assoc-in db dlg-path
                     (assoc {:open? true
                             ;; whether starting totally new
                             :new? (not (:dataset params))
                             :draft draft
                             :form form}
+                           ;; if re-editing then settings is generated from
+                           ;; old data. put in :src-data to show not dirty
+                           ;; but if totally new, then put in :data to show
+                           ;; as dirty and enable submit directly.
                            (if (:dataset params) :src-data :data)
                            settings))})))
 
@@ -110,7 +114,7 @@
  ::close
  (fn [{:keys [db]} [_ success?]]
    (cond->
-       {:db (assoc-in db [:dialog :dataset-settings] nil)}
+       {:db (assoc-in db dlg-path nil)}
      (and (not success?) (get-in db (conj dlg-path :new?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 

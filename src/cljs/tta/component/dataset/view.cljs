@@ -217,12 +217,13 @@
                              :margin-right "10px"}}]
       (translate [:dataset :message :not-found] "Not found!")])])
 
-(defn dataset [props]
+(defn dataset [{:keys [size]}]
   (let [last-saved @(rf/subscribe [::subs/last-saved])
         data-date @(rf/subscribe [::subs/data-date])
         fetching? @(rf/subscribe [::subs/fetching?])]
     [:div
      [app-view/layout-main
+      size
       (str (translate [:dataset :title :text] "Dataset")
            ": "
            (if data-date

@@ -5,15 +5,15 @@
             [ht.style :as ht :refer [color color-hex color-rgba]]
             [ht.app.style :as ht-style :refer [vendors]]))
 
-(defn content-height [view-size]
+#_(defn content-height [view-size]
   (let [{:keys [head-row-height sub-head-row-height]} ht/root-layout]
     (- (:height view-size)
        head-row-height
        sub-head-row-height)))
 
-(def head-content-height 72)
+#_(def head-content-height 72)
 
-(defn content-body-size [view-size]
+#_(defn content-body-size [view-size]
   (let [h (content-height view-size)]
     {:height (- h head-content-height 20)
      :width (- (:width view-size) 40)}))
@@ -261,13 +261,13 @@
 (def scroll-bar
   {::stylefy/sub-styles
    {:bar-h {:position "absolute"
-            ;; :z-index "9999"
+            :z-index "1" ;; "9999"
             :cursor "pointer"
             :left "3px"
             :bottom 0
             :height "9px"}
     :bar-v {:position "absolute"
-            ;; :z-index "9999"
+            :z-index "1" ;; "9999"
             :cursor "pointer"
             :top "3px"
             :right 0
@@ -313,15 +313,16 @@
            :width "0"
            :height (px (- height 40))}}})
 
-(defn layout-main [view-size]
-  (let [w (:width view-size)
-        h (content-height view-size)
-        {bh :height, bw :width} (content-body-size view-size)]
+(defn layout-main [size]
+  (let [hh 72
+        {w :width, h :height} size
+        bh (- h hh 20), bw (- w 40)]
+    ^{:data {:w w, :h h, :hh hh, :bh bh, :bw bw}}
     {:height (px h)
      :width (px w)
      :background (color :alumina-grey 70)
      ::stylefy/sub-styles
-     {:head {:height (px head-content-height)
+     {:head {:height (px hh)
              :width (px w)
              :display "flex"}
       :head-left {:flex 1

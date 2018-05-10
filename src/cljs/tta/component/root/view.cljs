@@ -5,6 +5,7 @@
             [cljs-react-material-ui.reagent :as ui]
             [cljs-react-material-ui.icons :as mic]
             [ht.util.interop :as i]
+            [ht.style :refer [root-layout color-hex]]
             [ht.app.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
@@ -24,7 +25,8 @@
             [tta.component.home.view :refer [home]]
             [tta.component.config.view :refer [config]]
             [tta.component.settings.view :refer [settings]]
-            [tta.component.dataset.view :refer [dataset]]))
+            [tta.component.dataset.view :refer [dataset]]
+            [tta.app.scroll :as scroll]))
 
 ;;; language-menu ;;;
 
@@ -251,15 +253,12 @@
    [:p (use-sub-style style/no-access :p)
     (translate [:root :no-access :message] "Insufficient rights!")]])
 
-(defn content []
-  (let [view-size        @(rf/subscribe [::ht-subs/view-size])
-        active-content   @(rf/subscribe [::subs/active-content])
+(defn content [{:keys [width height]}]
+  (let [active-content   @(rf/subscribe [::subs/active-content])
         content-allowed? @(rf/subscribe [::subs/content-allowed?])
-        content-height (app-style/content-height view-size)
-        content-size {:width (:width view-size)
-                      :height content-height}]
+        content-size {:width width, :height height}]
     [:div (update (use-style style/content) :style
-                  assoc :height content-height)
+                  assoc :height height)
      (if content-allowed?
        (case active-content
          :home [home {:on-select #(rf/dispatch
@@ -303,6 +302,36 @@
 
 ;;; root ;;;
 
+(defn content-box []
+  (let [{:keys [ head-row-height sub-head-row-height]
+         {min-h :height, min-w :width} :min-content-size} root-layout
+        {:keys [width height]} @(rf/subscribe [::ht-subs/view-size])
+        height (- height head-row-height sub-head-row-height)
+        h (max height min-h)
+        w (max width min-w)
+        warning (translate [:warning :tiny-screen :message]
+                           "Please use a screen with minimum resolution {resolution}!"
+                           {:resolution "1024x768"})]
+    (if (or (< height min-h) (< width min-w))
+      ;; smaller than minimum, use a scroll or hide for too small
+      (if (or (< height 200) (< width 400))
+        ;; too small
+        [:div {:style {:color (color-hex :red)
+                       :font-size "12px"
+                       :padding "5px 20px"}}
+         warning]
+        ;; use scroll
+        [:div {:style {:position "relative"}}
+         [scroll/scroll-box {:style {:width width, :height height}}
+          [:div {:style {:width w, :height h, :overflow "hidden"}}
+           [content {:width w, :height h}]]]
+         [:div {:style {:position "absolute", :bottom 6, :left 0
+                        :font-size "10px"
+                        :color (color-hex :royal-blue)
+                        :padding "0 10px"}}
+          (str "* " warning)]])
+      [content {:width w, :height h}])))
+
 (defn root []
   (let [agreed? @(rf/subscribe [::subs/agreed?])
         client @(rf/subscribe [::app-subs/client])
@@ -312,8 +341,8 @@
      [header]
      (if app-allowed?
        (if (and agreed? client plant)
-         (list ^{:key :sub-header} [sub-header {:key "sub-header"}]
-               ^{:key :content} [content {:key "content"}]))
+         (list ^{:key :sub-header} [sub-header]
+               ^{:key :content} [content-box]))
        [no-access])
 
      ;;dialogs

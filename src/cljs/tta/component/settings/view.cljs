@@ -164,9 +164,10 @@
    [:div (use-style style/no-config)
     "Missing configuration!"]])
 
-(defn settings []
+(defn settings [{:keys [size]}]
   (let [config? @(rf/subscribe [::app-subs/config?])]
     [app-view/layout-main
+     size
      (translate [:settings :title :text] "Settings")
      (translate [:settings :title :sub-text] "Reformer preferences")
      [(if config?

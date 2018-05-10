@@ -17,10 +17,10 @@
             [tta.app.style :as app-style]))
 
 
-(defn layout-main [title sub-title actions body]
-  (let [view-size @(rf/subscribe [::ht-subs/view-size])
-        body-size (style/content-body-size view-size)
-        style (style/layout-main view-size)]
+(defn layout-main [size title sub-title actions body]
+  (let [style (style/layout-main size)
+        {:keys [bh bw]} (:data (meta style))
+        body-size {:width bw, :height bh}]
     [:div (use-style style)
      [:div (use-sub-style style :head)
       [:div (use-sub-style style :head-left)

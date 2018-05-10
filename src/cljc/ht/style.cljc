@@ -75,9 +75,17 @@
            (:monet-pink colors)
            (:green colors)]})
 
+(def min-view-size
+  ;; ipad landscape size
+  {:height 768
+   :width 1024})
+
 (def root-layout
-  {:head-row-height 66 ;; logo 18px + top/bottom: 24px = 66px
-   :sub-head-row-height 44})
+  (let [h1 66 ;; logo 18px + top/bottom: 24px = 66px
+        h2 44]
+    {:head-row-height h1
+     :sub-head-row-height h2
+     :min-content-size (update min-view-size :height - h1 h2)}))
 
 (def gradients
   {:blue-spot-light "radial-gradient(circle farthest-side at 70% 600%,rgba(84,201,233,1),rgba(0,72,187,1)150%)"})
