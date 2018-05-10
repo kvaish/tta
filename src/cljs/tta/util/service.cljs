@@ -28,7 +28,8 @@
           :fetch-latest-dataset "/api/client/:client-id/plant/:plant-id/latest-dataset"
           :fetch-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"
           :create-dataset "/api/client/:client-id/plant/:plant-id/dataset"
-          :update-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"}}))
+          :update-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"
+          :delete-dataset "/api/client/:client-id/plant/:plant-id/dataset/:dataset-id"}}))
 
 
 (defn dispatch-one [evt entity-key]
@@ -162,9 +163,27 @@
         :on-success (dispatch-one evt-success :dataset)
         :evt-failure evt-failure}))
 
-(defn create-dataset [{:keys [dataset client-id plant-id evt-success evt-failure]}]
-  (run {:method http/post
-        :api-key :create-dataset
-        :data {:json-params (to-api :dataset dataset)}
-        :on-success (dispatch-one evt-success :res/create)
+(defn save-dataset [{:keys [new? dataset
+                              evt-success evt-failure]}]
+  (let [api-params (select-keys dataset [:client-id :plant-id])]
+    (run (merge {:data {:json-params (to-api :dataset dataset)}
+                 :evt-failure evt-failure}
+                (if new?
+                  {:method http/post
+                   :api-key :create-dataset
+                   :api-params api-params
+                   :on-success (dispatch-one evt-success :res/create)}
+                  {:method http/put
+                   :api-key :update-dataset
+                   :api-params (assoc api-params :dataset-id (:id dataset))
+                   :on-success (dispatch-one evt-success :res/update)})))))
+
+(defn delete-dataset [{:keys [client-id plant-id dataset-id
+                              evt-success evt-failure]}]
+  (run {:method http/delete
+        :api-key :delete-dataset
+        :api-params {:client-id client-id
+                     :plant-id plant-id
+                     :dataset-id dataset-id}
+        :on-success (dispatch-one evt-success :res/delete)
         :evt-failure evt-failure}))

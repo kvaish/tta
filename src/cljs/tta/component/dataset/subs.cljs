@@ -54,13 +54,13 @@
 
 
 (rf/reg-sub
- ::can-submit?
+ ::can-submit? ;; required for save to local-storage
  :<- [::dirty?]
  :<- [::valid?]
  (fn [[dirty? valid?] _] (and dirty? valid?)))
 
 (rf/reg-sub
- ::can-upload?
+ ::can-upload? ;; required for upload to database
  :<- [::dirty?]
  :<- [::valid?]
  :<- [::data]

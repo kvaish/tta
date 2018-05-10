@@ -129,7 +129,8 @@
         mode @(rf/subscribe [::subs/mode])
         topsoe? @(rf/subscribe [::ht-subs/topsoe?])
         can-edit? @(rf/subscribe [::subs/can-edit?])
-        can-delete? @(rf/subscribe [::subs/can-delete?])]
+        can-delete? @(rf/subscribe [::subs/can-delete?])
+        dirty? @(rf/subscribe [::subs/dirty?])]
     (if (= mode :edit)
       ;; edit mode
       (list (if (or draft? can-edit?) (action-settings data))
@@ -141,7 +142,7 @@
       (list (action-datasheet)
             (action-report)
             (if (and topsoe? gold-cup?) (action-publish-gold-cup))
-            (if (or draft? can-edit?) (action-upload))
+            (if (and dirty? (or draft? can-edit?)) (action-upload))
             (if (and (not draft?) can-delete?) (action-delete))
             (action-dataset-list)
             (if (or draft? can-edit?) (action-select-mode))))))
@@ -151,15 +152,18 @@
         selected-area @(rf/subscribe [::subs/selected-area])
         level-opts @(rf/subscribe [::subs/level-opts])
         selected-level @(rf/subscribe [::subs/selected-level])
-        ;; dummy for performance reason
-        _ @(rf/subscribe [::subs/selected-area-id])]
+        firing @(rf/subscribe [::subs/firing])
+        sel-area-id @(rf/subscribe [::subs/selected-area-id])]
+    ;; dummy for performance reason to keep the subs alive
+    @(rf/subscribe [::subs/selected-area-id])
     [app-view/tab-layout
      {:top-tabs {:selected (or selected-area 0)
                  :on-select #(rf/dispatch [::event/select-area %])
                  :labels (mapv :label area-opts)}
-      :bottom-tabs {:selected (or selected-level 0)
-                    :on-select #(rf/dispatch [::event/select-level %])
-                    :labels (mapv :label level-opts)}
+      :bottom-tabs (if-not (or (= firing "side") (= :burner sel-area-id))
+                     {:selected (or selected-level 0)
+                      :on-select #(rf/dispatch [::event/select-level %])
+                      :labels (mapv :label level-opts)})
       :width width, :height height
       :content
       (fn [{:keys [width height selected]}]
