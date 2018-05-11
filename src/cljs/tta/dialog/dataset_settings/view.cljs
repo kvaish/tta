@@ -1,6 +1,7 @@
 ;; view elements dialog dataset-settings
 (ns tta.dialog.dataset-settings.view
   (:require [reagent.core :as r]
+            [reagent.format :refer [format]]
             [re-frame.core :as rf]
             [stylefy.core :as stylefy :refer [use-style use-sub-style]]
             [cljs-react-material-ui.reagent :as ui]
@@ -10,6 +11,7 @@
             [ht.style :as ht-style]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
+            [tta.util.auth :as auth]
             [tta.app.comp :as app-comp]
             [tta.app.calendar :refer [date-picker]]
             [tta.app.icon :as ic]
@@ -55,6 +57,7 @@
 
 (defn date-time-of-reading [style]
   (let [date (:value @(rf/subscribe [::subs/field [:data-date]]))
+        draft? @(rf/subscribe [::subs/draft?])
         hour-opts @(rf/subscribe [::subs/hour-opts])
         min-opts @(rf/subscribe [::subs/min-opts])
         hr-selected (some #(if (= (:id %) (:hour date)) %) hour-opts)
@@ -62,29 +65,37 @@
     [:div (use-sub-style style :form-cell-1)
      [:div (use-sub-style style :form-label)
       (translate [:dataset-setting :reading-time :label] "Date of reading")]
-     [date-picker {:date date
-                   :valid? true
-                   :max (to-date-time-map (js/Date.))
-                   :on-change #(rf/dispatch [::event/set-field [:data-date]
-                                             (merge date %)])}]
-     [:div (use-sub-style style :form-label)
-      (translate [:dataset-setting :reading-time :label] "Time (HH:MM)")]
-     [app-comp/dropdown-selector
-      {:item-width 50
-       :selected hr-selected
-       :value-fn :id
-       :label-fn :label
-       :on-select #(rf/dispatch [::event/set-field [:data-date]
-                                 (assoc date :hour (:id %))])
-       :items hour-opts}]
-     [app-comp/dropdown-selector
-      {:item-width 50
-       :selected min-selected
-       :value-fn :id
-       :label-fn :label
-       :on-select #(rf/dispatch [::event/set-field [:data-date]
-                                 (assoc date :minute (:id %))])
-       :items min-opts}]]))
+     (if draft?
+       [date-picker {:date date
+                     :valid? true
+                     :max (to-date-time-map (js/Date.))
+                     :on-change #(rf/dispatch [::event/set-field [:data-date]
+                                               (merge date %)])}])
+     (if draft?
+       [:div (use-sub-style style :form-label)
+        (translate [:dataset-setting :reading-time :label] "Time (HH:MM)")]
+       (let [{:keys [year month day hour minute second]} date]
+         [:div (use-sub-style style :form-value)
+          (format "%4d-%02d-%02d | %02d:%02d"
+                  year month day hour minute second)]))
+     (if draft?
+       [app-comp/dropdown-selector
+        {:item-width 50
+         :selected hr-selected
+         :value-fn :id
+         :label-fn :label
+         :on-select #(rf/dispatch [::event/set-field [:data-date]
+                                   (assoc date :hour (:id %))])
+         :items hour-opts}])
+     (if draft?
+       [app-comp/dropdown-selector
+        {:item-width 50
+         :selected min-selected
+         :value-fn :id
+         :label-fn :label
+         :on-select #(rf/dispatch [::event/set-field [:data-date]
+                                   (assoc date :minute (:id %))])
+         :items min-opts}])]))
 
 (defn internal-dataset [style]
   (let [topsoe?  (:value @(rf/subscribe [::subs/field [:topsoe?]]))]
@@ -130,17 +141,27 @@ you should always use 1.0")])))
 
 (defn emissivity-type [style]
   (let [{:keys [value error valid?]} (query-id ::subs/field [:emissivity-type])
+        claims @(rf/subscribe [::ht-subs/auth-claims])
+        can-edit? (auth/allow-edit-dataset? claims)
         emissivity-opts @(rf/subscribe [::subs/emissivity-types])
-        selected (some #(if (= value (:id %)) %) emissivity-opts)]
-    [form-cell-2 style error
-     (translate [:dataset-settings :emissivity-type :label]
-                "Tube emissivity setting")
-     [app-comp/dropdown-selector
-      {:selected selected
-       :width 120
-       :items emissivity-opts
-       :label-fn :label, :value-fn :id, :disabled?-fn :disabled?
-       :on-select #(rf/dispatch [::event/set-emissivity-type (:id %)])}]]))
+        selected (some #(if (= value (:id %)) %) emissivity-opts)
+        label (translate [:dataset-settings :emissivity-type :label]
+                         "Tube emissivity setting")]
+    (if-not can-edit?
+      ;; opeartors can create but not edit, they are not allowed
+      ;; to choose another emissivitiy type. they must use the
+      ;; default selection in global settings.
+      [:div (use-sub-style style :form-cell-2)
+       [:div (use-sub-style style :form-label) label]
+       [:div (use-sub-style style :form-value) (:label selected)]]
+      ;; editors are allowed to select other emissivity types
+      [form-cell-2 style error label
+       [app-comp/dropdown-selector
+        {:selected selected
+         :width 120
+         :items emissivity-opts
+         :label-fn :label, :value-fn :id, :disabled?-fn :disabled?
+         :on-select #(rf/dispatch [::event/set-emissivity-type (:id %)])}]])))
 
 (defn tube-emissivity [style]
   (let [pyro-emissivity (:tube-emissivity @(rf/subscribe [::subs/active-pyrometer]))
@@ -181,7 +202,6 @@ you should always use 1.0")])))
        :valid? valid?
        :on-change #(rf/dispatch [::event/set-field [:operator] % false])}]]))
 
-
 (defn shift [style]
   (let [{:keys [value valid? error]} (query-id ::subs/field [:shift])]
     [form-cell-3 style error
@@ -202,6 +222,18 @@ you should always use 1.0")])))
        :height 100
        :on-change #(rf/dispatch [::event/set-field [:comment] % false])}]]))
 
+(defn additional-settings [style]
+  [:div
+   [:div (use-sub-style style :form-heading-label)
+    (translate [:dataset-settings :aditional-settings :label]
+               "Additional Settings")]
+   [:div
+    (roles style)
+    (operator style)
+    (shift style)]
+   [:div
+    (comments style)]])
+
 (defn form []
   (let [state (r/atom {:width 600})]
     (r/create-class
@@ -216,23 +248,17 @@ you should always use 1.0")])))
               topsoe-user? @(rf/subscribe [::ht-subs/topsoe?])
               et @(rf/subscribe [::subs/emissivity-type])]
           [:div {:ref "container"}
-           [:div (date-time-of-reading style)]
-           [:div (if topsoe-user? (internal-dataset style))]
+           [:div [date-time-of-reading style]]
+           [:div (if topsoe-user? [internal-dataset style])]
            [:div
-            (select-pyrometer style)
-            (pyrometer-emissivity-setting style)]
-           [:div (pyrometer-emissivity-warning style)]
+            [select-pyrometer style]
+            [pyrometer-emissivity-setting style]]
+           [:div [pyrometer-emissivity-warning style]]
            [:div
-            (emissivity-type style)
-            (if (= "common" et) (tube-emissivity style))]
-           [:div (use-sub-style style :form-heading-label)
-            (translate [:dataset-settings :aditional-settings :label]
-                       "Additional Settings")]
-           [:div
-            (roles style)
-            (operator style)
-            (shift style)]
-           [:div (comments style)]]))})))
+            [emissivity-type style]
+            (if (= "common" et) [tube-emissivity style])]
+           ;;--- additional settings ---
+           [additional-settings style]]))})))
 
 (defn dataset-settings []
   (let [open? @(rf/subscribe [::subs/open?])]

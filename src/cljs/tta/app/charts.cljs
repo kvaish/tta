@@ -93,11 +93,28 @@
                     be (first (last bs))]
                 [(- bi 0.5) (+ be 0.5)])))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn toolbar [state]
+  (let [{:keys [on-export]} @state]
+    [:div {:style {:position "absolute"
+                   :top 0, :right 0}}
+     ;; export image
+     [ic/camera {:style {:color (color-hex :sky-blue)
+                         :margin "0 5px"
+                         :cursor "pointer"}
+                 :on-click #(on-export state)}]]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Layouts ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- ch-background [color]
+  {:tag :rect, :class :background
+   :attr {:x 0, :y 0, :width "100%", :height "100%"
+          :fill color}})
 
 (defn- ch-defs-radial-fade [id class-kw color opacity-0 opacity-100]
   {:tag :defs, :class :grad-defs
@@ -166,7 +183,6 @@
 (defn- ch-rects [class-kw data-key events]
   {:tag :rect, :class class-kw
    :attr {:x :x, :y :y
-          :cursor "crosshair"
           :height :h, :width :w
           :stroke :color, :fill :color}
    :multi? true
@@ -301,7 +317,7 @@
                      :style (str "font-size:10px;fill:"
                                  (color-hex :bitumen-grey))}}]}))
 
-(defn- overall-twt-burner-markers [fill-id color]
+(defn- overall-twt-burner-markers [fill-id color events]
   {:tag :g, :class :reduced-burners
    :data :reduced-burners, :multi? true
    :nodes [{:tag :rect, :class :box, :data :box
@@ -309,7 +325,8 @@
                    :stroke color, :fill (str "url(#" fill-id ")")}}
            {:tag :circle, :class :markers
             :data :markers, :multi? true
-            :attr {:cx :x, :cy :y, :r 6, :fill color}}]})
+            :attr {:cx :x, :cy :y, :r 6, :fill color}
+            :on events}]})
 
 (defn- overall-twt-tubes-lines []
   {:tag :line, :class :tubes-lines
@@ -333,19 +350,15 @@
                      :style (str "font-size:10px;fill:" (color-hex :bitumen-grey))}
               :text [:text :sub-title]}]}))
 
-(def overall-twt-colors [(color-hex :yellow)
-                         (color-hex :amber)
-                         (color-hex :orange)
-                         (color-hex :red)])
+(def overall-twt-colors [[0 (color-hex :yellow)]
+                         [100 (color-hex :red)]])
 
 (defn- overall-twt-legend-scale []
-  (let [n (dec (count overall-twt-colors))
-        pcts (conj (mapv #(* % (/ 100.0 n)) (range n)) 100)
-        stops (mapv (fn [i c p]
+  (let [stops (mapv (fn [i [p c]]
                       {:tag :stop, :class (keyword (str "pct" i))
                        :attr {:offset (str p "%")
                               :style (str "stop-opacity:1;stop-color:" c)}})
-                    (range) overall-twt-colors pcts)]
+                    (range) overall-twt-colors)]
     {:tag :g, :class :legend-scale, :data :legend-scale
      :nodes [{:tag :defs, :class :defs
               :nodes [{:tag :linearGradient, :class :grad
@@ -369,11 +382,12 @@
 (defn update-overall-twt-data [state props]
   (let [{:keys [wall-names tube-rows burner-rows max-temp min-temp
                 height width burner-on? temps]} props
-        {:keys [reduced-burners temp-unit]} state
+        {:keys [temp-unit]} state
 
         x-ps-os 10, x-as-os 10, x-ae-os 10, x-pe-os 10
         y-ps-os 35, y-pe-os 90
-        x-ts 16, x-ws 20, x-bs 32, lg-i-w 100
+        x-ts 16, x-ws 20, x-bs 32
+        lg-count 3, lg-i-w 100
 
         px-start x-ps-os, px-end (- width x-pe-os), px-width (- px-end px-start)
         ax-start (+ px-start x-as-os)
@@ -410,7 +424,6 @@
         side-label-fn (fn [side] (if (zero? side) (:west wall-names) (:east wall-names)))
 
         ;; legend data
-        lg-count (dec (count overall-twt-colors))
         lg-w (* lg-count lg-i-w), lg-x (- px-end lg-w)
         [max-temp min-temp lg-temps lg-x]
         (let [tmax (* 10 (inc (quot (to-temp-unit max-temp temp-unit) 10)))
@@ -429,12 +442,11 @@
                                        {:text (str t0 " - " t1 " " temp-unit)
                                         :x (+ x half-w), :y (+ y1 14)})
                                      lg-x lg-temps (rest lg-temps))
-                        :scale {:x (first lg-x), :y y, :w lg-w, :h 20
-                                :color "red"}})
+                        :scale {:x (first lg-x), :y y, :w lg-w, :h 20}})
 
         ;; temp scale
-        temp-domain (map #(from-temp-unit % temp-unit) lg-temps)
-        temp-scale (d3-scale temp-domain overall-twt-colors)
+        temp-domain [min-temp max-temp]
+        temp-scale (d3-scale temp-domain (map second overall-twt-colors))
 
         ;; x-axis: burner, burner marker rect, tube, temp marker rect
         tw (/ (- ax-width x-ws x-ws (* x-bs b-row-count)) t-row-count)
@@ -484,21 +496,19 @@
                                        temps (range) [xl xr]))
                              temps (range) temp-x-l temp-x-r)
 
-        reduced-burners
-        (or reduced-burners
-            (if burner-on?
-              (mapcat (fn [bri burner-on? bx [bmx bmw]]
-                        (map (fn [[bi be]]
-                               (let [bip (b-scale bi)
-                                     bep (b-scale be)
-                                     bs (range (js/Math.ceil bi) be 1)]
-                                 {:box {:x bmx, :y bip, :w bmw, :h (- bep bip)}
-                                  :markers (map (fn [bi]
-                                                  {:x bx, :y (b-scale bi)
-                                                   :bri bri, :bi bi})
-                                                bs)}))
-                             (burner-bands burner-on?)))
-                      (range) burner-on? b-x bm-xw)))
+        reduced-burners (mapcat (fn [bri burner-on? bx [bmx bmw]]
+                                  (map (fn [[bi be]]
+                                         (let [bip (b-scale bi)
+                                               bep (b-scale be)
+                                               bs (range (js/Math.ceil bi) be 1)]
+                                           {:box {:x bmx, :y bip
+                                                  :w bmw, :h (- bep bip)}
+                                            :markers (map (fn [bi]
+                                                            {:x bx, :y (b-scale bi)
+                                                             :bri bri, :bi bi})
+                                                          bs)}))
+                                       (burner-bands burner-on?)))
+                                (range) burner-on? b-x bm-xw)
 
         chamber-box {:x (+ ax-start x-ws -10), :y (- y-start 10)
                      :w (- ax-width x-ws x-ws -20), :h (+ y-height 20)}
@@ -524,24 +534,23 @@
                   :temp-markers temp-markers
                   :wall-names wall-names
                   :chamber-box chamber-box
-                  :reduced-burners (or (if burner-on? reduced-burners) [])
+                  :reduced-burners reduced-burners
                   :legend-scale legend-scale
                   :chart-title chart-title}
-           :reduced-burners reduced-burners
            :t-label-fn t-label-fn
            :b-label-fn b-label-fn
            :tr-label-fn tr-label-fn
            :temp-label-fn temp-label-fn
            :side-label-fn side-label-fn)))
 
-(defn overall-twt-chart-d3-config [state export?]
-  (let [{:keys [config data props
-                x-title y-title]} state
+(defn overall-twt-chart-d3-config [state export? options]
+  (let [{:keys [config data props]} state
         {:keys [width height title sub-title]} props
-        data (-> data
-                 (assoc-in [:chart-title :text] (if export?
-                                                  {:title title
-                                                   :sub-title sub-title})))]
+        data (cond->
+                 (assoc-in data [:chart-title :text] (if export?
+                                                       {:title title
+                                                        :sub-title sub-title}))
+               (not (:reduced-firing? options)) (assoc :reduced-burners []))]
     (assoc config :data data
            :view-box (str "0 0 " width " " height)
            :width width, :height height)))
@@ -551,7 +560,8 @@
         {:keys [props] :as state} @state
         state (update-overall-twt-data state
                                        (assoc props :width width, :height height))
-        d3-config (overall-twt-chart-d3-config state true)
+        d3-config (overall-twt-chart-d3-config state true
+                                               {:reduced-firing? true})
         svg-string (d3-svg->string d3-config)]
     (save-svg-to-file "overall-twt-graph.png" svg-string width height 30)))
 
@@ -583,23 +593,32 @@
        (str (t-label-fn tri ti) ", " (side-label-fn si))]
       [:text {:x 10, :y 42, :fill "currentColor"} (tr-label-fn tri)]]]))
 
+(defn overall-twt-popup-burner [data state]
+  (let [tw 30, th 30
+        {:keys [b-label-fn]} @state
+        {:keys [x y bri bi]} data
+        {:keys [x y]} (tooltip-pos {:tw tw, :th th
+                                    :ax (- x 6), :ay (- y 6), :aw 12, :ah 12
+                                    :adx 15, :tdx 0, :tym 3})]
+    [:div {:style {:width tw, :height th
+                   :padding "6px"
+                   :background (color-hex :white)
+                   :border (str "1px solid " (color-hex :bitumen-grey))
+                   :border-radius "50%"
+                   :position "absolute"
+                   :left x, :top y
+                   :text-align "center"
+                   :font-size "12px", :font-weight 700
+                   :color (color-hex :bitumen-grey)}}
+     (b-label-fn bri bi)]))
+
 (defn overall-twt-popup [state]
   (let [{:keys [tooltip]} @state
         {:keys [data ttype]} @tooltip]
     (case ttype
-      :burner nil
+      :burner [overall-twt-popup-burner data state]
       :temp [overall-twt-popup-temp data state]
       nil)))
-
-(defn toolbar [state]
-  (let [{:keys [on-export]} @state]
-    [:div {:style {:position "absolute"
-                   :top 0, :right 0}}
-     ;; export image
-     [ic/camera {:style {:color (color-hex :sky-blue)
-                         :margin "0 5px"
-                         :cursor "pointer"}
-                 :on-click #(on-export state)}]]))
 
 (defn overall-twt-chart
   "**temps**: [[[<side A temp>, ..], [<side B temp>, ..]], ..]  
@@ -608,7 +627,8 @@
   [{:keys [;; static
            wall-names tube-rows burner-rows max-temp min-temp title sub-title
            ;; dynamic
-           width height burner-on? temps]}]
+           width height burner-on? temps]}
+   {:keys [reduced-firing?]}]
   (let [state (atom {})
         tooltip (r/atom nil)
         t-events {:mouseover (fn [_ d] (reset! tooltip {:ttype :temp, :data d}))
@@ -617,12 +637,13 @@
                         (fn [_ d] (reset! tooltip {:ttype :burner, :data d})))
         b-color (color-hex :sky-blue)
         config {:node {:tag :g, :class :root
-                       :nodes [(ch-defs-diagonal-lines "shade" :shade b-color 8)
+                       :nodes [(ch-background (color-hex :white))
+                               (ch-defs-diagonal-lines "shade" :shade b-color 8)
                                (ch-x-axis :x-axis :x-axis)
                                (ch-rects :temp-markers :temp-markers t-events)
                                (ch-walls :wall-names :wall-names)
                                (ch-box :chamber-box :chamber-box)
-                               (overall-twt-burner-markers "shade" b-color)
+                               (overall-twt-burner-markers "shade" b-color b-events)
                                (overall-twt-tube-markers)
                                (overall-twt-tubes-lines)
                                (overall-twt-legend-scale)
@@ -630,7 +651,7 @@
     (swap! state assoc :config config, :tooltip tooltip
            :on-export overall-twt-chart-export)
 
-    (fn [{:keys [width height] :as props}]
+    (fn [{:keys [width height] :as props} options]
       (let [ks [:height :width :burner-on? :temps]
             temp-unit @(rf/subscribe [::app-subs/temp-unit])]
         (swap! state assoc :temp-unit temp-unit)
@@ -639,7 +660,7 @@
                     (select-keys (:props @state) ks))
           (swap! state update-overall-twt-data props))
         ;; draw the chart
-        (let [d3-config (overall-twt-chart-d3-config @state false)]
+        (let [d3-config (overall-twt-chart-d3-config @state false options)]
           [:div {:style {:user-select "none"
                          :position "relative"
                          :width width, :height height}}
@@ -731,14 +752,11 @@
 
 (defn update-twt-data [state props]
   (let [state (merge state props)
-        {:keys [max-temp min-temp
+        {:keys [max-temp min-temp design-temp target-temp
                 start-tube end-tube
-                design-temp target-temp
-                height width
-                burner-on?
-                reduced-firing-bands avg-temp-band
-                avg-raw-temp avg-temp temps
-                temp-unit]} state
+                height width temps
+                burner-on? avg-temp-band avg-raw-temp avg-temp]} props
+        {:keys [temp-unit]} state
 
         x-ps-os 30, x-pe-os 5, x-as-os 40
         y-ps-os 40, y-pe-os 24
@@ -748,10 +766,7 @@
 
         tube-count (inc (abs (- end-tube start-tube)))
         burner-count (count burner-on?)
-        reduced-firing-bands (and burner-on?
-                                  ;; evaluate once only, since not going to change
-                                  (or reduced-firing-bands
-                                      (burner-bands burner-on?)))
+
         [max-temp min-temp] (let [ts (filter pos? [max-temp min-temp
                                                    design-temp target-temp
                                                    avg-raw-temp avg-temp])
@@ -818,9 +833,7 @@
                        false dlo]
                       [target-temp (color-hex :green -20)
                        (translate [:twt-chart :line-label :target-temp] "Target temp")
-                       false tlo]
-                      [avg-temp (color-hex :ocean-blue) nil false 0]
-                      [avg-raw-temp (color-hex :ocean-blue) nil true 0]]
+                       false tlo]]
                      (filter first)
                      (mapv (fn [[temp color text dashed? oy]]
                              (let [y (y-scale temp)]
@@ -850,59 +863,68 @@
                                               (color-hex :sky-blue 80))
 
         ;; avg temp bands
-        h-bands-avg (if avg-temp-band
-                      (let [[from to] avg-temp-band
-                            from-p (y-scale from)
-                            to-p (y-scale to)]
-                        [{:x x-start
-                          :y (min from-p to-p)
-                          :w x-width
-                          :h (abs (- from-p to-p))
-                          :color (color-rgba :ocean-blue 50 0.5)}])
-                      [])
+        avg-temp-bands (let [[from to] avg-temp-band
+                             from-p (y-scale from)
+                             to-p (y-scale to)]
+                         [{:x x-start
+                           :y (min from-p to-p)
+                           :w x-width
+                           :h (abs (- from-p to-p))
+                           :color (color-rgba :ocean-blue 50 0.5)}])
 
         ;; reduced firing bands
-        v-bands (if reduced-firing-bands
-                  (mapv (fn [[bi be]]
-                          (let [bip (b-scale bi)
-                                bep (b-scale be)]
-                            {:x bip, :y y-start
-                             :w (- bep bip)
-                             :h y-height
-                             :color (color-rgba :red 30 0.5)}))
-                        reduced-firing-bands)
-                  [])
+        reduced-firing-bands (mapv (fn [[bi be]]
+                                     (let [bip (b-scale bi)
+                                           bep (b-scale be)]
+                                       {:x bip, :y y-start
+                                        :w (- bep bip)
+                                        :h y-height
+                                        :color (color-rgba :red 30 0.5)}))
+                                   (burner-bands burner-on?))
+
+        ;; avg temp lines
+        avg-raw-temp-lines (if-not (pos? avg-raw-temp) []
+                                   [{:line {:x1 x-start, :x2 x-end
+                                            :y (y-scale avg-raw-temp),
+                                            :color (color-hex :ocean-blue)
+                                            :dashed? true}}])
+        avg-temp-lines (if-not (pos? avg-temp) []
+                               [{:line {:x1 x-start, :x2 x-end
+                                        :y (y-scale avg-temp)
+                                        :color (color-hex :ocean-blue)}}])
 
         ;; legend position
         legend  {:x plot-x-start, :y (- (/ y-start 2) 6)}
         ;; chart title position
         chart-title {:x (+ x-start (/ x-width 2)), :y y-start}]
 
-    (-> state
-        (merge props)
-        (assoc :data {:points points
-                      :y-axis y-axis
-                      :x-axis x-axis
-                      :h-lines h-lines
-                      :h-lines-bg h-lines-bg
-                      :h-bands-bg h-bands-bg
-                      :h-bands-avg h-bands-avg
-                      :v-bands v-bands
-                      :legend legend
-                      :chart-title chart-title}
-               :reduced-firing-bands reduced-firing-bands
-               :x-label-fn x-label-fn
-               :y-label-fn y-label-fn))))
+    (assoc state
+           :props props
+           :data {:points points
+                  :y-axis y-axis
+                  :x-axis x-axis
+                  :h-lines h-lines
+                  :h-lines-bg h-lines-bg
+                  :h-bands-bg h-bands-bg
+                  :reduced-firing-bands reduced-firing-bands
+                  :avg-temp-bands avg-temp-bands
+                  :avg-raw-temp-lines avg-raw-temp-lines
+                  :avg-temp-lines avg-temp-lines
+                  :legend legend
+                  :chart-title chart-title}
+           :x-label-fn x-label-fn
+           :y-label-fn y-label-fn)))
 
-(defn twt-popup [{:keys [state tooltip-state]}]
-  (let [{:keys [side-names x-label-fn y-label-fn]} @state
-        {:keys [x y si ti t] :as tooltip} @tooltip-state
+(defn twt-popup-temp [data state]
+  (let [{:keys [x-label-fn y-label-fn temp-unit]
+         {:keys [side-names]} :props} @state
+        {:keys [x y si ti t]} data
         w 80, h 50
         {:keys [x y]} (tooltip-pos {:tw w, :th h
                                     :ax (- x 3), :ay (- y 3)
                                     :aw 6, :ah 6
                                     :adx 11, :tdx 0, :tym 5})]
-    (if tooltip
+    (if data
       [:div {:style {:width w, :height h
                      :padding 0
                      :background (color-hex :white)
@@ -925,32 +947,44 @@
         [:text {:x 20, :y 28, :fill "currentColor"}
          (get side-names si)]
         [:text {:x 20, :y 41, :fill "currentColor"}
-         (str (y-label-fn t) " " @(rf/subscribe [::app-subs/temp-unit]))]]])))
+         (str (y-label-fn t) " " temp-unit)]]])))
 
-(defn twt-chart-d3-config [state config
-                           {:keys [y-title x-title legend-labels tooltip chart-title]}]
-  (let [{:keys [data width height]} state
+(defn twt-popup [state]
+  (let [{:keys [tooltip]} @state
+        {:keys [data ttype]} @tooltip]
+    (case ttype
+      :temp [twt-popup-temp data state]
+      nil)))
+
+(defn twt-chart-d3-config [state export? options]
+  (let [{:keys [config data props
+                x-title y-title legend-labels]} state
+        {:keys [width height title sub-title]} props
         data (-> data
-                 (assoc-in [:pt-shadow] tooltip)
                  (assoc-in [:y-axis :title :text] y-title)
                  (assoc-in [:x-axis :title :text] x-title)
                  (assoc-in [:legend :labels] legend-labels)
-                 (assoc-in [:chart-title :text] chart-title))]
+                 (assoc-in [:chart-title :text] (if export?
+                                                  {:title title
+                                                   :sub-title sub-title})))
+        data (cond-> data
+               (not (:reduced-firing? options)) (assoc :reduced-firing-bands [])
+               (not (:avg-temp-band? options)) (assoc :avg-temp-bands [])
+               (not (:avg-raw-temp? options)) (assoc :avg-raw-temp-lines [])
+               (not (:avg-temp? options)) (assoc :avg-temp-lines []))]
     (assoc config :data data
            :view-box (str "0 0 " width " " height)
            :width width, :height height)))
 
-(defn twt-chart-export [state config {:keys [y-title x-title legend-labels
-                                             title sub-title]}]
-  (let [props {:width 700, :height 500}
-        {:keys [width height]} props
-        state (update-twt-data state props)
-        d3-config (twt-chart-d3-config state config
-                                       {:x-title x-title
-                                        :y-title y-title
-                                        :legend-labels legend-labels
-                                        :chart-title {:title title
-                                                      :sub-title sub-title}})
+(defn twt-chart-export [state]
+  (let [ width 700, height 500
+        {:keys [props] :as state} @state
+        state (update-twt-data state (assoc props :width width, :height height))
+        d3-config (twt-chart-d3-config state true
+                                       {:reduced-firing? true
+                                        :avg-temp-band? true
+                                        :avg-raw-temp? true
+                                        :avg-temp? true})
         svg-string (d3-svg->string d3-config)]
     (save-svg-to-file "chart.png" svg-string width height 30)))
 
@@ -966,34 +1000,35 @@
            height width
            burner-on? avg-temp-band
            avg-raw-temp avg-temp temps
-           raw?]}]
+           raw?]}
+   {:keys [reduced-firing? avg-temp-band? avg-temp? avg-raw-temp?]}]
   (let [state (atom {})
-        tooltip-state (r/atom nil)
-        p-events {:mouseover (fn [_ d] (reset! tooltip-state d))
-                  :mouseout (fn [_] (reset! tooltip-state nil))}
+        tooltip (r/atom nil)
+        p-events {:mouseover (fn [_ d] (reset! tooltip {:ttype :temp, :data d}))
+                  :mouseout (fn [_] (reset! tooltip nil))}
         color-1 (color-hex :royal-blue)
         color-2 (color-hex :teal)
         config {:node {:tag :g, :class :root
-                       :nodes [(ch-defs-radial-fade "twt-grad-pt-shadow" :grad
-                                                    (color-hex :alumina-grey)
-                                                    0.3 1)
+                       :nodes [(ch-background (color-hex :white))
                                (ch-bands :h-bands-bg :h-bands-bg)
                                (ch-horizontal-lines :h-lines-bg :h-lines-bg)
-                               (ch-bands :v-bands :v-bands)
-                               (ch-bands :h-bands-avg :h-bands-avg)
+                               (ch-bands :firing :reduced-firing-bands)
+                               (ch-bands :atb :avg-temp-bands)
                                (ch-horizontal-lines :h-lines :h-lines)
+                               (ch-horizontal-lines :atl :avg-temp-lines)
+                               (ch-horizontal-lines :artl :avg-raw-temp-lines)
                                (ch-x-axis :x-axis :x-axis)
                                (ch-y-axis :y-axis :y-axis 25)
-                               (ch-point-shadow :pt-shadow :pt-shadow
-                                                "twt-grad-pt-shadow" 30)
                                (ch-marker-circle :points-a [:points 0] 6
                                                  color-1 p-events)
                                (ch-marker-square :points-b [:points 1] 6
                                                  color-2 p-events)
                                (twt-chart-legend color-1 color-2)
                                (twt-chart-title)]}}]
+    (swap! state assoc :config config, :tooltip tooltip
+           :on-export twt-chart-export)
 
-    (fn [{:keys [raw? width height] :as props}]
+    (fn [{:keys [raw? width height] :as props} options]
       (let [ks [:height :width
                 :burner-on? :avg-temp-band
                 :avg-raw-temp :avg-temp :temps]
@@ -1018,34 +1053,21 @@
              (translate [:twt-chart :legend :avg-temp-band] "{delta} off Avg temp"
                         {:delta (str "±" (if (= temp-unit deg-C) 20 36)
                                      " " temp-unit)})}]
+        (swap! state assoc :temp-unit temp-unit
+               :x-title x-title, :y-title y-title
+               :legend-labels legend-labels)
         ;; update chart data when required
         (when (not= (select-keys props ks)
-                    (select-keys @state ks))
-          (swap! state update-twt-data (assoc props :temp-unit temp-unit)))
+                    (select-keys (:props @state) ks))
+          (swap! state update-twt-data props))
         ;; draw the chart
-        (let [tooltip @tooltip-state
-              d3-config (twt-chart-d3-config @state config
-                                             {:x-title x-title
-                                              :y-title y-title
-                                              :legend-labels legend-labels
-                                              :tooltip tooltip})]
+        (let [d3-config (twt-chart-d3-config @state false options)]
           [:div {:style {:user-select "none"
                          :position "relative"
                          :width width, :height height}}
            ;; chart
            [d3-svg d3-config]
-           ;; hover toolitp
-           (if tooltip [twt-popup {:state state, :tooltip-state tooltip-state}])
+           ;; hover tooltip
+           [twt-popup state]
            ;; toolbar
-           [:div {:style {:position "absolute"
-                          :top 0, :right 0}}
-            ;; export image
-            [ic/camera {:style {:color (color-hex :sky-blue)
-                                :margin "0 5px"
-                                :cursor "pointer"}
-                        :on-click #(twt-chart-export @state config
-                                                     {:legend-labels legend-labels
-                                                      :x-title x-title
-                                                      :y-title y-title
-                                                      :title title
-                                                      :sub-title sub-title})}]]])))))
+           [toolbar state]])))))

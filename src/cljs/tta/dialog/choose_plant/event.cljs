@@ -57,7 +57,8 @@
  ::select-plant
  [(inject-cofx ::inject/sub [:ht.app.subs/auth-claims])
   (inject-cofx ::inject/sub [:tta.app.subs/user])]
- (fn [{:keys [db ht.app.subs/auth-claims tta.app.subs/user]} [_ plant]]
+ (fn [{:keys [db :ht.app.subs/auth-claims :tta.app.subs/user]} [_ plant]]
+   ;; (js/console.log [auth-claims user])
    (let [client (get-in db [:dialog :choose-plant :data :client])
          {:keys [id]} auth-claims
          new? (nil? user)

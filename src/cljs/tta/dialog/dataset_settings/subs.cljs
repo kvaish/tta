@@ -7,7 +7,8 @@
             [tta.util.common :as au]
             [tta.app.subs :as app-subs]
             [tta.component.settings.subs :refer [has-emissivity?
-                                                 emissivity-type-opts]]))
+                                                 emissivity-type-opts]]
+            [tta.util.auth :as auth]))
 
 ;; Do NOT use rf/subscribe
 ;; instead add input signals like :<- [::query-id]
@@ -20,9 +21,14 @@
 
 (rf/reg-sub
  ::draft
- (fn [db _] (get-in db [:dialog :draft])))
+ (fn [db _] (get-in db [:dialog :dataset-settings :draft])))
 
 ;; derived signals
+
+(rf/reg-sub
+ ::draft?
+ :<- [::draft]
+ (fn [draft _] (:draft? draft)))
 
 (rf/reg-sub
  ::src-data
@@ -109,11 +115,18 @@
  ::pyrometers
  :<- [::settings]
  :<- [::draft]
- (fn [[settings draft] _]
-   (let [p (:pyrometer draft)
-         ps (:pyrometers settings)]
-     (if (and p (not (some #(= (:id p) (:id %)) ps)))
-       (conj ps p)
+ :<- [::ht-subs/auth-claims]
+ (fn [[settings draft claims] _]
+   (let [{p :pyrometer, :keys [draft? emissivity-type]} draft
+         {ps :pyrometers, gc-wl :gold-cup-wavelength} settings
+         can-edit? (auth/allow-edit-dataset? claims)
+         ps (if (and p (not (some #(= (:id p) (:id %)) ps)))
+              (conj ps p)
+              ps)]
+     (if (and draft? (not can-edit?) (= emissivity-type "goldcup"))
+       ;; show only those pyrometers suitable for gold-cup
+       (filter #(= gc-wl (:wavelength %)) ps)
+       ;; show the full list of pyrometers
        ps))))
 
 (rf/reg-sub

@@ -63,15 +63,6 @@
                           :array-dim 2 ;; burner-row x burner
                           :schema    {:deg-open "degOpen"}}
 
-                :wall-temps    {:name   "wall-temps"
-                                :schema {:east  {:name   "east"
-                                                 :schema ::wall-temps}
-                                         :west  {:name   "west"
-                                                 :schema ::wall-temps}
-                                         :north {:name   "north"
-                                                 :schema ::wall-temps}
-                                         :south {:name   "south"
-                                                 :schema ::wall-temps}}}
                 :ceiling-temps {:name   "ceilingTemp"
                                 :array? true
                                 :schema ::wall-temps}
@@ -85,7 +76,17 @@
                                        :array? true
                                        :schema {:tubes {:name   "tubes"
                                                         :schema ::tube
-                                                        :array? true}}}}}}
+                                                        :array? true}}}}}
+
+               :wall-temps {:name   "wall-temps"
+                            :schema {:east  {:name   "east"
+                                             :schema ::wall-temps}
+                                     :west  {:name   "west"
+                                             :schema ::wall-temps}
+                                     :north {:name   "north"
+                                             :schema ::wall-temps}
+                                     :south {:name   "south"
+                                             :schema ::wall-temps}}}}
 
    ::side-fired {:chambers {:name   "chambers"
                             :array? true

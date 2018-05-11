@@ -79,12 +79,16 @@
    (let [{:keys [draft settings form]} (parse params plant topsoe?
                                               user-roles (:id client))]
      {:dispatch [::validate-emissivity-type]
-      :db (assoc-in db [:dialog :dataset-settings]
+      :db (assoc-in db dlg-path
                     (assoc {:open? true
                             ;; whether starting totally new
                             :new? (not (:dataset params))
                             :draft draft
                             :form form}
+                           ;; if re-editing then settings is generated from
+                           ;; old data. put in :src-data to show not dirty
+                           ;; but if totally new, then put in :data to show
+                           ;; as dirty and enable submit directly.
                            (if (:dataset params) :src-data :data)
                            settings))})))
 
@@ -110,7 +114,7 @@
  ::close
  (fn [{:keys [db]} [_ success?]]
    (cond->
-       {:db (assoc-in db [:dialog :dataset-settings] nil)}
+       {:db (assoc-in db dlg-path nil)}
      (and (not success?) (get-in db (conj dlg-path :new?)))
      (assoc :dispatch [:tta.component.root.event/activate-content :home]))))
 
@@ -143,18 +147,18 @@
                        {:sides (->> {:tubes (vec (repeat tube-count nil))}
                                     (repeat 2)
                                     (vec))})
-                     tube-counts)}]
+                     tube-counts)
+               :wall-temps {:north temps
+                            :east temps
+                            :west temps
+                            :south temps}}]
     ;; (js/console.log level)
     (assoc draft :top-fired
            (cond->
                {:levels (cond-> {}
                           top? (assoc :top level)
                           middle? (assoc :middle level)
-                          bottom? (assoc :bottom level))
-                :wall-temps {:north temps
-                             :east temps
-                             :west temps
-                             :south temps}}
+                          bottom? (assoc :bottom level))}
              top? (assoc :ceiling-temps (vec (repeat (inc row-count) temps)))
              bottom? (assoc :floor-temps (vec (repeat (inc row-count) temps)))))))
 
@@ -184,14 +188,12 @@
                     (init-sf-dataset plant)
                     (and (= firing "top") (not (:top-fired draft)))
                     (init-tf-dataset plant))]
-        (cond->
-            {:dispatch-n (list
-                          [::close true]
-                          [:tta.component.dataset.event/init {:dataset draft}])}
-          ;; in case of draft, also save to local storage
-          (:draft? draft)
-          (assoc :storage/set {:key :draft
-                               :value (au/dataset-to-storage draft)}))))
+        {:dispatch-n (list
+                      [::close true]
+                      [:tta.component.dataset.event/init {:dataset draft}]
+                      ;; in case of draft update in :home
+                      (if (:draft? draft)
+                        [:tta.component.home.event/set-draft draft]))}))
     {:db (update-in db dlg-path assoc :show-error? true)})))
 
 (rf/reg-event-fx

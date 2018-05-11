@@ -123,11 +123,21 @@
      :evt-failure (or evt-failure [::ht-event/service-failure false])})))
 
 (rf/reg-fx
- :service/create-dataset
- (fn [{:keys [dataset client-id plant-id evt-success evt-failure]}]
-   (svc/create-dataset
+ :service/save-dataset
+ (fn [{:keys [dataset new? evt-success evt-failure]}]
+   (svc/save-dataset
+    {:dataset dataset
+     :new? new?
+     :evt-success evt-success
+     :evt-failure (or evt-failure [::ht-event/service-failure false])})))
+
+(rf/reg-fx
+ :service/delete-dataset
+ (fn [{:keys [client-id plant-id dataset-id
+             evt-success evt-failure]}]
+   (svc/delete-dataset
     {:client-id client-id
      :plant-id plant-id
-     :dataset dataset
+     :dataset-id dataset-id
      :evt-success evt-success
      :evt-failure (or evt-failure [::ht-event/service-failure false])})))

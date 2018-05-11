@@ -20,10 +20,11 @@
   (let [{:keys [w h2]} (:data (meta style))
         ch-data @(rf/subscribe [::subs/overall-twt-graph-data level-key])
         props (assoc ch-data
-                     :height (- h2 20), :width (- w 20)
-                     :title title, :sub-title sub-title)]
+                     :height h2, :width w
+                     :title title, :sub-title sub-title)
+        options {:reduced-firing? @(rf/subscribe [::subs/reduced-firing?])}]
     [:div (use-sub-style style :body)
-     [overall-twt-chart props]]))
+     [overall-twt-chart props options]]))
 
 (defn graph-header [style level-key title sub-title]
   [:div (use-sub-style style :header)

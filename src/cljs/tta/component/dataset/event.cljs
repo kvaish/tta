@@ -35,18 +35,21 @@
                          (mapv (fn [r]
                                  {:sides
                                   (mapv (fn [s]
-                                          {:tubes (vec (repeat (count (:tubes s))
-                                                               nil))})
+                                          {:tubes
+                                           (vec (repeat (count (:tubes s))
+                                                        nil))})
                                         (:sides r))})
-                               (:rows lvl))}))
+                               (:rows lvl))
+                         :wall-temps
+                         (reduce-kv (fn [m k temps]
+                                      (assoc m k
+                                             {:temps
+                                              (vec (repeat (count (:temps temps))
+                                                           nil))}))
+                                    {}
+                                    (:wall-temps lvl))}))
                {}
                (get-in dataset [:top-fired :levels]))
-    :wall-temps
-    (reduce-kv (fn [m k temps]
-                 (assoc m k
-                        {:temps (vec (repeat (count (:temps temps)) nil))}))
-               {}
-               (get-in dataset [:top-fired :wall-temps]))
     :ceiling-temps
     (mapv (fn [temps]
             {:temps (vec (repeat (count (:temps temps)) nil))})
@@ -71,10 +74,9 @@
 
 (rf/reg-event-fx
  ::init
- [(inject-cofx :storage :draft)
+ [(inject-cofx ::inject/sub [:tta.component.home.subs/draft])
   (inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::app-subs/plant]
-      {:keys [draft]} :storage}
+ (fn [{:keys [db ::app-subs/plant :tta.component.home.subs/draft]}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
    (if dataset
      ;; load the given dataset
@@ -83,13 +85,7 @@
               (assoc-in data-path nil)
               (assoc-in form-path (init-form dataset)))
       :dispatch [::init-settings]}
-     ;; load draft or create or fetch a dataset as specified in parameters
-     (let [draft (if (and
-                      (= (:plant-id draft) (:id plant))
-                      (= (:reformer-version draft)
-                         (get-in plant [:config :version])))
-                   (au/dataset-from-storage draft))
-           {:keys [client-id], plant-id :id} plant
+     (let [{:keys [client-id], plant-id :id} plant
            fetch-params {:client-id client-id
                          :plant-id plant-id
                          :evt-success [::fetch-success]
@@ -127,15 +123,14 @@
 
 (rf/reg-event-fx
  ::init-settings
- [(inject-cofx ::inject/sub [::subs/data])
-  (inject-cofx ::inject/sub [::subs/settings])
+ [(inject-cofx ::inject/sub [::subs/settings])
   (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/mode])]
- (fn [{:keys [db ::subs/data ::subs/settings ::subs/config ::subs/mode]} _]
+ (fn [{:keys [db ::subs/settings ::subs/config ::subs/mode]} _]
    ;; update settings in edit mode only
    (if (= :edit mode)
-     {:db (assoc-in db (conj comp-path :dataset)
-                    (apply-settings data settings config))})))
+     {:db (update-in db (conj comp-path :dataset)
+                    apply-settings settings config)})))
 
 (rf/reg-event-db
  ::close
@@ -163,27 +158,33 @@
 ;; VIEW STATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-event-fx
- ::set-mode
+ ::set-mode ;; optionally also enforces the area selection
  [(inject-cofx ::inject/sub [::subs/data])
   (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/selected-area-id])]
  (fn [{:keys [db ::subs/data ::subs/config
              ::subs/selected-area-id]}
-     [_ mode]] ;; mode => :read or :edit
+     [_ mode area-id]] ;; mode => :read or :edit
    {:db (cond-> (assoc-in db (conj view-path :mode) mode)
           ;; while switching to graph mode update calculations
           (= mode :read) (assoc-in data-path
                                    (update-calc-summary data config))
-          ;; while switching to edit mode ensure view-factor
-          (= mode :edit) (assoc-in data-path
-                                   (ensure-view-factor data config)))
+          ;; while switching to edit mode ensure view-factor.
+          ;; this will happen only the first time you
+          ;; switch to edit mode, hece data should be nil then.
+          ;; update the src-data only instead of data.
+          ;; otherwise it will result in a dirty state, but the user
+          ;; has not made any changes yet!
+          (= mode :edit) (update-in (conj comp-path :dataset)
+                                   ensure-view-factor config))
     :dispatch [::select-area-by-id
-               (if (and (= mode :read) (= selected-area-id :twt)
-                        (= "top" (:firing config)))
-                 ;; in case of top-fired, prefer overall
-                 ;; when switching to graph from tube/wall entry
-                 :overall
-                 selected-area-id)]}))
+               (or area-id
+                   (if (and (= mode :read) (= selected-area-id :twt)
+                            (= "top" (:firing config)))
+                     ;; in case of top-fired, prefer overall
+                     ;; when switching to graph from tube/wall entry
+                     :overall
+                     selected-area-id))]}))
 
 (rf/reg-event-fx
  ::select-area-by-id
@@ -307,10 +308,10 @@
  ::do-reset-draft
  (fn [{:keys [db]} _]
    (let [{:keys [gold-cup?]} (get-in db (conj comp-path :dataset))]
-     {:storage/set {:key :draft, :value nil}
-      :db (update-in db comp-path dissoc :dataset :data :form)
-      :dispatch [:tta.dialog.dataset-settings.event/open
-                 {:gold-cup? gold-cup?}]})))
+     {:db (update-in db comp-path dissoc :dataset :data :form)
+      :dispatch-n (list [:tta.dialog.dataset-settings.event/open
+                         {:gold-cup? gold-cup?}]
+                        [:tta.component.home.event/set-draft nil])})))
 
 (rf/reg-event-fx
  ::save-draft
@@ -321,31 +322,52 @@
    (if can-submit?
      (let [data (-> (update-calc-summary data config)
                     (assoc :last-saved (js/Date.)))]
-       {:storage/set {:key :draft
-                      :value (au/dataset-to-storage data)}
-        :db (-> db
+       {:db (-> db
                 (assoc-in (conj comp-path :dataset) data)
-                (assoc-in data-path nil))}))))
+                (assoc-in data-path nil))
+        :dispatch [:tta.component.home.event/set-draft data]}))))
 
-(rf/reg-event-fx
- ::create-dataset-success
- (fn [_ [_ dataset-id]]
-   {:dispatch [::init {:dataset-id (:new-id dataset-id)}]}))
-
+;; TODO: need to enforce minimum measurement requirement
+;; policy: <10: hidden, 10-50: red, 50-85: amber, >85 blue
 (rf/reg-event-fx
  ::upload
  [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/settings])
   (inject-cofx ::inject/sub [::subs/config])
-  (inject-cofx ::inject/sub [::subs/can-submit?])
-  (inject-cofx ::inject/sub [::app-subs/plant])
-  (inject-cofx ::inject/sub [::app-subs/client])]
- (fn [{:keys [::subs/data ::subs/config ::subs/can-submit?
-             ::app-subs/client ::app-subs/plant]} _]
-   #_(if can-submit?
-       {:service/create-dataset {:client (:id client)
-                                 :plant-id (:id plant)
-                                 :dataset (update-calc-summary data config)
-                                 :evt-success [::create-dataset-success]}})))
+  (inject-cofx ::inject/sub [::subs/can-upload?])]
+ (fn [{:keys [::subs/data ::subs/settings ::subs/config ::subs/can-upload?]} _]
+   (if can-upload?
+     ;; update calculations and upload
+     (let [dataset (update-calc-summary data config)
+           {:keys [tubes%]} (:summary dataset)
+           {:keys [min-tubes%]} settings]
+       (if (>= tubes% min-tubes%)
+         ;; upload if enough tubes measured
+         {:service/save-dataset {:dataset dataset
+                                 :new? (:draft? dataset)
+                                 :evt-success [::save-dataset-success]}}
+         ;; warn if not enough
+         {:dispatch
+          [::ht-event/show-message-box
+           {:message (translate [:warning :inadequate-dataset-upload :message]
+                                "Please measure at least {min-tubes%} of tubes!"
+                                {:min-tubes% (str min-tubes% "%")})
+            :title (translate [:warning :inadequate-dataset-upload :title]
+                              "Insufficient measurement!")
+            :level :warning
+            :label-ok (translate [:action :ok :label] "Ok")
+            :event-ok [::set-mode :edit :twt]}]})))))
+
+(rf/reg-event-fx
+ ::save-dataset-success
+ (fn [_ [_ {:keys [new-id]}]]
+   {:dispatch-n (list
+                 ;; TODO: re-fetch messages
+                 ;; clear draft
+                 [:tta.component.home.event/set-draft nil]
+                 ;; re-fetch in read mode
+                 [::init {:dataset-id new-id, :mode :read}])}))
+
 
 ;; burners ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -502,12 +502,13 @@
      (if @(rf/subscribe [:tta.dialog.view-factor.subs/open?])
        [view-factor])]))
 
-(defn config [props]
+(defn config [{:keys [size]}]
   (let [firing @(rf/subscribe [::subs/firing])
         vf-ready? @(rf/subscribe [::subs/ready-for-view-factor?])
         vf-valid? @(rf/subscribe [::subs/view-factor-valid?])
         show-error? (show-error?)]
     [app-view/layout-main
+     size
      (translate [:config :title :text] "Configuration")
      (translate [:config :title :sub-text] "Reformer configuration")
      [(if (and show-error? (= "top" firing) vf-ready? (not vf-valid?))

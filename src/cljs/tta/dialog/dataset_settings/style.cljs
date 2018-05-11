@@ -54,6 +54,12 @@
                    :display "inline-block"
                    :padding "14px 12px 0 12px"
                    :vertical-align "top"}
+      :form-value {:color (color-hex :royal-blue)
+                   :font-size "12px"
+                   :font-weight 700
+                   :display "inline-block"
+                   :padding "14px 12px 0 12px"
+                   :vertical-align "top"}
       :form-error {:color (color-hex :red)
                    :font-size "11px"
                    :display "block"

@@ -57,14 +57,14 @@
   Tm : raw-temp
   Tw : avg-wall-temp
   lam : wavelength (λ, μm)
-  em : emissivity
-  F : view-factor"
-  [Tm Tw lam em F]
+  em : emissivity"
+  [Tm Tw lam em]
   (let [dT
-        (if (and (pos? Tm) (pos? Tw) (pos? F) (pos? em) (pos? lam))
+        (if (and (pos? Tm) (pos? Tw) (pos? em) (pos? lam))
           (if (= Tm Tw) 0
-              (if (and (pos? lam) (<= 0 em 1) (< Tm Tw) (<= 0 F 1))
+              (if (and (pos? lam) (<= 0 em 1) (< Tm Tw))
                 (let [C 14388 ;; constant
+                      F 1     ;; constant
                       Tw (+ K Tw)
                       Tm (+ K Tm)
                       X (/ C lam)
@@ -177,11 +177,16 @@
 (defn tf-calc-wall-temps [dataset]
   (-> dataset
       ;; process 4 wall temps
-      (update-in [:top-fired :wall-temps]
-                 (fn [wall-temps]
-                   (reduce #(update %1 %2 calc-wall-temps)
-                           wall-temps
-                           (keys wall-temps))))
+      (update-in [:top-fired :levels]
+                 (fn [levels]
+                   (reduce (fn [levels level-key]
+                             (update-in levels [level-key :wall-temps]
+                                        (fn [wall-temps]
+                                          (reduce #(update %1 %2 calc-wall-temps)
+                                                  wall-temps
+                                                  (keys wall-temps)))))
+                           levels
+                           (keys levels))))
       ;; process ceiling temps
       (update-in [:top-fired :ceiling-temps] #(if % (mapv calc-wall-temps %)))
       ;; process floor temps
@@ -273,46 +278,55 @@
                             (:tube-emissivity py))
                      lam (:wavelength py)
                      Tm (:raw-temp tube)
-                     F (:view-factor tube)
-                     dT (->> (map #(calc-dT-corr Tm %1 lam em %2) Tw F)
-                             (remove nil?)
-                             not-empty)]
-                 ;; (if dT (js/console.log em lam F Tw Tm dT))
+                     vf (:view-factor tube)
+                     dT (->> (map #(calc-dT-corr Tm %1 lam em) Tw)
+                             (map list vf)
+                             (filter (comp pos? second))
+                             (map #(apply * %))
+                             (filter pos?)
+                             (not-empty))]
+                 ;; (if dT (js/console.log em lam Tw Tm dT))
                  (if dT (- Tm (apply + dT)))))]
     (if (pos? Tc)
       (assoc tube :corrected-temp Tc)
       (dissoc tube :corrected-temp))))
 
 (defn tf-calc-Tc [dataset]
-  (let [Tw-n (get-in dataset [:top-fired :wall-temps :north :avg])
-        Tw-e (get-in dataset [:top-fired :wall-temps :east :avg])
-        Tw-s (get-in dataset [:top-fired :wall-temps :south :avg])
-        Tw-w (get-in dataset [:top-fired :wall-temps :west :avg])
-        Tw-nw (avg [Tw-n Tw-w])
-        Tw-ne (avg [Tw-n Tw-e])
-        Tw-sw (avg [Tw-s Tw-w])
-        Tw-se (avg [Tw-s Tw-e])
-        Tw-n6 [Tw-nw Tw-ne]
-        Tw-m [Tw-w Tw-e]
-        Tw-s6 [Tw-sw Tw-se]
-        Tw-c (mapv :avg (get-in dataset [:top-fired :ceiling-temps]))
+  (let [Tw-c (mapv :avg (get-in dataset [:top-fired :ceiling-temps]))
         Tw-f (mapv :avg (get-in dataset [:top-fired :floor-temps]))
         calc-tube (partial tf-calc-tube dataset)
-        calc-tubes-fn (fn [level-key]
-                        (let [Tw-2 (case level-key
-                                     :top Tw-c
-                                     :bottom Tw-f
-                                     nil)]
-                          (fn [tubes ri si]
-                            (let [[nts mts sts] (tf-split-tubes tubes)
-                                  Tw-n6 (get Tw-n6 si)
-                                  Tw-m (get Tw-m si)
-                                  Tw-s6 (get Tw-s6 si)
-                                  Tw-2 (get Tw-2 (+ ri si))]
-                              (vec (concat
-                                    (map #(calc-tube % [Tw-n6 Tw-2]) nts)
-                                    (map #(calc-tube % [Tw-m Tw-2]) mts)
-                                    (map #(calc-tube % [Tw-s6 Tw-2]) sts)))))))]
+        calc-tubes-fn
+        (fn [level-key]
+          (let [{:keys [wall-temps]} (get-in dataset [:top-fired :levels level-key])
+                Tw-n (get-in wall-temps [:north :avg])
+                Tw-e (get-in wall-temps [:east :avg])
+                Tw-s (get-in wall-temps [:south :avg])
+                Tw-w (get-in wall-temps [:west :avg])
+                Tw-nw (avg [Tw-n Tw-w])
+                Tw-ne (avg [Tw-n Tw-e])
+                Tw-sw (avg [Tw-s Tw-w])
+                Tw-se (avg [Tw-s Tw-e])
+                Tw-n6 [Tw-nw Tw-ne] ;; both side for 6 tubes close to north wall
+                Tw-m [Tw-w Tw-e]    ;; both side for tubes far from north/south
+                Tw-s6 [Tw-sw Tw-se] ;; both side for 6 tubes close to south wall
+                ;; ceiling/floor
+                Tw-2 (case level-key
+                       :top Tw-c
+                       :bottom Tw-f
+                       nil)]
+            (fn [tubes ri si]
+              (let [;; split the tubes into set of [6 rest 6] from north to south
+                    [nts mts sts] (tf-split-tubes tubes)
+                    ;; get the Tw for side index si
+                    Tw-n6 (get Tw-n6 si) ;; Tw for 6 tubes close to north wall
+                    Tw-m (get Tw-m si)   ;; Tw for tubes in middle
+                    Tw-s6 (get Tw-s6 si) ;; Tw for 6 tubes close to south wall
+                    Tw-2 (get Tw-2 (+ ri si))] ;; ceiling/floor
+                ;; calculate the tubes for each set and then combine into one set
+                (vec (concat
+                      (map #(calc-tube % [Tw-n6 Tw-2]) nts)
+                      (map #(calc-tube % [Tw-m Tw-2]) mts)
+                      (map #(calc-tube % [Tw-s6 Tw-2]) sts)))))))]
     (reduce
      (fn [dataset level-key]
        (update-in dataset [:top-fired :levels level-key :rows]
@@ -374,8 +388,7 @@
                             (:tube-emissivity py))
                      lam (:wavelength py)
                      Tm (:raw-temp tube)
-                     F 1
-                     dT (calc-dT-corr Tm Tw lam em F)]
+                     dT (calc-dT-corr Tm Tw lam em)]
                  (if dT (- Tm dT))))]
     (if (pos? Tc)
       (assoc tube :corrected-temp Tc)

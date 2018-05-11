@@ -1,11 +1,14 @@
 ;; subscriptions for component home
 (ns tta.component.home.subs
   (:require [re-frame.core :as rf]
+            [reagent.ratom :refer [reaction]]
             [ht.app.subs :as ht-subs :refer [translate]]
             [tta.app.subs :as app-subs]
             [tta.util.auth :as auth]
             [ht.util.auth :as ht-auth]
-            [tta.info :as info]))
+            [tta.info :as info]
+            [ht.util.common :as u]
+            [tta.util.common :as au]))
 
 (rf/reg-sub
  ::home
@@ -16,8 +19,6 @@
   (if (ht-auth/allow-operation? claims op info/operations)
     :enabled
     :disabled))
-
-
 
 (rf/reg-sub
  ::access-rules
@@ -47,3 +48,18 @@
             :print-logsheet true}
            (map f)
            (into {}))})))
+
+(rf/reg-sub
+ ::draft
+ :<- [::home]
+ :<- [::app-subs/plant]
+ (fn [[{:keys [draft]} plant] _]
+   (if (and (= (:plant-id draft) (:id plant))
+            (= (:reformer-version draft)
+               (get-in plant [:config :version])))
+     draft)))
+
+(rf/reg-sub
+ ::has-draft?
+ :<- [::draft]
+ (fn [draft _] (some? draft)))
