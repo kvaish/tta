@@ -76,14 +76,14 @@
          :on-change on-change}]
        (if-not last? [vertical-line {:height height}])])))
 
-(defn tf-twt-entry-wall [_ label wall-key last?]
-  (let [path [:top-fired :wall-temps wall-key :temps]
+(defn tf-twt-entry-wall [_ label level-key wall-key last?]
+  (let [path [:top-fired :levels level-key :wall-temps wall-key :temps]
         field-fn #(deref (rf/subscribe [::subs/field-temp (conj path %)]))
         on-change (fn [index value]
                     (rf/dispatch [::event/set-temp (conj path index) value false]))
         on-clear #(rf/dispatch [::event/clear-wall-temps path])
         on-add #(rf/dispatch [::event/add-temp-field path])]
-    (fn [height _ _ _]
+    (fn [height _ _ _ _]
       [:span
        [list-wall-temps
         {:label label
@@ -126,7 +126,7 @@
                                  [tf-twt-entry-wall
                                   height
                                   (get-in config [:tf-config :wall-names wall-key])
-                                  wall-key (last? index)]))
+                                  level-key wall-key (last? index)]))
                              indexes))
                       (:ceiling :floor)
                       (fn [indexes _]
@@ -184,7 +184,7 @@
         ^{:key index} [tf-twt-entry-wall
                        height
                        (get-in config [:tf-config :wall-names index])
-                       index false]
+                       level-key index false]
         (:ceiling :floor)
         ^{:key index} [tf-twt-entry-ceiling-floor height scope index false]
         nil)

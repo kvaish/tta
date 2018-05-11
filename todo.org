@@ -1,0 +1,37 @@
+* Update wall-temps logic
+
+  Moved :wall-temps inside :levels. This affects the following files:
+
+** DONE dataset/event.cljs
+   CLOSED: [2018-05-11 Fri 19:05]
+   *init-form*
+   move creation of skeleton of :wall-temps inside :levels skeleton
+
+** DONE dataset/subs.cljs
+   CLOSED: [2018-05-11 Fri 19:05]
+
+** DONE dataset/twt-entry.cljs
+   CLOSED: [2018-05-11 Fri 19:13]
+   *tf-twt-entry-wall*
+
+** DONE dataset/calc.cljs
+   CLOSED: [2018-05-11 Fri 19:39]
+   *tf-calc-Tc*
+   *tf-calc-wall-temps*
+
+** DONE dataset_settings/event.cljs
+   CLOSED: [2018-05-11 Fri 19:17]
+   *init-tf-dataset*
+
+* Fix calculation for top-fired
+
+** DONE update the calcs
+   CLOSED: [2018-05-11 Fri 19:58]
+   view-factor to be used for adding up the dT from wall and ceiling/floor calcs
+   view-factor is not to be used inside the calc
+
+* Test and deploy
+
+** TODO backend
+
+** TODO frontend

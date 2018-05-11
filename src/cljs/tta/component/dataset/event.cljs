@@ -35,18 +35,21 @@
                          (mapv (fn [r]
                                  {:sides
                                   (mapv (fn [s]
-                                          {:tubes (vec (repeat (count (:tubes s))
-                                                               nil))})
+                                          {:tubes
+                                           (vec (repeat (count (:tubes s))
+                                                        nil))})
                                         (:sides r))})
-                               (:rows lvl))}))
+                               (:rows lvl))
+                         :wall-temps
+                         (reduce-kv (fn [m k temps]
+                                      (assoc m k
+                                             {:temps
+                                              (vec (repeat (count (:temps temps))
+                                                           nil))}))
+                                    {}
+                                    (:wall-temps lvl))}))
                {}
                (get-in dataset [:top-fired :levels]))
-    :wall-temps
-    (reduce-kv (fn [m k temps]
-                 (assoc m k
-                        {:temps (vec (repeat (count (:temps temps)) nil))}))
-               {}
-               (get-in dataset [:top-fired :wall-temps]))
     :ceiling-temps
     (mapv (fn [temps]
             {:temps (vec (repeat (count (:temps temps)) nil))})

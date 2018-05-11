@@ -147,18 +147,18 @@
                        {:sides (->> {:tubes (vec (repeat tube-count nil))}
                                     (repeat 2)
                                     (vec))})
-                     tube-counts)}]
+                     tube-counts)
+               :wall-temps {:north temps
+                            :east temps
+                            :west temps
+                            :south temps}}]
     ;; (js/console.log level)
     (assoc draft :top-fired
            (cond->
                {:levels (cond-> {}
                           top? (assoc :top level)
                           middle? (assoc :middle level)
-                          bottom? (assoc :bottom level))
-                :wall-temps {:north temps
-                             :east temps
-                             :west temps
-                             :south temps}}
+                          bottom? (assoc :bottom level))}
              top? (assoc :ceiling-temps (vec (repeat (inc row-count) temps)))
              bottom? (assoc :floor-temps (vec (repeat (inc row-count) temps)))))))
 
