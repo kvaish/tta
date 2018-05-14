@@ -59,3 +59,12 @@
  (fn [{:keys [db]} [_ & params]]
    {:db (assoc-in db (conj comp-path :fetching?) false)
     :dispatch (into [::ht-event/service-failure false] params)}))
+
+(rf/reg-event-db
+ ::remove-dataset
+ (fn [{:keys [db]} [_ dataset-id]]
+   (update-in db (conj comp-path :datasets)
+              (fn [ds]
+                (->> ds
+                     (remove #(= (:id %) dataset-id))
+                     (vec))))))

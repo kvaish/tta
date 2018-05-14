@@ -7,6 +7,11 @@
             [ht.app.style :as ht-style :refer [vendors]]
             [tta.app.style :as app-style]))
 
+(def no-config {:font-size "32px"
+                :text-align "center"
+                :padding "32px 0"
+                :color (ht.style/color-hex :red)})
+
 (defn twt-graph [width height]
   (let [h1 100
         h3 48

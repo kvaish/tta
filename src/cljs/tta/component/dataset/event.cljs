@@ -75,51 +75,54 @@
 (rf/reg-event-fx
  ::init
  [(inject-cofx ::inject/sub [:tta.component.home.subs/draft])
-  (inject-cofx ::inject/sub [::app-subs/plant])]
- (fn [{:keys [db ::app-subs/plant :tta.component.home.subs/draft]}
+  (inject-cofx ::inject/sub [::app-subs/plant])
+  (inject-cofx ::inject/sub [::subs/settings?])]
+ (fn [{:keys [db ::app-subs/plant :tta.component.home.subs/draft
+             ::subs/settings?]}
      [_ {:keys [mode dataset dataset-id logger-data gold-cup?]}]]
-   (if dataset
-     ;; load the given dataset
-     {:db (-> db
-              (assoc-in (conj comp-path :dataset) dataset)
-              (assoc-in data-path nil)
-              (assoc-in form-path (init-form dataset)))
-      :dispatch [::init-settings]}
-     (let [{:keys [client-id], plant-id :id} plant
-           fetch-params {:client-id client-id
-                         :plant-id plant-id
-                         :evt-success [::fetch-success]
-                         :evt-failure [::fetch-failure]}]
-       (cond
-         dataset-id
-         {:service/fetch-dataset (assoc fetch-params :dataset-id dataset-id)
-          :db (update-in db view-path assoc
-                         :mode :read, :fetching? true)}
+   (when settings?
+     (if dataset
+       ;; load the given dataset
+       {:db (-> db
+                (assoc-in (conj comp-path :dataset) dataset)
+                (assoc-in data-path nil)
+                (assoc-in form-path (init-form dataset)))
+        :dispatch [::init-settings]}
+       (let [{:keys [client-id], plant-id :id} plant
+             fetch-params {:client-id client-id
+                           :plant-id plant-id
+                           :evt-success [::fetch-success]
+                           :evt-failure [::fetch-failure]}]
+         (cond
+           dataset-id
+           {:service/fetch-dataset (assoc fetch-params :dataset-id dataset-id)
+            :db (update-in db view-path assoc
+                           :mode :read, :fetching? true)}
 
-         (= mode :read)
-         {:service/fetch-latest-dataset fetch-params
-          :db (update-in db view-path assoc
-                         :mode :read, :fetching? true)}
+           (= mode :read)
+           {:service/fetch-latest-dataset fetch-params
+            :db (update-in db view-path assoc
+                           :mode :read, :fetching? true)}
 
-         logger-data
-         {:dispatch [:tta.dialog.dataset-settings.event/open
-                     {:logger-data logger-data}]
-          :db (assoc-in db (conj view-path :mode) :edit)}
+           logger-data
+           {:dispatch [:tta.dialog.dataset-settings.event/open
+                       {:logger-data logger-data}]
+            :db (assoc-in db (conj view-path :mode) :edit)}
 
-         (or gold-cup? (= mode :edit))
-         (-> {:db (assoc-in db (conj view-path :mode) :edit)}
-             (assoc :dispatch
-                    (if draft
-                      [::init {:dataset (cond-> draft
-                                          gold-cup? (assoc :gold-cup? true))}]
-                      [:tta.dialog.dataset-settings.event/open
-                       {:gold-cup? gold-cup?}])))
+           (or gold-cup? (= mode :edit))
+           (-> {:db (assoc-in db (conj view-path :mode) :edit)}
+               (assoc :dispatch
+                      (if draft
+                        [::init {:dataset (cond-> draft
+                                            gold-cup? (assoc :gold-cup? true))}]
+                        [:tta.dialog.dataset-settings.event/open
+                         {:gold-cup? gold-cup?}])))
 
-         ;; not usual, while raising this event take care to add
-         ;; right parameters so as to avoid one extra step
-         ;; for better performance
-         :default
-         {:dispatch [::init {:mode (if draft :edit :read)}]})))))
+           ;; not usual, while raising this event take care to add
+           ;; right parameters so as to avoid one extra step
+           ;; for better performance
+           :default
+           {:dispatch [::init {:mode (if draft :edit :read)}]}))))))
 
 (rf/reg-event-fx
  ::init-settings
@@ -291,6 +294,41 @@
  )
 
 (rf/reg-event-fx
+ ::delete-dataset
+ (fn [_ _]
+   {:dispatch
+    [::ht-event/show-message-box
+     {:message (translate [:warning :delete-dataset :message]
+                          "Do you really want to delete the dataset?")
+      :title (translate [:warning :delete-dataset :title]
+                        "Delete dataset!")
+      :level :warning
+      :label-ok (translate [:action :delete :label] "Delete")
+      :event-ok [::do-delete-dataset]
+      :label-cancel (translate [:action :cancel :label] "Cancel")}]}))
+
+(rf/reg-event-fx
+ ::do-delete-dataset
+ [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::app-subs/plant])]
+ (fn [{:keys [::subs/data ::app-subs/plant]} _]
+   (if-let [id (:id data)]
+     {:service/delete-dataset
+      {:client-id (:client-id plant)
+       :plant-id (:id plant)
+       :dataset-id id
+       :evt-success [::delete-dataset-success id]}
+      :dispatch [::ht-event/set-busy? true]})))
+
+(rf/reg-event-fx
+ ::delete-dataset-success
+ (fn [_ [_ dataset-id]]
+   {:dispatch-n (list [::ht-event/set-busy? false]
+                      [:tta.component.dataset-selector.event/remove-dataset
+                       dataset-id]
+                      [:tta.component.root.event/activate-content :home])}))
+
+(rf/reg-event-fx
  ::reset-draft
  (fn [_ _]
    {:dispatch
@@ -327,8 +365,6 @@
                 (assoc-in data-path nil))
         :dispatch [:tta.component.home.event/set-draft data]}))))
 
-;; TODO: need to enforce minimum measurement requirement
-;; policy: <10: hidden, 10-50: red, 50-85: amber, >85 blue
 (rf/reg-event-fx
  ::upload
  [(inject-cofx ::inject/sub [::subs/data])
@@ -345,7 +381,8 @@
          ;; upload if enough tubes measured
          {:service/save-dataset {:dataset dataset
                                  :new? (:draft? dataset)
-                                 :evt-success [::save-dataset-success]}}
+                                 :evt-success [::save-dataset-success]}
+          :dispatch [::ht-event/set-busy? true]}
          ;; warn if not enough
          {:dispatch
           [::ht-event/show-message-box
@@ -362,6 +399,7 @@
  ::save-dataset-success
  (fn [_ [_ {:keys [new-id]}]]
    {:dispatch-n (list
+                 [::ht-event/set-busy? false]
                  ;; TODO: re-fetch messages
                  ;; clear draft
                  [:tta.component.home.event/set-draft nil]

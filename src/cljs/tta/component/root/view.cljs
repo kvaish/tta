@@ -296,6 +296,7 @@
   @(rf/subscribe [:tta.dialog.view-factor.subs/level-opts])
   @(rf/subscribe [:tta.dialog.view-factor.subs/config])
   @(rf/subscribe [:tta.component.home.subs/draft])
+  @(rf/subscribe [:tta.component.dataset.subs/settings?])
 
   ;; dummy
   [:span])

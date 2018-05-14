@@ -162,7 +162,8 @@
 (defn no-config [{:keys [width height]}]
   [:div {:style {:width width, :height height}}
    [:div (use-style style/no-config)
-    "Missing configuration!"]])
+    (translate [:warning :no-config :message]
+               "Plant configuration not initialized!")]])
 
 (defn settings [{:keys [size]}]
   (let [config? @(rf/subscribe [::app-subs/config?])]

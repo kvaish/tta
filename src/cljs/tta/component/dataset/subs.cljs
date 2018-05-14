@@ -111,6 +111,15 @@
 ;; PLANT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (rf/reg-sub
+ ::settings? ;; dataset component can not be used until settings is ready
+ :<- [::app-subs/config?]
+ :<- [::app-subs/plant]
+ (fn [[config? plant] _]
+   (and config?
+        (pos? (count (get-in plant [:settings :pyrometers])))
+        (some? (get-in plant [:settings :pyrometer-id])))))
+
+(rf/reg-sub
  ::config
  :<- [::reformer-version]
  :<- [::app-subs/plant]
@@ -130,7 +139,7 @@
    ;;
    ;; returns nil when data not ready
 
-   (when-let [data-date (tc/from-date data-date)]
+   (if-let [data-date (if data-date (tc/from-date data-date))]
      (let [{:keys [settings]} plant
            pinch-old (some #(if (t/before? data-date
                                            (tc/from-date (:end-date %)))

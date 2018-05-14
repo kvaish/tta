@@ -1,3 +1,5 @@
+#+STARTUP: align indent fold nodlcheck hidestars oddeven lognotestate
+
 * Update wall-temps logic
 
   Moved :wall-temps inside :levels. This affects the following files:
@@ -30,8 +32,35 @@
    view-factor to be used for adding up the dT from wall and ceiling/floor calcs
    view-factor is not to be used inside the calc
 
-* Test and deploy
+* DONE Deploy
+  CLOSED: [2018-05-11 Fri 20:22]
 
-** TODO backend
+* Dataset actions
 
-** TODO frontend
+** DONE disable data-entry when plant settings not done
+CLOSED: [2018-05-14 Mon 12:33]
+
+** DONE fix NaN issue with d3 plot of overall twt
+non-reproducible.. probably some corrupt data
+CLOSED: [2018-05-14 Mon 13:47]
+
+** DONE implement delete
+CLOSED: [2018-05-14 Mon 13:47]
+show busy screen
+warn before delete
+go to :home on success
+
+* TTA Logsheet
+
+** TODO integrate tta-logsheet branch by MUKS
+   integrate the logsheet print feature for both sidefired and topfired
+
+* Trendline
+
+** TODO implement policy
+  need to enforce minimum measurement requirement
+  policy: <10: hidden, 10-50: red, 50-85: amber, >85 blue
+
+** TODO create trendline chart
+
+** TODO create trendline component

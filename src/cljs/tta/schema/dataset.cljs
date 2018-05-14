@@ -44,12 +44,14 @@
               :rows         {:name   "rows"
                              :schema ::summary
                              :array? true}
-              :levels       {:top    {:name   "top"
-                                      :schema ::summary}
-                             :middle {:name   "middle"
-                                      :schema ::summary}
-                             :bottom {:name   "bottom"
-                                      :schema ::summary}}}
+              :levels       {:name "levels"
+                             :schema
+                             {:top    {:name   "top"
+                                       :schema ::summary}
+                              :middle {:name   "middle"
+                                       :schema ::summary}
+                              :bottom {:name   "bottom"
+                                       :schema ::summary}}}}
 
    ::top-fired {:levels  {:name   "levels"
                           :schema {:top    {:name   "top"

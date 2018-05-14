@@ -91,7 +91,7 @@
 (defn action-delete []
   [app-comp/button
    {:icon ic/delete
-    :on-click #(rf/dispatch [::event/delete])
+    :on-click #(rf/dispatch [::event/delete-dataset])
     :label (translate [:dataset :action :delete] "Delete")}])
 
 ;;disabled when dataset and plant reformer version mismatched
@@ -221,8 +221,20 @@
                              :margin-right "10px"}}]
       (translate [:dataset :message :not-found] "Not found!")])])
 
+(defn not-ready [{:keys [width height]}]
+  [:div {:style {:width width, :height height}}
+   [:div (use-style style/no-config)
+    (if @(rf/subscribe [::app-subs/config?])
+      ;; configured but settings not ready
+      (translate [:warning :no-settings :message]
+                 "Plant settings not initialized!")
+      ;; not configured yet!
+      (translate [:warning :no-config :message]
+                 "Plant configuration not initialized!"))]])
+
 (defn dataset [{:keys [size]}]
-  (let [last-saved @(rf/subscribe [::subs/last-saved])
+  (let [settings? @(rf/subscribe [::subs/settings?])
+        last-saved @(rf/subscribe [::subs/last-saved])
         data-date @(rf/subscribe [::subs/data-date])
         fetching? @(rf/subscribe [::subs/fetching?])]
     [:div
@@ -245,11 +257,13 @@
       (if data-date
         (get-actions)
         (list (action-dataset-list)))
-      (if fetching?
-        fetching
-        (if data-date
-          body
-          not-found))]
+      (if-not settings?
+        not-ready
+        (if fetching?
+          fetching
+          (if data-date
+            body
+            not-found)))]
 
      ;;dataset settings dialog
      (if @(rf/subscribe [:tta.dialog.dataset-settings.subs/open?])
