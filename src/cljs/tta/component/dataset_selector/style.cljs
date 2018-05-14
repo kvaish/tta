@@ -12,12 +12,13 @@
     ^{:data {:w w}}
     {:display "inline-block"
      ::stylefy/sub-styles
-     {:item {:cursor "pointer"
-             :margin "0 10px"
+     {:item {:margin "0 10px"
              :width (px iw)
+             :cursor "pointer"
              :color (color-hex :royal-blue)
              ::stylefy/mode {:hover {:background-color (color-hex :alumina-grey)}}}
       :selected-item {:width (px iw)
+                      :margin "0 10px"
                       :color  (color-hex :monet-pink)
                       ::stylefy/mode {:hover {:background-color "none"}}}
       :display-date {:width "120px"

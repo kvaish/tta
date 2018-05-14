@@ -3,6 +3,7 @@
   (:require [re-frame.core :as rf]
             [reagent.ratom :refer [reaction]]
             [cljs-time.core :as t]
+            [ht.util.interop :as i]
             [ht.app.subs :as ht-subs :refer [translate]]
             [ht.app.event :as ht-event]
             [tta.app.subs :as app-subs]
@@ -78,9 +79,11 @@
  :<- [::ht-subs/topsoe?]
  :<- [::filters]
  (fn [[datasets topsoe? filters] _]
-   (let [{:keys [f1]} filters]
+   (let [{:keys [f1]} filters
+         desc #(- (i/ocall %2 :valueOf) (i/ocall %1 :valueOf))]
      (vec
       (cond->> datasets
         (not topsoe?) (remove :topsoe?)
         ;;TODO: define and apply filters
-        f1 (filter filter-by-f1))))))
+        f1 (filter filter-by-f1)
+        :sort (sort-by :data-date desc))))))

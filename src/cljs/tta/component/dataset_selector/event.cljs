@@ -4,7 +4,11 @@
             [re-frame.cofx :refer [inject-cofx]]
             [ht.app.subs :refer [translate]]
             [ht.app.event :as ht-event]
-            [tta.app.event :as app-event]))
+            [tta.app.event :as app-event]
+            [vimsical.re-frame.cofx.inject :as inject]
+            [tta.component.dataset-selector.subs :as subs]
+            [tta.app.subs :as app-subs]
+            [cljs-time.core :as t]))
 
 (defonce comp-path [:component :dataset-selector])
 
@@ -68,3 +72,11 @@
                 (->> ds
                      (remove #(= (:id %) dataset-id))
                      (vec))))))
+
+(rf/reg-event-fx
+ ::reset
+ (fn [{:keys [db]} _]
+   (let [date-range {:start (t/ago (t/period :months 1))
+                     :end (t/now)}]
+     {:db (assoc-in db (conj comp-path :filters)
+                    {:date-range date-range})})))

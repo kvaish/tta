@@ -212,8 +212,7 @@
    (reaction
     (let [firing @(rf/subscribe [::firing])
           gold-cup? @(rf/subscribe [::gold-cup?])
-          mode @(rf/subscribe [::mode])
-          burner? @(rf/subscribe [::burner?])]
+          mode @(rf/subscribe [::mode])]
       (->> [{:id :overall
              :label (translate [:data-analyzer :area :overall] "Overall")
              :show? (and (= mode :read) (= firing "top"))}
@@ -224,7 +223,7 @@
              :show? true}
             {:id :burner
              :label (translate [:data-entry :area :burner] "Burners")
-             :show? (or (= mode :edit) burner?)}
+             :show? true}
             {:id :gold-cup
              :label (translate [:data-entry :area :gold-cup] "Gold Cup")
              :show? gold-cup?}]

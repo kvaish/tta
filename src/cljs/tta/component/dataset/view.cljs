@@ -142,10 +142,15 @@
       (list (action-datasheet)
             (action-report)
             (if (and topsoe? gold-cup?) (action-publish-gold-cup))
-            (if (and dirty? (or draft? can-edit?)) (action-upload))
+            (if (or draft? (or dirty? can-edit?)) (action-upload))
             (if (and (not draft?) can-delete?) (action-delete))
             (action-dataset-list)
             (if (or draft? can-edit?) (action-select-mode))))))
+
+(defn no-burner [{:keys [width height]}]
+  [:div {:style {:width width, :height height}}
+   (translate [:dataset :no-burner-data :message]
+              "Burner status not available!")])
 
 (defn body [{:keys [width height]}]
   (let [area-opts @(rf/subscribe [::subs/area-opts])
@@ -153,7 +158,8 @@
         level-opts @(rf/subscribe [::subs/level-opts])
         selected-level @(rf/subscribe [::subs/selected-level])
         firing @(rf/subscribe [::subs/firing])
-        sel-area-id @(rf/subscribe [::subs/selected-area-id])]
+        sel-area-id @(rf/subscribe [::subs/selected-area-id])
+        burner? @(rf/subscribe [::subs/burner?])]
     ;; dummy for performance reason to keep the subs alive
     @(rf/subscribe [::subs/selected-area-id])
     [app-view/tab-layout
@@ -193,7 +199,9 @@
               [twt-graph {:level sel-bottom
                           :view-size view-size}]
               :burner ;; burner-status
-              [burner-status {:view-size view-size}]
+              (if burner?
+                [burner-status {:view-size view-size}]
+                [no-burner view-size])
               :gold-cup ;; gold-cup-view
               [:div {:style view-size} "gold-cup view"]
               nil))))}]))

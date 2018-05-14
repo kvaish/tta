@@ -163,15 +163,16 @@
 (rf/reg-event-fx
  ::set-mode ;; optionally also enforces the area selection
  [(inject-cofx ::inject/sub [::subs/data])
+  (inject-cofx ::inject/sub [::subs/dirty?])
   (inject-cofx ::inject/sub [::subs/config])
   (inject-cofx ::inject/sub [::subs/selected-area-id])]
- (fn [{:keys [db ::subs/data ::subs/config
+ (fn [{:keys [db ::subs/data ::subs/dirty? ::subs/config
              ::subs/selected-area-id]}
      [_ mode area-id]] ;; mode => :read or :edit
    {:db (cond-> (assoc-in db (conj view-path :mode) mode)
           ;; while switching to graph mode update calculations
-          (= mode :read) (assoc-in data-path
-                                   (update-calc-summary data config))
+          (and (= mode :read) (or dirty? (:draft? data)))
+          (assoc-in data-path (update-calc-summary data config))
           ;; while switching to edit mode ensure view-factor.
           ;; this will happen only the first time you
           ;; switch to edit mode, hece data should be nil then.
@@ -400,6 +401,8 @@
  (fn [_ [_ {:keys [new-id]}]]
    {:dispatch-n (list
                  [::ht-event/set-busy? false]
+                 ;; reset dataset selector list
+                 [:tta.component.dataset-selector.event/reset]
                  ;; TODO: re-fetch messages
                  ;; clear draft
                  [:tta.component.home.event/set-draft nil]

@@ -53,8 +53,12 @@
    (let [{:keys [event/close]} (get all-contents close-id)
          {:keys [event/init]} (if-let [e (get all-contents init-id)]
                                 (update e :event/init conj init-params))]
-     {:db (assoc-in db [:component :root :content :active] init-id)
-      :dispatch-n (list init close)})))
+     (if (= close-id init-id)
+       ;; for same component, no actual close, just re-init
+       {:dispatch init}
+       ;; actual switch: close the old and init the new one
+       {:db (assoc-in db [:component :root :content :active] init-id)
+        :dispatch-n (list init close)}))))
 
 (rf/reg-event-db
   ::set-menu-open?

@@ -1,4 +1,5 @@
-#+STARTUP: align indent fold nodlcheck hidestars oddeven lognotestate
+#+OPTIONS: tex:t
+#+STARTUP: align indent fold nodlcheck hidestars oddeven lognotestate entitiespretty
 
 * Update wall-temps logic
 
@@ -50,12 +51,32 @@ show busy screen
 warn before delete
 go to :home on success
 
+
+* more fixes
+** DONE when switching to read mode, do calcs only if dirty or draft
+CLOSED: [2018-05-14 Mon 18:03]
+
+** DONE after upload ask for refresh of dataset list
+CLOSED: [2018-05-14 Mon 19:01]
+
+** TODO after upload refetch messages
+
+** DONE show the burner tab on read mode as well
+CLOSED: [2018-05-14 Mon 19:13]
+
+** DONE show upload for drafts on view mode even when not dirty
+CLOSED: [2018-05-14 Mon 17:57]
+
 * TTA Logsheet
 
 ** TODO integrate tta-logsheet branch by MUKS
    integrate the logsheet print feature for both sidefired and topfired
 
 * Trendline
+
+** DONE fix dataset selector popup
+CLOSED: [2018-05-14 Mon 19:01]
+fix alignment of selected/unselected
 
 ** TODO implement policy
   need to enforce minimum measurement requirement
